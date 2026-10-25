@@ -76,7 +76,7 @@ input:checked + .slider:before{transform:translateX(20px);}
       <button class="app-icon" data-app="facetime"><span>📹</span><label>FaceTime</label></button>
       <button class="app-icon" data-app="worldline"><span>🌐</span><label>世界线</label></button>
       <button class="app-icon" data-app="maps"><span>🗺️</span><label>地图</label></button>
-      <button class="app-icon" data-app="photos"><span>🖼️</span><label>照片</label></button>
+     <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>通讯录</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
@@ -91,7 +91,7 @@ input:checked + .slider:before{transform:translateX(20px);}
     <div id="appBody" class="app-body"></div>
   </div>
 </div>
-
+<audio id="globalAudio" style="display:none;"></audio>
 <script>
 const WORLD = { name:"彼得·本杰明·帕克", timeline:["阶段一：初遇与日常","阶段二：华盛顿纪念碑事件","阶段三：斯塔克渡轮事件","阶段四：复联大厦决战","阶段五：泰坦星响指","阶段六：身份曝光"] };
 
@@ -144,7 +144,18 @@ async function generateImage(prompt) {
 function buildSystem(extra) {
   const p = store.getProfile();
   const s = store.getState();
-  return `你是蜘蛛侠世界模拟器的DM。彼得·帕克16岁，性格话痨、善良、有责任感。玩家：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn}/30 回合，好感度 ${s.affinity}/200。剧情节点：${WORLD.timeline[s.anchor]}。文风：电影镜头感，严禁AI句式。${extra}`;
+  
+  // 读取世界书
+  let worldbookPrompt = "";
+  try {
+    const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
+    const activeBooks = books.filter(b => b.enabled);
+    if (activeBooks.length > 0) {
+      worldbookPrompt = "\n\n【最高准则 · 世界书设定】" + activeBooks.map(b => `[${b.name}]\n${b.content}`).join("\n\n");
+    }
+  } catch(e) {}
+
+  return `你是蜘蛛侠世界模拟器的DM。彼得·帕克16岁，性格话痨、善良、有责任感。玩家：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn}/30 回合，好感度 ${s.affinity}/200。剧情节点：${WORLD.timeline[s.anchor]}。文风：电影镜头感，严禁AI句式。${worldbookPrompt}\n\n${extra}`;
 }
 
 const $ = s => document.querySelector(s);
@@ -603,13 +614,6 @@ worldline: {
     }
   },
 
-  photos: {
-    title: "照片",
-    render(body){
-      body.innerHTML=`<div style="padding:14px"><div class="card"><p style="color:var(--muted)">照片功能与 Instagram 共用生图接口，请前往 Instagram 生成图片。</p></div></div>`;
-    }
-  },
-
 facetime: {
     title: "FaceTime",
     render(body){ body.innerHTML=`<div class="loader">开发中</div>`; }
@@ -653,39 +657,122 @@ facetime: {
     }
   },
 
+worldbook: {
+    title: "世界书",
+    render(body) {
+      const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card">
+          <h3>新增世界书条目</h3>
+          <div class="field"><label>名称</label><input id="wb_name" placeholder="例如：法术指导"></div>
+          <div class="field"><label>设定内容（最高准则）</label><textarea id="wb_content" rows="5" placeholder="输入强制 AI 遵守的设定..."></textarea></div>
+          <button class="btn" id="add_wb">保存并启用</button>
+        </div>
+        <div class="card">
+          <h3>已保存条目 (${books.length})</h3>
+          ${books.map((b, i) => `
+            <div style="padding:12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+              <div style="flex:1">
+                <div style="font-weight:bold;margin-bottom:4px">${esc(b.name)}</div>
+                <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${esc(b.content)}</div>
+              </div>
+              <div class="row">
+                <label class="switch"><input type="checkbox" class="wb-toggle" data-idx="${i}" ${b.enabled?'checked':''}><span class="slider"></span></label>
+                <button class="btn ghost wb-del" data-idx="${i}" style="width:auto;padding:4px 8px;font-size:12px;color:#e62429;border-color:#e62429">删除</button>
+              </div>
+            </div>
+          `).join("") || '<p style="color:var(--muted);font-size:13px">暂无世界书条目</p>'}
+        </div>
+      </div>`;
+
+      body.querySelector("#add_wb").onclick = () => {
+        const name = body.querySelector("#wb_name").value.trim();
+        const content = body.querySelector("#wb_content").value.trim();
+        if(!name || !content) return toast("请填写名称和内容");
+        books.push({ name, content, enabled: true });
+        localStorage.setItem("sv_worldbooks", JSON.stringify(books));
+        this.render(body);
+        toast("已添加并启用");
+      };
+
+      body.querySelectorAll(".wb-toggle").forEach(el => {
+        el.onchange = () => {
+          books[el.dataset.idx].enabled = el.checked;
+          localStorage.setItem("sv_worldbooks", JSON.stringify(books));
+          toast(el.checked ? "已启用" : "已禁用");
+        };
+      });
+
+      body.querySelectorAll(".wb-del").forEach(el => {
+        el.onclick = () => {
+          if(!confirm("确定删除这条世界书吗？")) return;
+          books.splice(el.dataset.idx, 1);
+          localStorage.setItem("sv_worldbooks", JSON.stringify(books));
+          this.render(body);
+        };
+      });
+    }
+  },
+
   music: {
     title: "音乐",
     render(body) {
-      body.innerHTML=`<div style="padding:14px">
-        <div class="card"><h3>本地音乐</h3>
-          <input type="file" id="audioFile" accept="audio/*,.mp3,.m4a,.wav,.ogg,.mp4" style="width:100%;color:#fff;margin-bottom:10px">
-          <audio id="audioPlayer" controls style="width:100%"></audio>
-        </div>
-        <div class="card"><h3>🎵 已上传</h3><div id="trackList" style="color:var(--muted);font-size:13px">暂无</div></div>
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card"><h3>本地音乐 (支持 MP3/FLAC)</h3>
+          <input type="file" id="audioFile" accept="audio/*,.mp3,.m4a,.wav,.ogg,.mp4,.flac" multiple style="width:100%;color:#fff;margin-bottom:10px">
+          <p style="color:var(--muted);font-size:12px;margin:0">提示：由于浏览器限制，大文件可能无法永久保存，建议单次添加少量文件。</p>
+        <div class="card"><h3>🎵 播放列表</h3><div id="trackList" style="color:var(--muted);font-size:13px">暂无</div></div>
       </div>`;
-      const player=body.querySelector("#audioPlayer");
-      const input=body.querySelector("#audioFile");
-      const trackList=body.querySelector("#trackList");
-      const tracks=JSON.parse(localStorage.getItem("sv_music")||"[]");
-      const renderList=()=>{
-        if(!tracks.length){trackList.textContent="暂无";return;}
-        trackList.innerHTML=tracks.map((t,i)=>`<div style="padding:8px;border-bottom:1px solid #333;cursor:pointer" data-idx="${i}">▶ ${esc(t.name)}</div>`).join("");
-        trackList.querySelectorAll("div[data-idx]").forEach(el=>{
-          el.onclick=()=>{player.src=tracks[parseInt(el.dataset.idx)].url;player.play();};
+      
+      const input = body.querySelector("#audioFile");
+      const trackList = body.querySelector("#trackList");
+      const globalAudio = document.querySelector("#globalAudio");
+      
+      let tracks = JSON.parse(localStorage.getItem("sv_music") || "[]");
+
+      const renderList = () => {
+        if(!tracks.length){ trackList.textContent="暂无"; return; }
+        trackList.innerHTML = tracks.map((t, i) =>
+          `<div style="padding:10px;border-bottom:1px solid #333;cursor:pointer;display:flex;justify-content:space-between;align-items:center" data-idx="${i}">
+            <span>▶ ${esc(t.name)}</span>
+            <button class="btn ghost del-music" data-idx="${i}" style="width:auto;padding:2px 8px;font-size:12px;color:#e62429;border:none">✕</button>
+          </div>`
+        ).join("");
+        
+        trackList.querySelectorAll("div[data-idx]").forEach(el => {
+          el.onclick = (e) => {
+            if(e.target.classList.contains("del-music")) return; // 点击删除按钮时不播放
+            globalAudio.src = tracks[parseInt(el.dataset.idx)].url;
+            globalAudio.play().catch(()=>{});
+            toast("正在播放：" + tracks[parseInt(el.dataset.idx)].name);
+          };
+        });
+
+        trackList.querySelectorAll(".del-music").forEach(el => {
+          el.onclick = (e) => {
+            e.stopPropagation();
+            tracks.splice(parseInt(el.dataset.idx), 1);
+            localStorage.setItem("sv_music", JSON.stringify(tracks));
+            renderList();
+            toast("已删除");
+          };
         });
       };
       renderList();
-      input.onchange=(e)=>{
-        const file=e.target.files[0]; if(!file) return;
-        const reader=new FileReader();
-        reader.onload=()=>{
-          const url=reader.result;
-          tracks.push({name:file.name,url});
-          localStorage.setItem("sv_music",JSON.stringify(tracks));
-          renderList(); player.src=url; player.play().catch(()=>{});
-          toast("已添加："+file.name);
-        };
-        reader.readAsDataURL(file);
+
+input.onchange = (e) => {
+        const files = e.target.files;
+        if(!files.length) return;
+        Array.from(files).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            tracks.push({ name: file.name, url: reader.result });
+            localStorage.setItem("sv_music", JSON.stringify(tracks));
+            renderList();
+            toast("已添加：" + file.name);
+          };
+          reader.readAsDataURL(file);
+        });
       };
     }
   }
