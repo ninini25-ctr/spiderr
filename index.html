@@ -108,8 +108,31 @@ const store = {
   setChats(c){this.set("sv_chats",c);},
   getPosts(){return this.get("sv_posts",{twitter:[],instagram:[]});},
   setPosts(p){this.set("sv_posts",p);},
-  getContacts(){return this.get("sv_contacts",["彼得·帕克","内德·利兹","MJ","梅婶"]);},
-  setContacts(c){this.set("sv_contacts",c);},
+  getContacts(){ 
+    let list = this.get("sv_contacts", []);
+    if(!list || list.length === 0) {
+      list = [
+        { name:"彼得·帕克", desc:"中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" },
+        { name:"内德·利兹", desc:"彼得的好哥们，热爱电脑和乐高，话很多。", affinity: 0, heart: "暂无" },
+        { name:"米歇尔·琼斯", desc:"彼得的同学，性格直率，观察力敏锐，有些愤世嫉俗。", affinity: 0, heart: "暂无" },
+        { name:"梅婶", desc:"彼得的监护人，坚强独立，非常关心彼得。", affinity: 0, heart: "暂无" }
+      ];
+    } else {
+      // 兼容旧数据，补齐缺失字段
+      list = list.map(c => {
+        if (typeof c === 'string') return { name: c, desc: "自定义联系人", affinity: 0, heart: "暂无" };
+        return { 
+          name: c.name || "未知", 
+          desc: c.desc || "自定义联系人", 
+          affinity: c.affinity || 0, 
+          heart: c.heart || "暂无" 
+        };
+      });
+    }
+    this.set("sv_contacts", list);
+    return list; 
+  },
+setContacts(c){ this.set("sv_contacts", c); },
   getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10});},
   setChatConfig(c){this.set("sv_chat_cfg",c);}
 };
@@ -145,7 +168,6 @@ function buildSystem(extra) {
   const p = store.getProfile();
   const s = store.getState();
   
-  // 读取世界书
   let worldbookPrompt = "";
   try {
     const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
@@ -155,7 +177,7 @@ function buildSystem(extra) {
     }
   } catch(e) {}
 
-  return `你是蜘蛛侠世界模拟器的DM。彼得·帕克16岁，性格话痨、善良、有责任感。玩家：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn}/30 回合，好感度 ${s.affinity}/200。剧情节点：${WORLD.timeline[s.anchor]}。文风：电影镜头感，严禁AI句式。${worldbookPrompt}\n\n${extra}`;
+  return `你是蜘蛛侠世界模拟器的DM。初始时间为2016年，彼得·帕克15岁，性格话痨、善良、有责任感。玩家：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn}/30 回合，世界线好感度 ${s.affinity}/200。剧情节点：${WORLD.timeline[s.anchor]}。文风：电影镜头感，严禁AI句式。${worldbookPrompt}\n\n${extra}`;
 }
 
 const $ = s => document.querySelector(s);
@@ -176,27 +198,57 @@ window.selectOption = (optText) => {
   store.setState(s); openApp('worldline');
 };
 
-window.addComment = async (platform, postIndex, text) => {
+window.addComment = async (platform, postIndex, text, parentCommentIndex = null) => {
   if (!text||!text.trim()) return toast("请输入评论");
   const all = store.getPosts();
   const list = all[platform]||[];
   const p = list[postIndex];
   if (!p) return;
-  p.comments = p.comments||[];
-  p.comments.push({user:"我",text:text.trim()});
+  
+  p.comments = p.comments || [];
+  
+  if (parentCommentIndex !== null) {
+    // 回复某一条具体评论
+    const parentC = p.comments[parentCommentIndex];
+    parentC.replies = parentC.replies || [];
+    parentC.replies.push({user:"我", text:text.trim()});
+  } else {
+    // 直接评论帖子
+    p.comments.push({user:"我",text:text.trim(), replies: []});
+  }
+  
   all[platform] = list;
   store.setPosts(all);
   openApp(platform);
+  
   try {
-    const sys = buildSystem(`用户刚在"${p.text}"下评论了"${text.trim()}"。生成1到3条随机NPC追评，符合网友语气。格式：网友名 ||| 评论内容。每行一条。`);
-    const res = await callAI([{role:"user",content:"生成追评"}], sys);
+    const contextStr = parentCommentIndex !== null ? `某网友的评论："${p.comments[parentCommentIndex].text}"` : `帖子内容："${p.text}"`;
+    const sysPrompt = buildSystem(`用户刚在${platform}上评论了${contextStr}，内容是："${text.trim()}"。
+【要求】
+1. 生成 1 到 3 条回复。
+2. 其中必须有 1 条是楼主（发帖人：${p.name}）的回复，另外的可以是随机网友。
+3. 格式：如果是楼主，名字直接写 "${p.name}"；网友则起个英文网名。
+4. 符合网友语气，有生活感。
+【格式要求】
+姓名 ||| 评论内容
+每行一条，不要任何解释。`);
+    
+    const res = await callAI([{role:"user",content:"生成回复"}], sysPrompt);
     const newAll = store.getPosts();
     const newList = newAll[platform]||[];
     const np = newList[postIndex];
-    if (!np) return;
-    res.split('\n').filter(l=>l.includes('|||')).slice(0,3).forEach(l=>{
+    
+    const targetComment = parentCommentIndex !== null ? (np.comments[parentCommentIndex].replies = np.comments[parentCommentIndex].replies || []) : np.comments;
+    
+    res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
       const [u,t] = l.split('|||').map(x=>x.trim());
-      if (u&&t) np.comments.push({user:u,text:t});
+      if (u&&t) {
+        if (parentCommentIndex !== null) {
+          np.comments[parentCommentIndex].replies.push({user:u, text:t});
+        } else {
+          np.comments.push({user:u, text:t, replies: []});
+        }
+      }
     });
     newAll[platform] = newList;
     store.setPosts(newAll);
@@ -277,6 +329,25 @@ const apps = {
 messages: {
   title: "信息", hasSettings: true, view: "list", currentUser: "", lastUserText: "", quoteData: null,
   renderSettings(body) {
+    if (this.view === "chat") {
+      const contacts = store.getContacts();
+const c = contacts.find(x => x.name === this.currentUser) || { name: this.currentUser, desc: "", affinity: 0, heart: "" };
+      body.innerHTML = `<div style="padding:14px"><div class="card"><h3>${esc(c.name)} 的设定</h3>
+        <div class="field"><label>个人简介</label><textarea id="c_desc" rows="3">${esc(c.desc)}</textarea></div>
+        <div class="field"><label>好感度 (0-200)</label><input id="c_aff" type="number" value="${c.affinity}" readonly style="opacity:0.7"></div>
+        <div class="field"><label>心声 (AI 生成)</label><textarea id="c_heart" rows="3" readonly style="opacity:0.7">${esc(c.heart || "暂无")}</textarea></div>
+        <button class="btn" id="save">保存简介</button>
+        <button class="btn ghost" id="back" style="margin-top:10px">返回聊天</button>
+      </div></div>`;
+      body.querySelector("#save").onclick = () => {
+        c.desc = body.querySelector("#c_desc").value;
+        store.setContacts(contacts);
+        toast("已保存");
+      };
+      body.querySelector("#back").onclick = () => openApp('messages');
+      return;
+    }
+
     const cfg = store.getChatConfig();
     body.innerHTML = `<div style="padding:14px"><div class="card"><h3>聊天设置</h3><div class="field"><label>背景图 URL</label><input id="c_bg" value="${esc(cfg.bg)}"></div><div class="field"><label>上下文条数</label><input id="c_ctx" type="number" value="${cfg.maxContext}"></div><button class="btn" id="save">保存</button><button class="btn ghost" id="back" style="margin-top:10px">返回</button></div></div>`;
     body.querySelector("#save").onclick = () => { store.setChatConfig({bg:body.querySelector("#c_bg").value, maxContext:parseInt(body.querySelector("#c_ctx").value)||10}); openApp('messages'); };
@@ -293,31 +364,46 @@ messages: {
       if (self.view === "chat" && self.lastUserText) self.sendMessage(body, self.lastUserText, true);
       else toast("请先发送消息后再重试");
     };
+    
     if (self.view === "list") {
       const contacts = store.getContacts();
-      body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn">➕ 添加联系人</button><button class="btn ghost" id="groupBtn" style="margin-top:8px">👥 发起群聊</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contacts.map(c=>`<div class="chat-row" data-user="${esc(c)}" style="padding:12px;border-bottom:1px solid #333;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>${esc(c)}</span><span style="color:var(--muted)">›</span></div>`).join("")}</div></div>`;
-      body.querySelectorAll(".chat-row").forEach(el=>{ el.onclick = () => { self.currentUser=el.dataset.user; self.view="chat"; self.render(body); }; });
+body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn">➕ 添加联系人</button><button class="btn ghost" id="groupBtn" style="margin-top:8px">👥 发起群聊</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contacts.map(c=>`<div class="chat-row" data-user="${esc(c.name)}" style="padding:12px;border-bottom:1px solid #333;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:bold">${esc(c.name)}</div><div style="font-size:12px;color:var(--muted)">${esc(c.desc || "")}</div></div><span style="color:var(--muted)">›</span></div>`).join("")}</div></div>`;
+      
+      body.querySelectorAll(".chat-row").forEach(el => {
+        el.onclick = () => { self.currentUser = el.dataset.user; self.view = "chat"; self.render(body); };
+      });
+      
       body.querySelector("#addContactBtn").onclick = async () => {
-        const ans = prompt("添加联系人：\n\n可选：1 彼得·帕克  2 内德·利兹  3 MJ  4 梅婶\n或直接输入自定义名字，或输入「随机」让AI生成");
+        const ans = prompt("添加联系人：\n\n可选：1 彼得·帕克  2 内德·利兹  3 米歇尔·琼斯  4 梅婶\n或直接输入自定义名字，或输入「随机」让AI生成");
         if (!ans) return;
         let name = ans.trim();
-        if(name==="1") name="彼得·帕克"; else if(name==="2") name="内德·利兹"; else if(name==="3") name="MJ"; else if(name==="4") name="梅婶";
-        else if(name==="随机") {
-          try { const res = await callAI([{role:"user",content:"生成一个"}], buildSystem("为蜘蛛侠世界生成一个随机NPC姓名，只输出名字")); name = res.replace(/[。\n]/g,"").trim().slice(0,12); }
+       if(name==="1") name="彼得·帕克"; else if(name==="2") name="内德·利兹"; else if(name==="3") name="米歇尔·琼斯"; else if(name==="4") name="梅婶";
+        else if (name==="随机") {
+          try { 
+            const res = await callAI([{role:"user",content:"生成一个"}], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)")); 
+            const [n, d] = res.split('|||').map(x=>x.trim());
+            name = n || "神秘人";
+            const list=store.getContacts();
+            list.push({ name, desc: d || "未知", affinity: 0, heart: "暂无" });
+            store.setContacts(list); self.render(body); return toast("已添加："+name);
+          }
           catch(e) { return toast("生成失败："+e.message); }
         }
         if(!name) return;
         const list=store.getContacts();
-        if(list.includes(name)) return toast("已存在");
-        list.push(name); store.setContacts(list); self.render(body); toast("已添加："+name);
+        if(list.find(x=>x.name===name)) return toast("已存在");
+        list.push({ name, desc: "自定义联系人", affinity: 0, heart: "暂无" });
+        store.setContacts(list); self.render(body); toast("已添加："+name);
       };
-      body.querySelector("#groupBtn").onclick = () => {
-        const names=prompt("群聊成员（逗号分隔，例如：彼得·帕克,内德·利兹）");
-        if(!names) return;
-        self.currentUser="群聊-"+names; self.view="chat"; self.render(body);
-      };
-      return;
+      
+body.querySelector("#groupBtn").onclick = () => {
+  const names=prompt("群聊成员（逗号分隔，例如：彼得·帕克,内德·利兹）");
+  if(!names) return;
+  self.currentUser="群聊-"+names; self.view="chat"; self.render(body);
+};
+return;
     }
+    
     const chats=store.getChats(), msgs=chats[self.currentUser]||[], cfg=store.getChatConfig();
     
     let chatHtml = `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''}">`;
@@ -330,6 +416,7 @@ messages: {
     
     const thread=body.querySelector("#chatThread");
     thread.scrollTop=thread.scrollHeight;
+    
     thread.querySelectorAll(".bubble").forEach(el => {
       let pressTimer;
       const showMenu = (e) => {
@@ -350,6 +437,7 @@ messages: {
       el.addEventListener("touchmove", () => clearTimeout(pressTimer));
       el.addEventListener("contextmenu", showMenu);
     });
+    
     body.querySelector("#cancelQuote").onclick = () => { body.querySelector("#quotePreview").style.display = "none"; self.quoteData = null; };
     body.querySelector("#sendBtn").onclick = () => {
       const text = body.querySelector("#msgInput").value.trim();
@@ -367,6 +455,7 @@ messages: {
     const quoteContent = self.quoteData;
     self.quoteData = null;
     body.querySelector("#quotePreview").style.display = "none";
+    
     if (!isRetry) {
       self.lastUserText = text;
       arr.push({role:"me", content:text, quote: quoteContent});
@@ -382,23 +471,75 @@ messages: {
         self.render(body);
       }
     }
+    
     const currentThread = body.querySelector("#chatThread");
     currentThread.innerHTML += `<div class="bubble them" id="loading" style="color:#999">...</div>`;
     currentThread.scrollTop = currentThread.scrollHeight;
+    
     try {
+      const contacts = store.getContacts();
+      let contact = contacts.find(x=>x.name === self.currentUser) || { affinity: 0 };
+      
+      let attitude = "普通朋友";
+      if (self.currentUser === "彼得·帕克") {
+        if (contact.affinity >= 151) attitude = "深爱、恋人，充满保护欲和深情";
+        else if (contact.affinity >= 101) attitude = "暧昧、暗恋、会脸红、关心过度";
+        else if (contact.affinity >= 51) attitude = "信任的好友，会分享日常和心事";
+      } else {
+        if (contact.affinity >= 101) attitude = "非常亲密的家人/闺蜜/死党，无话不谈";
+        else if (contact.affinity >= 51) attitude = "好朋友，互相帮助";
+      }
+
       const recent = arr.slice(-store.getChatConfig().maxContext * 2);
       let quoteInstruction = "";
       if (quoteContent) quoteInstruction = `\n【特别注意】玩家引用了你之前发的消息："${quoteContent}"，请在回复中自然地回应这句引用。`;
-      const sysPrompt = buildSystem(`你正在扮演「${self.currentUser}」和玩家发短信。\n【要求】\n1. 像真人一样口语化，不要长篇大论。\n2. 结合上下文情绪。\n3. 情绪激动、紧张或想补充时，拆分成多条短消息发送。\n4. 严格输出 JSON 数组格式，例如：["第一条", "第二条"]，不要任何其他文字。${quoteInstruction}`);
+      
+      const sysPrompt = buildSystem(`你正在扮演「${self.currentUser}」和玩家发短信。
+【当前关系】${attitude}（好感度：${contact.affinity}/200）。严禁逾越当前关系（如非彼得，禁止恋爱向）。
+【要求】
+1. 像真人一样口语化，结合上下文情绪。
+2. 情绪激动、紧张或想补充时，拆分成多条短消息发送。
+3. 严格输出 JSON 格式，不要任何其他文字：{"replies": ["第一条", "第二条"], "heart": "你此时内心的真实想法，50-300字"}
+${quoteInstruction}`);
+      
       const replyRaw = await callAI(recent.map(m=>({role:m.role==="me"?"user":"assistant",content:m.content})), sysPrompt);
-      let replyList = [];
-      const match = replyRaw.match(/\[[\s\S]*\]/);
-      if (match) {
-        try { replyList = JSON.parse(match[0]); } catch(e) { replyList = match[0].replace(/[\[\]"]/g, '').split(/\\n|\n/).filter(Boolean); }
-      } else {
-        replyList = replyRaw.split(/\n/).filter(Boolean);
+      
+let replyList = [];
+let heartText = "";
+try {
+  // 移除可能存在的 markdown 标记，并提取第一个大括号块
+  let cleanRaw = replyRaw.replace(/```json/g, '').replace(/```/g, '').trim();
+  const startIdx = cleanRaw.indexOf('{');
+  const endIdx = cleanRaw.lastIndexOf('}');
+  if (startIdx !== -1 && endIdx !== -1) {
+    const jsonStr = cleanRaw.substring(startIdx, endIdx + 1);
+    const data = JSON.parse(jsonStr);
+    replyList = data.replies || [replyRaw];
+    heartText = data.heart || ""; // 成功提取心声
+  } else {
+    replyList = replyRaw.split('\n').filter(Boolean);
+  }
+} catch (err) {
+  console.warn("解析 JSON 失败:", err);
+  replyList = replyRaw.split('\n').filter(Boolean);
+}
+// 如果 JSON 解析后 heart 还是空的，尝试用正则强抓
+if (!heartText) {
+  const heartMatch = replyRaw.match(/"heart"\s*:\s*"([^"]+)"/);
+  if (heartMatch) heartText = heartMatch[1];
+}
+// 保底处理
+if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
+
+      if (heartText) {
+        const contactsNow = store.getContacts();
+        const idx = contactsNow.findIndex(x=>x.name===self.currentUser);
+        if (idx !== -1) {
+          contactsNow[idx].heart = heartText;
+          store.setContacts(contactsNow);
+        }
       }
-      if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
+
       const load = body.querySelector("#loading"); if(load) load.remove();
       for (let i = 0; i < replyList.length; i++) {
         const msgText = replyList[i].trim();
@@ -433,28 +574,40 @@ messages: {
 
   twitter: {
     title: "推特",
-    async render(body) {
-      body.innerHTML = "";
-      const posts = store.getPosts().twitter||[];
-      body.innerHTML = `<div style="padding:14px">
-        <div class="row" style="gap:8px;margin-bottom:12px">
-          <button class="btn" id="newPostBtn" style="flex:1">✍️ 发帖</button>
-          <button class="btn ghost" id="refreshBtn" style="flex:1">🔄 刷新</button>
-        </div>
-        <div id="feed">
-          ${posts.map((p,i)=>`
-          <div class="tweet">
-            <div style="font-weight:bold">${esc(p.name)}</div>
-            <div style="margin:6px 0">${esc(p.text)}</div>
-            <div style="color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding-bottom:6px">♡ ${p.likes||0} · 💬 ${(p.comments||[]).length}</div>
-            <div style="padding:6px 0">${(p.comments||[]).map(c=>`<div class="comment"><b>${esc(c.user)}:</b> ${esc(c.text)}</div>`).join("")}</div>
-            <div class="row" style="margin-top:8px">
-              <input id="twc_${i}" placeholder="写评论..." style="flex:1;padding:6px 10px;border-radius:8px;border:none;background:#222;color:#fff">
-              <button class="cmtBtn" data-idx="${i}" style="background:var(--accent-2);color:#fff;border:none;padding:6px 14px;border-radius:8px">💬</button>
+async render(body) {
+  const posts = store.getPosts().twitter||[];
+  body.innerHTML = `<div style="padding:14px">
+  <div class="row" style="gap:8px;margin-bottom:12px">
+    <button class="btn" id="newPostBtn" style="flex:1">✍️ 发帖</button>
+    <button class="btn ghost" id="refreshBtn" style="flex:1">🔄 刷新</button>
+  </div>
+  <div id="feed">
+    ${posts.map((p,i)=>`
+    <div class="tweet">
+      <div style="font-weight:bold">${esc(p.name)}</div>
+      <div style="margin:6px 0">${esc(p.text)}</div>
+      <div style="color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding-bottom:6px">♡ ${p.likes||0} · 💬 ${(p.comments||[]).length}</div>
+      
+      <div style="padding:6px 0">
+        ${(p.comments||[]).map((c, ci)=>`
+          <div class="comment" style="margin-bottom:6px">
+            <div onclick="apps.twitter.replyToComment(${i}, ${ci})" style="cursor:pointer">
+              <b>${esc(c.user)}:</b> ${esc(c.text)}
             </div>
-          </div>`).join("")}
-        </div>
-      </div>`;
+            ${c.replies && c.replies.length > 0 ? `<div style="padding-left:16px;border-left:1px solid #444;margin-top:4px">
+               ${c.replies.map(r=>`<div style="font-size:12px;margin-top:2px"><b>${esc(r.user)}:</b> ${esc(r.text)}</div>`).join("")}
+            </div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <input id="twc_${i}" placeholder="写评论..." style="flex:1;padding:6px 10px;border-radius:8px;border:none;background:#222;color:#fff">
+        <button onclick="window.addComment('twitter', ${i}, document.getElementById('twc_${i}').value)" style="background:var(--accent-2);color:#fff;border:none;padding:6px 14px;border-radius:8px">💬</button>
+      </div>
+    </div>`).join("")}
+  </div>
+</div>`;
       body.querySelectorAll(".cmtBtn").forEach(btn=>{
         btn.onclick=()=>{const i=parseInt(btn.dataset.idx);window.addComment("twitter",i,body.querySelector("#twc_"+i).value);};
       });
@@ -484,7 +637,7 @@ async newPost() {
 【要求】
 1. 生成至少 5 条随机网友评论。
 2. 评论者名字必须全部为纯英文字符串（如 "tony_stark_fan", "queens_gossip"）。
-3. 评论内容要像真实网友，有生活感、网感，可以对推文进行吐槽、赞同或玩梗。
+3. 评论内容要像真实网友，有生活感、网感，可以对推文进行吐槽、赞同、反对或玩梗。
 【格式要求】
 严格按以下格式输出，每行一条评论，用 ||| 分隔：
 评论者英文名 ||| 评论内容
@@ -492,10 +645,10 @@ async newPost() {
         
         const res=await callAI([{role:"user",content:"生成评论"}], sysPrompt);
         
-        res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
-          const [u,t]=l.split('|||').map(x=>x.trim());
-          if(u&&t) newPost.comments.push({user:u,text:t});
-        });
+res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
+  const [u,t]=l.split('|||').map(x=>x.trim());
+  if(u&&t) newPost.comments.push({user:u,text:t, replies: []});
+});
         
         const all2=store.getPosts();
         all2.twitter=all2.twitter.map(p=>(p.text===text&&p.name===newPost.name)?newPost:p);
@@ -510,7 +663,7 @@ async refresh() {
 2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"）。
 3. 禁止出现中文名。
 【内容与评论要求】
-1. 每条推文必须附带 3 到 5 条网友评论。
+1. 每条推文必须附带 5 到 15 条网友评论。
 2. 评论者名字也必须全部为纯英文字符串（如 "spidey_fan", "NYC_local"）。
 3. 评论内容要像真实网友，有生活感、网感，可以互怼或玩梗。
 【格式要求】
@@ -538,81 +691,176 @@ async refresh() {
       } catch(e){toast(e.message);}
     }
   },
+replyToComment(postIdx, commentIdx) {
+  const text = prompt("回复该评论：");
+  if (text) window.addComment('twitter', postIdx, text, commentIdx);
+},
 
 worldline: {
-    title: "世界线",
-    async render(body) {
-      const s=store.getState();
-      if(!s.currentStory){
-        body.innerHTML=`<div class="loader"><div class="spin"></div>生成1000字剧情中...</div>`;
-        try {
-          const history = s.history || [];
-          const lastTurn = history.length > 0 ? history[history.length - 1] : null;
-          
-          let contextStr = "";
-          if (lastTurn) {
-            contextStr = `\n【上一轮剧情】\n${lastTurn.story}\n【玩家上一轮的选择】\n${lastTurn.choice}\n请紧接上述剧情和选择，继续发展。`;
-          }
+  title: "世界线",
+async render(body) {
+    const s = store.getState();
+    if (!s.currentStory) {
+      body.innerHTML = `<div class="loader"><div class="spin"></div>生成剧情中...</div>`;
+      try {
+        const history = s.history || [];
+        const lastTurn = history.length > 0 ? history[history.length - 1] : null;
+        
+        let contextStr = "";
+        if (lastTurn) {
+          contextStr = `\n【上一轮剧情】\n${lastTurn.story}\n【玩家上一轮的选择】\n${lastTurn.choice}\n请紧接上述剧情和选择，继续发展。`;
+        }
 
-          const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
+        const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
 【当前时间线锚点】${WORLD.timeline[s.anchor]}
 【要求】
 1. 必须严格围绕当前锚点展开，不要跳跃时间。
 2. 剧情必须承接上一轮的结尾和玩家的选择，不能割裂。
-3. 生成不少于1000字的高质量剧情（包含环境、心理、动作描写）。
-4. 在剧情末尾，用【选项】列出 A. B. C. D. 四个选项，引导玩家行动。${contextStr}`);
+3. 生成不少于1000字的高质量剧情（包含环境、心理、动作描写；剧情内的交流对话内容用斜体英文，并附带换行的对应中文翻译，再换行继续剧情内容）。
+4. 在剧情末尾，用【选项】列出 A. B. C. D. 四个不同方向选项，引导玩家行动。
+5. 剧情中必须包含玩家与彼得的互动，并根据互动结果，在剧情末尾用【好感度变动: +X】或【好感度变动: -X】标出（X最大为5）。${contextStr}`);
 
-          const res=await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
+        const res=await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
+        
+        const parts=res.split('【选项】');
+        s.currentStory=(parts[0]||"").replace('【剧情】','').trim();
+        s.currentOptions=parts[1]||"";
+        
+        // 解析好感度变动
+        const affMatch = res.match(/【好感度变动:\s*([+-]\d+)】/);
+        if (affMatch) {
+          let delta = parseInt(affMatch[1]);
+          if (delta > 5) delta = 5;
+          if (delta < -5) delta = -5;
+          s.affinity += delta;
+          if (s.affinity < 0) s.affinity = 0;
+          if (s.affinity > 200) s.affinity = 200;
           
-          const parts=res.split('【选项】');
-          s.currentStory=(parts[0]||"").replace('【剧情】','').trim();
-          s.currentOptions=parts[1]||"";
-          store.setState(s);
-
-          // 【新功能】剧情生成后，根据情境触发 NPC 主动发短信
-          // 我们不阻塞界面渲染，让它在后台静默执行
-          triggerNpcMessage(s.currentStory);
+          // 同步更新彼得帕克的好感度
+          const contacts = store.getContacts();
+          const peter = contacts.find(x=>x.name === "彼得·帕克");
+          if (peter) {
+            peter.affinity = s.affinity;
+            store.setContacts(contacts);
+          }
           
-} catch(e){return body.innerHTML=`<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;}
-      }
-      const opts=(s.currentOptions||"").split('\n').filter(l=>/^[A-D][\.\、]/.test(l.trim()));
-      body.innerHTML=`<div style="padding:14px">
-        <div class="row" style="gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5">
-          <button class="btn ghost" style="flex:1" onclick="window.openSlots('save')">💾 存档</button>
-          <button class="btn ghost" style="flex:1" onclick="window.openSlots('load')">📂 读档</button>
-          <button class="btn ghost" style="flex:1" onclick="window.showMemory()">📜 回忆</button>
-        </div>
-        <div class="story-content">${esc(s.currentStory)}</div>
-        ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
-        <div class="card">
-          <input id="customAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
-          <button class="btn" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
-        </div>
-      </div>`;
-      const ci=body.querySelector("#customAct");
-      ci.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();window.selectOption(ci.value);}});
+          // 记录本次好感度变动（用于展示）
+          s.lastDelta = delta;
+          toast(`世界线好感度变动：${delta > 0 ? '+' : ''}${delta}`);
+        } else {
+          s.lastDelta = 0;
+        }
+        
+        store.setState(s);
+        triggerNpcMessage(s.currentStory);
+      } catch(e){return body.innerHTML=`<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;}
     }
-  },
+    
+    const opts=(s.currentOptions||"").split('\n').filter(l=>/^[A-D][\.\、]/.test(l.trim()));
+    const lastDelta = s.lastDelta || 0;
+    const deltaStr = lastDelta === 0 ? "0 (无变化)" : (lastDelta > 0 ? `+${lastDelta}` : lastDelta.toString());
 
-  instagram: {
-    title: "Instagram",
-    async render(body) {
-      body.innerHTML=`<div class="loader"><div class="spin"></div>生成动态与图片...</div>`;
+    body.innerHTML=`<div style="padding:14px">
+      <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:bold;color:#e62429;font-size:16px">彼得好感度: ${s.affinity}/200</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">上一轮选项变动: ${deltaStr}</div>
+        </div>
+        <div style="font-size:24px">${s.affinity >= 151 ? '❤️' : s.affinity >= 101 ? '💖' : s.affinity >= 51 ? '💛' : '💙'}</div>
+      </div>
+      <div class="row" style="gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5">
+        <button class="btn ghost" style="flex:1" onclick="window.openSlots('save')">💾 存档</button>
+        <button class="btn ghost" style="flex:1" onclick="window.openSlots('load')">📂 读档</button>
+        <button class="btn ghost" style="flex:1" onclick="window.showMemory()">📜 回忆</button>
+      </div>
+      <div class="story-content">${esc(s.currentStory)}</div>
+      ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
+      <div class="card">
+        <input id="customAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
+        <button class="btn" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
+      </div>
+    </div>`;
+    const ci=body.querySelector("#customAct");
+    ci.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();window.selectOption(ci.value);}});
+  }
+},
+
+instagram: {
+  title: "Instagram",
+  replyToComment(postIdx, commentIdx) {
+    const text = prompt("回复该评论：");
+    if (text) window.addComment('instagram', postIdx, text, commentIdx);
+  },
+  async render(body) {
+    const posts = store.getPosts().instagram || [];
+    
+    body.innerHTML = `<div style="padding:14px">
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn ghost" id="igRefreshBtn" style="flex:1">🔄 刷新/重新生成</button>
+      </div>
+      ${posts && posts.length > 0 ? posts.map((p,i)=>`
+      <div class="tweet">
+        <div class="head">
+          <div style="width:36px;height:36px;border-radius:50%;background:#3a3a4d;display:flex;align-items:center;justify-content:center;font-weight:700">${esc((p.name||"?")[0])}</div>
+          <div><div class="name">${esc(p.name)}</div><div class="handle">${esc(p.handle || '@user')}</div></div>
+        </div>
+        < img src="${p.img}" style="width:100%;border-radius:12px;margin-bottom:8px;">
+        <div class="text">${esc(p.text)}</div>
+        <div class="foot"><span>♡ ${p.likes||0}</span></div>
+        
+        <div style="padding:6px 0">
+          ${(p.comments||[]).map((c, ci)=>`
+            <div class="comment" style="margin-bottom:6px">
+              <div onclick="apps.instagram.replyToComment(${i}, ${ci})" style="cursor:pointer">
+                <b>${esc(c.user)}:</b> ${esc(c.text)}
+              </div>
+              ${c.replies && c.replies.length > 0 ? `<div style="padding-left:16px;border-left:1px solid #444;margin-top:4px">
+                 ${c.replies.map(r=>`<div style="font-size:12px;margin-top:2px"><b>${esc(r.user)}:</b> ${esc(r.text)}</div>`).join("")}
+              </div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="row" style="margin-top:8px">
+          <input id="igc_${i}" placeholder="写评论..." style="flex:1;padding:6px 10px;border-radius:8px;border:none;background:#222;color:#fff">
+          <button onclick="window.addComment('instagram', ${i}, document.getElementById('igc_${i}').value)" style="background:var(--accent-2);color:#fff;border:none;padding:6px 14px;border-radius:8px">💬</button>
+        </div>
+      </div>`).join("") : '<div class="card">暂无帖子，点击上方刷新。</div>'}
+    </div>`;
+
+    body.querySelector("#igRefreshBtn").onclick = async () => {
+      body.innerHTML = `<div class="loader"><div class="spin"></div>生成动态与图片...</div>`;
       try {
-        const res=await callAI([{role:"user",content:"刷新"}],buildSystem("生成1条IG。格式：姓名 ||| @账号 ||| 英文生图Prompt ||| 文案 ||| 点赞"));
-        const [name,handle,imgPrompt,text,likes]=res.split('|||').map(s=>s.trim());
-        body.innerHTML=`<div class="loader"><div class="spin"></div>绘制中...</div>`;
-        let imgUrl=""; try{imgUrl=await generateImage(imgPrompt);}catch(e){imgUrl="https://via.placeholder.com/400x400/14141c/888?text=Error";}
-        body.innerHTML=`<div style="padding:14px"><div class="tweet">
-          <div class="head"><div style="width:36px;height:36px;border-radius:50%;background:#3a3a4d;display:flex;align-items:center;justify-content:center;font-weight:700">${esc((name||"?")[0])}</div>
-          <div><div class="name">${esc(name)}</div><div class="handle">${esc(handle)}</div></div></div>
-          <img src="${imgUrl.startsWith('http')?imgUrl:'data:image/png;base64,'+imgUrl}" style="width:100%;border-radius:12px;margin-bottom:8px;">
-          <div class="text">${esc(text)}</div>
-          <div class="foot"><span>♡ ${esc(likes)}</span></div>
-        </div><button class="btn ghost" onclick="openApp('instagram')" style="margin-top:8px">刷新</button></div>`;
-      } catch(e){body.innerHTML=`<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;}
-    }
-  },
+        const sysPrompt = buildSystem(`生成1条IG动态。
+【格式要求】
+姓名 ||| @账号 ||| 英文生图Prompt ||| 文案 ||| 点赞 ||| 评论者1:评论1 ;; 评论者2:评论2 ;; 评论者3:评论3
+不要输出任何解释。`);
+        const res = await callAI([{role:"user",content:"刷新"}], sysPrompt);
+        const [name, handle, imgPrompt, text, likes, commentsStr] = res.split('|||').map(s => s.trim());
+        
+        const comments = commentsStr ? commentsStr.split(';;').map(c => {
+          const [u,t] = c.split(':');
+          return { user: u ? u.trim() : "user", text: t ? t.trim() : c.trim(), replies: [] };
+        }) : [];
+        body.innerHTML = `<div class="loader"><div class="spin"></div>绘制中...</div>`;
+        
+        let imgUrl = "";
+        try {
+          imgUrl = await generateImage(imgPrompt);
+        } catch(e) {
+          imgUrl = "https://via.placeholder.com/400x400/14141c/888?text=Error";
+        }
+        
+        const all = store.getPosts();
+        all.instagram = [{name, handle, img: imgUrl, text, likes, comments: comments}];
+        store.setPosts(all);
+        this.render(body);
+      } catch(e) {
+        body.innerHTML = `<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;
+      }
+    };
+  }
+},
 
 facetime: {
     title: "FaceTime",
@@ -891,7 +1139,7 @@ ${storyContext.slice(0, 800)}
     if (!data.sender || !data.messages || !data.messages.length) return;
 
     // 如果联系人列表里没有这个角色，就不发了（防止AI瞎编）
-    if (!contacts.includes(data.sender)) return;
+    if (!contacts.find(c => c.name === data.sender)) return;
 
     const chats = store.getChats();
     const arr = chats[data.sender] || [];
