@@ -1,0 +1,828 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>蜘蛛侠世界模拟器</title>
+<style>
+:root{--bg:#0a0a0f;--panel:#14141c;--panel-2:#1d1d28;--accent:#e62429;--accent-2:#2d6bff;--text:#f2f3f7;--muted:#8a8a99;--line:#2a2a38;--safe-bottom:env(safe-area-inset-bottom, 20px);}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;background:#000;font-family:-apple-system,"SF Pro","PingFang SC",sans-serif;color:var(--text);overflow:hidden;}
+body{display:flex;align-items:center;justify-content:center;height:100vh;background:radial-gradient(circle at 50% 30%,#1a1a2a,#000 70%);}
+.device{position:relative;width:390px;height:844px;max-width:100vw;max-height:100vh;background:var(--bg);border-radius:44px;overflow:hidden;box-shadow:0 0 0 10px #111,0 0 60px rgba(230,36,41,.25);display:flex;flex-direction:column;}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:28px;background:#000;border-radius:0 0 18px 18px;z-index:50;}
+.statusbar{position:absolute;top:0;left:0;right:0;height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;z-index:40;color:#fff;font-weight:600;}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;padding-top:44px;}
+.screen.active{display:flex;}
+#desktop .wallpaper{position:absolute;inset:0;background:radial-gradient(circle at 50% 20%,rgba(230,36,41,.35),transparent 60%),radial-gradient(circle at 80% 80%,rgba(45,107,255,.25),transparent 55%),linear-gradient(160deg,#0d0d16,#1a1a28 50%,#08080f);}
+#desktop .app-grid{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:22px 14px;padding:70px 22px;align-content:start;}
+.app-icon{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;color:#fff;font-size:11px;cursor:pointer;}
+.app-icon:active{transform:scale(.9);}
+.app-icon span{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(145deg,#2a2a38,#16161f);box-shadow:0 6px 14px rgba(0,0,0,.4);}
+.app-icon label{color:#eee;text-shadow:0 1px 2px #000;}
+.app-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(20,20,28,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);min-height:48px;z-index:10;}
+.back-btn{background:none;border:none;color:var(--accent-2);font-size:30px;padding:0 6px;cursor:pointer;}
+.app-header h1{font-size:17px;margin:0;flex:1;text-align:center;font-weight:600;}
+.app-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;position:relative;}
+.app-body::-webkit-scrollbar{width:0;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;}
+.card h3{margin:0 0 12px;font-size:15px;color:#fff;}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.field label{font-size:12px;color:var(--muted);}
+.field input,.field select,.field textarea{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;width:100%;}
+.btn{background:var(--accent-2);border:none;color:#fff;padding:10px 16px;border-radius:12px;font-weight:600;cursor:pointer;width:100%;}
+.btn.ghost{background:var(--panel-2);border:1px solid var(--line);}
+.btn:disabled{opacity:.5;}
+.row{display:flex;gap:8px;align-items:center;}
+#chatThread{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;padding-bottom:100px;background-size:cover;background-position:center;}
+.bubble{max-width:80%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.bubble.me{align-self:flex-end;background:var(--accent-2);border-bottom-right-radius:4px;color:#fff;}
+.bubble.them{align-self:flex-start;background:var(--panel-2);border-bottom-left-radius:4px;color:#fff;}
+.composer{display:flex;gap:8px;padding:10px 14px;background:var(--panel);border-top:1px solid var(--line);position:absolute;bottom:0;left:0;right:0;padding-bottom:calc(15px + var(--safe-bottom));z-index:20;}
+.composer input{flex:1;background:var(--panel-2);border:none;border-radius:20px;padding:10px 14px;color:#fff;outline:none;font-size:14px;}
+.composer button{background:var(--accent-2);border:none;color:#fff;border-radius:20px;padding:0 16px;font-weight:600;cursor:pointer;}
+.tweet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;}
+.tweet .head{display:flex;gap:10px;align-items:center;margin-bottom:8px;}
+.tweet .name{font-weight:700;font-size:14px;}
+.tweet .handle{color:var(--muted);font-size:12px;}
+.tweet .text{font-size:14px;line-height:1.5;white-space:pre-wrap;margin-bottom:8px;}
+.tweet .foot{display:flex;gap:16px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:8px;}
+.comment{font-size:13px;line-height:1.4;padding:4px 0;}
+.comment b{color:#aaa;font-weight:normal;}
+.story-content{font-size:15px;line-height:1.7;white-space:pre-wrap;margin-bottom:20px;color:#e0e0e0;}
+.switch{position:relative;display:inline-block;width:44px;height:24px;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#333;transition:.4s;border-radius:24px;}
+.slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;}
+input:checked + .slider{background-color:var(--accent-2);}
+input:checked + .slider:before{transform:translateX(20px);}
+.toast{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.loader{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--muted);font-size:13px;gap:10px;}
+.spin{width:24px;height:24px;border:3px solid #333;border-top-color:var(--accent-2);border-radius:50%;animation:sp 1s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="device">
+  <div class="notch"></div>
+  <div class="statusbar"><span id="clock">9:41</span><span>100%</span></div>
+  <div id="desktop" class="screen active">
+    <div class="wallpaper"></div>
+    <div class="app-grid">
+      <button class="app-icon" data-app="messages"><span>💬</span><label>信息</label></button>
+      <button class="app-icon" data-app="instagram"><span>📸</span><label>Instagram</label></button>
+      <button class="app-icon" data-app="twitter"><span>𝕏</span><label>推特</label></button>
+      <button class="app-icon" data-app="facetime"><span>📹</span><label>FaceTime</label></button>
+      <button class="app-icon" data-app="worldline"><span>🌐</span><label>世界线</label></button>
+      <button class="app-icon" data-app="maps"><span>🗺️</span><label>地图</label></button>
+      <button class="app-icon" data-app="photos"><span>🖼️</span><label>照片</label></button>
+      <button class="app-icon" data-app="contacts"><span>👥</span><label>通讯录</label></button>
+      <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
+      <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
+    </div>
+  </div>
+  <div id="appView" class="screen">
+    <header class="app-header">
+      <button id="backBtn" class="back-btn">‹</button>
+      <h1 id="appTitle">应用</h1>
+      <button id="appSettingsBtn" style="background:none;border:none;color:var(--accent-2);font-size:14px;display:none;cursor:pointer;">设置</button>
+    </header>
+    <div id="appBody" class="app-body"></div>
+  </div>
+</div>
+
+<script>
+const WORLD = { name:"彼得·本杰明·帕克", timeline:["阶段一：初遇与日常","阶段二：华盛顿纪念碑事件","阶段三：斯塔克渡轮事件","阶段四：复联大厦决战","阶段五：泰坦星响指","阶段六：身份曝光"] };
+
+const store = {
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
+  set(k,v){localStorage.setItem(k,JSON.stringify(v));},
+  getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3"});},
+  setConfig(c){this.set("sv_config",c);},
+  getProfile(){return this.get("sv_profile",{name:"你",identity:"同学"});},
+  setProfile(p){this.set("sv_profile",p);},
+  getState(){return this.get("sv_state",{turn:1,affinity:0,anchor:0,currentStory:"",currentOptions:"",history:[]});},
+  setState(s){this.set("sv_state",s);},
+  getChats(){return this.get("sv_chats",{});},
+  setChats(c){this.set("sv_chats",c);},
+  getPosts(){return this.get("sv_posts",{twitter:[],instagram:[]});},
+  setPosts(p){this.set("sv_posts",p);},
+  getContacts(){return this.get("sv_contacts",["彼得·帕克","内德·利兹","MJ","梅婶"]);},
+  setContacts(c){this.set("sv_contacts",c);},
+  getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10});},
+  setChatConfig(c){this.set("sv_chat_cfg",c);}
+};
+
+async function callAI(messages, systemPrompt) {
+  const cfg = store.getConfig();
+  if (!cfg.enabled) throw new Error("AI 未启用");
+  if (!cfg.apiKey) throw new Error("请先填入 API Key");
+  const url = (cfg.baseUrl||"https://api.openai.com/v1").replace(/\/+$/,"") + "/chat/completions";
+  const res = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.apiKey},body:JSON.stringify({model:cfg.model,messages:[{role:"system",content:systemPrompt},...messages],temperature:0.85})});
+  if (!res.ok) throw new Error("API 报错: "+res.status);
+  return (await res.json()).choices[0].message.content.trim();
+}
+
+async function fetchModels(baseUrl, apiKey) {
+  const url = baseUrl.replace(/\/+$/,"") + "/models";
+  const res = await fetch(url, {headers:{"Authorization":"Bearer "+apiKey}});
+  if (!res.ok) throw new Error("无法获取模型");
+  return (await res.json()).data.map(m=>m.id).sort();
+}
+
+async function generateImage(prompt) {
+  const cfg = store.getConfig();
+  const key = cfg.imgApiKey || cfg.apiKey;
+  const url = (cfg.imgBaseUrl||"https://api.openai.com/v1").replace(/\/+$/,"") + "/images/generations";
+  const res = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:cfg.imgModel||"dall-e-3",prompt:prompt,n:1,size:"1024x1024"})});
+  if (!res.ok) throw new Error("生图失败: "+res.status);
+  const data = await res.json();
+  return data.data[0].url || data.data[0].b64_json;
+}
+
+function buildSystem(extra) {
+  const p = store.getProfile();
+  const s = store.getState();
+  return `你是蜘蛛侠世界模拟器的DM。彼得·帕克16岁，性格话痨、善良、有责任感。玩家：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn}/30 回合，好感度 ${s.affinity}/200。剧情节点：${WORLD.timeline[s.anchor]}。文风：电影镜头感，严禁AI句式。${extra}`;
+}
+
+const $ = s => document.querySelector(s);
+const esc = str => String(str||"").replace(/[&<>"']/g, c=>({'&':"&amp;",'<':"&lt;",'>':"&gt;",'"':"&quot;","'":'&#39;'}[c]));
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.classList.add("show"),10);setTimeout(()=>{t.classList.remove("show");setTimeout(()=>t.remove(),300);},2000);}
+setInterval(()=>{const d=new Date();$("#clock").textContent=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");},10000);
+
+let currentApp = null;
+
+window.selectOption = (optText) => {
+  if (!optText||!optText.trim()) return toast("请输入内容");
+  const s = store.getState();
+  if (!s.currentStory) return;
+  s.history = s.history||[];
+  s.history.push({story:s.currentStory,choice:optText});
+  s.currentStory=""; s.currentOptions=""; s.turn+=1;
+  if(s.turn>=5)s.anchor=1; if(s.turn>=10)s.anchor=2; if(s.turn>=15)s.anchor=3; if(s.turn>=20)s.anchor=4; if(s.turn>=25)s.anchor=5;
+  store.setState(s); openApp('worldline');
+};
+
+window.addComment = async (platform, postIndex, text) => {
+  if (!text||!text.trim()) return toast("请输入评论");
+  const all = store.getPosts();
+  const list = all[platform]||[];
+  const p = list[postIndex];
+  if (!p) return;
+  p.comments = p.comments||[];
+  p.comments.push({user:"我",text:text.trim()});
+  all[platform] = list;
+  store.setPosts(all);
+  openApp(platform);
+  try {
+    const sys = buildSystem(`用户刚在"${p.text}"下评论了"${text.trim()}"。生成1到3条随机NPC追评，符合网友语气。格式：网友名 ||| 评论内容。每行一条。`);
+    const res = await callAI([{role:"user",content:"生成追评"}], sys);
+    const newAll = store.getPosts();
+    const newList = newAll[platform]||[];
+    const np = newList[postIndex];
+    if (!np) return;
+    res.split('\n').filter(l=>l.includes('|||')).slice(0,3).forEach(l=>{
+      const [u,t] = l.split('|||').map(x=>x.trim());
+      if (u&&t) np.comments.push({user:u,text:t});
+    });
+    newAll[platform] = newList;
+    store.setPosts(newAll);
+    openApp(platform);
+  } catch(e) { toast(e.message); }
+};
+
+const apps = {
+  settings: {
+    title: "设置",
+    render(body) {
+      const cfg = store.getConfig();
+      const p = store.getProfile();
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card"><h3>我的角色设定</h3>
+          <div class="field"><label>姓名</label><input id="p_name" value="${esc(p.name)}"></div>
+          <div class="field"><label>身份</label><input id="p_identity" value="${esc(p.identity)}"></div>
+          <button class="btn" id="saveP">保存人设</button>
+        </div>
+        <div class="card"><h3>文本 AI 接入</h3>
+          <div class="row" style="justify-content:space-between;margin-bottom:12px"><label>启用</label><label class="switch"><input type="checkbox" id="c_enabled" ${cfg.enabled?'checked':''}><span class="slider"></span></label></div>
+          <div class="field"><label>预设</label><select id="c_provider">
+            <option value="openai" ${cfg.provider==='openai'?'selected':''}>OpenAI</option>
+            <option value="google" ${cfg.provider==='google'?'selected':''}>Google</option>
+            <option value="deepseek" ${cfg.provider==='deepseek'?'selected':''}>DeepSeek</option>
+            <option value="custom" ${cfg.provider==='custom'?'selected':''}>自定义</option>
+          </select></div>
+          <div class="field"><label>API Key</label><input id="c_key" type="password" value="${esc(cfg.apiKey)}"></div>
+          <div class="field"><label>Base URL</label><input id="c_url" value="${esc(cfg.baseUrl)}"></div>
+          <div class="field"><label>模型</label>
+            <div class="row"><input id="c_model" value="${esc(cfg.model)}" style="flex:1"><button class="btn ghost" id="fetchModel" style="width:auto;padding:0 12px">拉取</button></div>
+          </div>
+          <button class="btn" id="saveC">保存配置</button>
+        </div>
+        <div class="card"><h3>生图 AI 接入</h3>
+          <div class="field"><label>生图 Key（留空同上）</label><input id="i_key" type="password" value="${esc(cfg.imgApiKey)}"></div>
+          <div class="field"><label>生图 URL</label><input id="i_url" value="${esc(cfg.imgBaseUrl)}"></div>
+          <div class="field"><label>生图模型</label>
+            <div class="row"><input id="i_model" value="${esc(cfg.imgModel)}" style="flex:1"><button class="btn ghost" id="fetchImgModel" style="width:auto;padding:0 12px">拉取</button></div>
+          </div>
+          <button class="btn" id="saveI">保存生图配置</button>
+        </div>
+      </div>`;
+      const sel = body.querySelector("#c_provider");
+      sel.onchange = () => {
+        if(sel.value==="openai"){body.querySelector("#c_url").value="https://api.openai.com/v1";body.querySelector("#c_model").value="gpt-4o-mini";}
+        if(sel.value==="google"){body.querySelector("#c_url").value="https://generativelanguage.googleapis.com/v1beta/openai";body.querySelector("#c_model").value="gemini-1.5-flash";}
+        if(sel.value==="deepseek"){body.querySelector("#c_url").value="https://api.deepseek.com/v1";body.querySelector("#c_model").value="deepseek-chat";}
+      };
+      body.querySelector("#fetchModel").onclick = async (e) => {
+        e.target.textContent="...";
+        try {
+          const m = await fetchModels(body.querySelector("#c_url").value, body.querySelector("#c_key").value);
+          if(!m.length) return toast("无模型");
+          body.querySelector("#c_model").outerHTML = `<select id="c_model" style="flex:1">${m.map(x=>`<option value="${x}">${x}</option>`).join('')}</select>`;
+          toast("拉取成功");
+        } catch(err){toast(err.message);}
+        e.target.textContent="拉取";
+      };
+      body.querySelector("#fetchImgModel").onclick = async (e) => {
+        e.target.textContent="...";
+        try {
+          const url = body.querySelector("#i_url").value||body.querySelector("#c_url").value;
+          const key = body.querySelector("#i_key").value||body.querySelector("#c_key").value;
+          const m = await fetchModels(url, key);
+          if(!m.length) return toast("无模型");
+          body.querySelector("#i_model").outerHTML = `<select id="i_model" style="flex:1">${m.map(x=>`<option value="${x}">${x}</option>`).join('')}</select>`;
+          toast("拉取成功");
+        } catch(err){toast(err.message);}
+        e.target.textContent="拉取";
+      };
+      body.querySelector("#saveP").onclick = () => { store.setProfile({name:body.querySelector("#p_name").value,identity:body.querySelector("#p_identity").value}); toast("已保存"); };
+      body.querySelector("#saveC").onclick = () => { store.setConfig({...cfg,enabled:body.querySelector("#c_enabled").checked,provider:sel.value,apiKey:body.querySelector("#c_key").value,baseUrl:body.querySelector("#c_url").value,model:body.querySelector("#c_model").value}); toast("已保存"); };
+      body.querySelector("#saveI").onclick = () => { store.setConfig({...cfg,imgApiKey:body.querySelector("#i_key").value,imgBaseUrl:body.querySelector("#i_url").value,imgModel:body.querySelector("#i_model").value}); toast("已保存"); };
+    }
+  },
+
+messages: {
+  title: "信息", hasSettings: true, view: "list", currentUser: "", lastUserText: "", quoteData: null,
+  renderSettings(body) {
+    const cfg = store.getChatConfig();
+    body.innerHTML = `<div style="padding:14px"><div class="card"><h3>聊天设置</h3><div class="field"><label>背景图 URL</label><input id="c_bg" value="${esc(cfg.bg)}"></div><div class="field"><label>上下文条数</label><input id="c_ctx" type="number" value="${cfg.maxContext}"></div><button class="btn" id="save">保存</button><button class="btn ghost" id="back" style="margin-top:10px">返回</button></div></div>`;
+    body.querySelector("#save").onclick = () => { store.setChatConfig({bg:body.querySelector("#c_bg").value, maxContext:parseInt(body.querySelector("#c_ctx").value)||10}); openApp('messages'); };
+    body.querySelector("#back").onclick = () => openApp('messages');
+  },
+  async render(body) {
+    body.innerHTML = "";
+    const self = this;
+    const sb = $("#appSettingsBtn");
+    sb.style.display = "flex";
+    sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+    sb.querySelector("#setBtn").onclick = () => self.renderSettings(body);
+    sb.querySelector("#retryBtn").onclick = () => {
+      if (self.view === "chat" && self.lastUserText) self.sendMessage(body, self.lastUserText, true);
+      else toast("请先发送消息后再重试");
+    };
+    if (self.view === "list") {
+      const contacts = store.getContacts();
+      body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn">➕ 添加联系人</button><button class="btn ghost" id="groupBtn" style="margin-top:8px">👥 发起群聊</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contacts.map(c=>`<div class="chat-row" data-user="${esc(c)}" style="padding:12px;border-bottom:1px solid #333;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>${esc(c)}</span><span style="color:var(--muted)">›</span></div>`).join("")}</div></div>`;
+      body.querySelectorAll(".chat-row").forEach(el=>{ el.onclick = () => { self.currentUser=el.dataset.user; self.view="chat"; self.render(body); }; });
+      body.querySelector("#addContactBtn").onclick = async () => {
+        const ans = prompt("添加联系人：\n\n可选：1 彼得·帕克  2 内德·利兹  3 MJ  4 梅婶\n或直接输入自定义名字，或输入「随机」让AI生成");
+        if (!ans) return;
+        let name = ans.trim();
+        if(name==="1") name="彼得·帕克"; else if(name==="2") name="内德·利兹"; else if(name==="3") name="MJ"; else if(name==="4") name="梅婶";
+        else if(name==="随机") {
+          try { const res = await callAI([{role:"user",content:"生成一个"}], buildSystem("为蜘蛛侠世界生成一个随机NPC姓名，只输出名字")); name = res.replace(/[。\n]/g,"").trim().slice(0,12); }
+          catch(e) { return toast("生成失败："+e.message); }
+        }
+        if(!name) return;
+        const list=store.getContacts();
+        if(list.includes(name)) return toast("已存在");
+        list.push(name); store.setContacts(list); self.render(body); toast("已添加："+name);
+      };
+      body.querySelector("#groupBtn").onclick = () => {
+        const names=prompt("群聊成员（逗号分隔，例如：彼得·帕克,内德·利兹）");
+        if(!names) return;
+        self.currentUser="群聊-"+names; self.view="chat"; self.render(body);
+      };
+      return;
+    }
+    const chats=store.getChats(), msgs=chats[self.currentUser]||[], cfg=store.getChatConfig();
+    
+    let chatHtml = `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''}">`;
+    chatHtml += msgs.map((m, idx)=>`<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">${m.quote ? `<div style="font-size:11px;color:#aaa;border-left:2px solid #666;padding-left:6px;margin-bottom:4px;opacity:0.8">引用: ${esc(m.quote)}</div>` : ""}${esc(m.content)}</div>`).join("");
+    chatHtml += `</div>`;
+    chatHtml += `<div id="quotePreview" style="display:none;padding:8px 14px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12px;color:var(--muted);"><div style="display:flex;justify-content:space-between;align-items:center;"><span id="quoteText"></span><span id="cancelQuote" style="cursor:pointer;color:var(--accent)">✕</span></div></div>`;
+    chatHtml += `<div class="composer"><input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}..."><button id="sendBtn">发送</button></div>`;
+    
+    body.innerHTML = chatHtml;
+    
+    const thread=body.querySelector("#chatThread");
+    thread.scrollTop=thread.scrollHeight;
+    thread.querySelectorAll(".bubble").forEach(el => {
+      let pressTimer;
+      const showMenu = (e) => {
+        e.preventDefault();
+        const idx = parseInt(el.dataset.idx);
+        const msg = msgs[idx];
+        if (!msg) return;
+        const menu = document.createElement("div");
+        menu.style.cssText = "position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);background:#222;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:120px;text-align:center;";
+        menu.innerHTML = `<div style="padding:8px;cursor:pointer;border-bottom:1px solid #444" onclick="navigator.clipboard.writeText('${esc(msg.content).replace(/'/g, "\\'")}');this.parentNode.remove();toast('已复制')">📋 复制</div>
+        <div style="padding:8px;cursor:pointer;border-bottom:1px solid #444" onclick="document.getElementById('quotePreview').style.display='block';document.getElementById('quoteText').textContent='引用: ${esc(msg.content).replace(/'/g, "\\'")}';apps.messages.quoteData=${JSON.stringify(msg.content)};this.parentNode.remove();">💬 引用</div>
+        <div style="padding:8px;cursor:pointer;color:#e62429" onclick="if(confirm('删除这条消息？')){const arr=store.getChats()['${esc(self.currentUser)}']||[];arr.splice(${idx},1);const c=store.getChats();c['${esc(self.currentUser)}']=arr;store.setChats(c);apps.messages.render(document.getElementById('appBody'));}this.parentNode.remove();">🗑️ 删除</div>`;
+        document.body.appendChild(menu);
+        setTimeout(() => { document.body.addEventListener('click', function closeMenu(e) { if (!menu.contains(e.target)) { menu.remove(); document.body.removeEventListener('click', closeMenu); } }); }, 100);
+      };
+      el.addEventListener("touchstart", (e) => { pressTimer = setTimeout(() => showMenu(e), 600); }, {passive: true});
+      el.addEventListener("touchend", () => clearTimeout(pressTimer));
+      el.addEventListener("touchmove", () => clearTimeout(pressTimer));
+      el.addEventListener("contextmenu", showMenu);
+    });
+    body.querySelector("#cancelQuote").onclick = () => { body.querySelector("#quotePreview").style.display = "none"; self.quoteData = null; };
+    body.querySelector("#sendBtn").onclick = () => {
+      const text = body.querySelector("#msgInput").value.trim();
+      if(!text) return;
+      body.querySelector("#msgInput").value = "";
+      self.sendMessage(body, text, false);
+    };
+    body.querySelector("#msgInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();body.querySelector("#sendBtn").click();}});
+  },
+  async sendMessage(body, text, isRetry) {
+    const self = this;
+    const thread = body.querySelector("#chatThread");
+    const chatsNow = store.getChats();
+    const arr = chatsNow[self.currentUser] || [];
+    const quoteContent = self.quoteData;
+    self.quoteData = null;
+    body.querySelector("#quotePreview").style.display = "none";
+    if (!isRetry) {
+      self.lastUserText = text;
+      arr.push({role:"me", content:text, quote: quoteContent});
+      chatsNow[self.currentUser] = arr;
+      store.setChats(chatsNow);
+      self.render(body);
+    } else {
+      const lastAiIdx = arr.map(m=>m.role).lastIndexOf("them");
+      if(lastAiIdx !== -1) {
+        arr.splice(lastAiIdx, 1);
+        chatsNow[self.currentUser] = arr;
+        store.setChats(chatsNow);
+        self.render(body);
+      }
+    }
+    const currentThread = body.querySelector("#chatThread");
+    currentThread.innerHTML += `<div class="bubble them" id="loading" style="color:#999">...</div>`;
+    currentThread.scrollTop = currentThread.scrollHeight;
+    try {
+      const recent = arr.slice(-store.getChatConfig().maxContext * 2);
+      let quoteInstruction = "";
+      if (quoteContent) quoteInstruction = `\n【特别注意】玩家引用了你之前发的消息："${quoteContent}"，请在回复中自然地回应这句引用。`;
+      const sysPrompt = buildSystem(`你正在扮演「${self.currentUser}」和玩家发短信。\n【要求】\n1. 像真人一样口语化，不要长篇大论。\n2. 结合上下文情绪。\n3. 情绪激动、紧张或想补充时，拆分成多条短消息发送。\n4. 严格输出 JSON 数组格式，例如：["第一条", "第二条"]，不要任何其他文字。${quoteInstruction}`);
+      const replyRaw = await callAI(recent.map(m=>({role:m.role==="me"?"user":"assistant",content:m.content})), sysPrompt);
+      let replyList = [];
+      const match = replyRaw.match(/\[[\s\S]*\]/);
+      if (match) {
+        try { replyList = JSON.parse(match[0]); } catch(e) { replyList = match[0].replace(/[\[\]"]/g, '').split(/\\n|\n/).filter(Boolean); }
+      } else {
+        replyList = replyRaw.split(/\n/).filter(Boolean);
+      }
+      if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
+      const load = body.querySelector("#loading"); if(load) load.remove();
+      for (let i = 0; i < replyList.length; i++) {
+        const msgText = replyList[i].trim();
+        if (!msgText) continue;
+        arr.push({role:"them", content:msgText});
+        chatsNow[self.currentUser] = arr; store.setChats(chatsNow);
+        currentThread.innerHTML += `<div class="bubble them">${esc(msgText)}</div>`;
+        currentThread.scrollTop = currentThread.scrollHeight;
+        if (i < replyList.length - 1) {
+          await new Promise(r => setTimeout(r, 800));
+          currentThread.innerHTML += `<div class="bubble them typing" id="typing" style="color:#999">正在输入...</div>`;
+          currentThread.scrollTop = currentThread.scrollHeight;
+          await new Promise(r => setTimeout(r, 500));
+          const t = body.querySelector("#typing"); if(t) t.remove();
+        }
+      }
+    } catch(e) {
+      const load = body.querySelector("#loading"); 
+      if(load) load.textContent = "失败: " + e.message; 
+    }
+  },
+  onBack() {
+    if(this.view==="chat"){
+      this.view="list"; this.currentUser="";
+      $("#appTitle").textContent="信息";
+      apps.messages.render($("#appBody"));
+      return true;
+    }
+    return false;
+  }
+},
+
+  twitter: {
+    title: "推特",
+    async render(body) {
+      body.innerHTML = "";
+      const posts = store.getPosts().twitter||[];
+      body.innerHTML = `<div style="padding:14px">
+        <div class="row" style="gap:8px;margin-bottom:12px">
+          <button class="btn" id="newPostBtn" style="flex:1">✍️ 发帖</button>
+          <button class="btn ghost" id="refreshBtn" style="flex:1">🔄 刷新</button>
+        </div>
+        <div id="feed">
+          ${posts.map((p,i)=>`
+          <div class="tweet">
+            <div style="font-weight:bold">${esc(p.name)}</div>
+            <div style="margin:6px 0">${esc(p.text)}</div>
+            <div style="color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding-bottom:6px">♡ ${p.likes||0} · 💬 ${(p.comments||[]).length}</div>
+            <div style="padding:6px 0">${(p.comments||[]).map(c=>`<div class="comment"><b>${esc(c.user)}:</b> ${esc(c.text)}</div>`).join("")}</div>
+            <div class="row" style="margin-top:8px">
+              <input id="twc_${i}" placeholder="写评论..." style="flex:1;padding:6px 10px;border-radius:8px;border:none;background:#222;color:#fff">
+              <button class="cmtBtn" data-idx="${i}" style="background:var(--accent-2);color:#fff;border:none;padding:6px 14px;border-radius:8px">💬</button>
+            </div>
+          </div>`).join("")}
+        </div>
+      </div>`;
+      body.querySelectorAll(".cmtBtn").forEach(btn=>{
+        btn.onclick=()=>{const i=parseInt(btn.dataset.idx);window.addComment("twitter",i,body.querySelector("#twc_"+i).value);};
+      });
+      posts.forEach((_,i)=>{
+        const inp=body.querySelector("#twc_"+i);
+        if(inp) inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();window.addComment("twitter",i,inp.value);}});
+      });
+      body.querySelector("#newPostBtn").onclick=()=>this.newPost();
+      body.querySelector("#refreshBtn").onclick=()=>this.refresh();
+    },
+async newPost() {
+      const text=prompt("发布推文内容："); if(!text) return;
+      const all=store.getPosts(); all.twitter=all.twitter||[];
+      
+      // 发帖人是你自己，使用你的英文名（如果没设英文名，自动转拼音或使用 "Me"）
+      let myName = store.getProfile().name || "Me";
+      // 简单判断是否包含中文，如果有，就用 "Me"
+      if (/[\u4e00-\u9fa5]/.test(myName)) {
+        myName = "Me";
+      }
+      
+      const newPost={name:myName, text, comments:[], likes:Math.floor(Math.random()*200)+20};
+      all.twitter.unshift(newPost); store.setPosts(all); this.render($("#appBody"));
+      
+      try {
+        const sysPrompt = buildSystem(`用户刚发了推特："${text}"。
+【要求】
+1. 生成至少 5 条随机网友评论。
+2. 评论者名字必须全部为纯英文字符串（如 "tony_stark_fan", "queens_gossip"）。
+3. 评论内容要像真实网友，有生活感、网感，可以对推文进行吐槽、赞同或玩梗。
+【格式要求】
+严格按以下格式输出，每行一条评论，用 ||| 分隔：
+评论者英文名 ||| 评论内容
+不要输出任何解释。`);
+        
+        const res=await callAI([{role:"user",content:"生成评论"}], sysPrompt);
+        
+        res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
+          const [u,t]=l.split('|||').map(x=>x.trim());
+          if(u&&t) newPost.comments.push({user:u,text:t});
+        });
+        
+        const all2=store.getPosts();
+        all2.twitter=all2.twitter.map(p=>(p.text===text&&p.name===newPost.name)?newPost:p);
+        store.setPosts(all2); this.render($("#appBody"));
+      } catch(e){toast(e.message);}
+    },
+async refresh() {
+      try {
+        const sysPrompt = buildSystem(`生成 3 条推特动态。
+【发帖人要求】
+1. 必须包含彼得·帕克（Peter Parker）以及随机生成的2个不同NPC（如同学、路人、反派下属等）。
+2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"）。
+3. 禁止出现中文名。
+【内容与评论要求】
+1. 每条推文必须附带 3 到 5 条网友评论。
+2. 评论者名字也必须全部为纯英文字符串（如 "spidey_fan", "NYC_local"）。
+3. 评论内容要像真实网友，有生活感、网感，可以互怼或玩梗。
+【格式要求】
+严格按以下格式输出，每行一条推文，用 ||| 分隔：
+发帖人英文名 ||| @账号 ||| 正文 ||| 点赞数 ||| 评论者英文名1:评论内容1 ;; 评论者英文名2:评论内容2 ;; 评论者英文名3:评论内容3
+不要输出任何解释。`);
+
+        const res=await callAI([{role:"user",content:"刷新"}], sysPrompt);
+        const all=store.getPosts(); all.twitter=all.twitter||[];
+        
+        res.split('\n').filter(l=>l.includes('|||')).forEach(line=>{
+          const [name,handle,text,likes,commentsStr]=line.split('|||').map(s=>s.trim());
+          if(!name) return;
+          
+          // 解析多条评论
+          const comments = commentsStr ? commentsStr.split(';;').map(c => {
+            const [u,t] = c.split(':');
+            return { user: u ? u.trim() : "user", text: t ? t.trim() : c.trim() };
+          }) : [];
+          
+          all.twitter.unshift({name,handle,text,likes:parseInt(likes)||0,comments});
+        });
+        
+        store.setPosts(all); this.render($("#appBody"));
+      } catch(e){toast(e.message);}
+    }
+  },
+
+worldline: {
+    title: "世界线",
+    async render(body) {
+      const s=store.getState();
+      if(!s.currentStory){
+        body.innerHTML=`<div class="loader"><div class="spin"></div>生成1000字剧情中...</div>`;
+        try {
+          const history = s.history || [];
+          const lastTurn = history.length > 0 ? history[history.length - 1] : null;
+          
+          let contextStr = "";
+          if (lastTurn) {
+            contextStr = `\n【上一轮剧情】\n${lastTurn.story}\n【玩家上一轮的选择】\n${lastTurn.choice}\n请紧接上述剧情和选择，继续发展。`;
+          }
+
+          const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
+【当前时间线锚点】${WORLD.timeline[s.anchor]}
+【要求】
+1. 必须严格围绕当前锚点展开，不要跳跃时间。
+2. 剧情必须承接上一轮的结尾和玩家的选择，不能割裂。
+3. 生成不少于1000字的高质量剧情（包含环境、心理、动作描写）。
+4. 在剧情末尾，用【选项】列出 A. B. C. D. 四个选项，引导玩家行动。${contextStr}`);
+
+          const res=await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
+          
+          const parts=res.split('【选项】');
+          s.currentStory=(parts[0]||"").replace('【剧情】','').trim();
+          s.currentOptions=parts[1]||"";
+          store.setState(s);
+
+          // 【新功能】剧情生成后，根据情境触发 NPC 主动发短信
+          // 我们不阻塞界面渲染，让它在后台静默执行
+          triggerNpcMessage(s.currentStory);
+          
+} catch(e){return body.innerHTML=`<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;}
+      }
+      const opts=(s.currentOptions||"").split('\n').filter(l=>/^[A-D][\.\、]/.test(l.trim()));
+      body.innerHTML=`<div style="padding:14px">
+        <div class="row" style="gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5">
+          <button class="btn ghost" style="flex:1" onclick="window.openSlots('save')">💾 存档</button>
+          <button class="btn ghost" style="flex:1" onclick="window.openSlots('load')">📂 读档</button>
+          <button class="btn ghost" style="flex:1" onclick="window.showMemory()">📜 回忆</button>
+        </div>
+        <div class="story-content">${esc(s.currentStory)}</div>
+        ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
+        <div class="card">
+          <input id="customAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
+          <button class="btn" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
+        </div>
+      </div>`;
+      const ci=body.querySelector("#customAct");
+      ci.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();window.selectOption(ci.value);}});
+    }
+  },
+
+  instagram: {
+    title: "Instagram",
+    async render(body) {
+      body.innerHTML=`<div class="loader"><div class="spin"></div>生成动态与图片...</div>`;
+      try {
+        const res=await callAI([{role:"user",content:"刷新"}],buildSystem("生成1条IG。格式：姓名 ||| @账号 ||| 英文生图Prompt ||| 文案 ||| 点赞"));
+        const [name,handle,imgPrompt,text,likes]=res.split('|||').map(s=>s.trim());
+        body.innerHTML=`<div class="loader"><div class="spin"></div>绘制中...</div>`;
+        let imgUrl=""; try{imgUrl=await generateImage(imgPrompt);}catch(e){imgUrl="https://via.placeholder.com/400x400/14141c/888?text=Error";}
+        body.innerHTML=`<div style="padding:14px"><div class="tweet">
+          <div class="head"><div style="width:36px;height:36px;border-radius:50%;background:#3a3a4d;display:flex;align-items:center;justify-content:center;font-weight:700">${esc((name||"?")[0])}</div>
+          <div><div class="name">${esc(name)}</div><div class="handle">${esc(handle)}</div></div></div>
+          <img src="${imgUrl.startsWith('http')?imgUrl:'data:image/png;base64,'+imgUrl}" style="width:100%;border-radius:12px;margin-bottom:8px;">
+          <div class="text">${esc(text)}</div>
+          <div class="foot"><span>♡ ${esc(likes)}</span></div>
+        </div><button class="btn ghost" onclick="openApp('instagram')" style="margin-top:8px">刷新</button></div>`;
+      } catch(e){body.innerHTML=`<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;}
+    }
+  },
+
+  photos: {
+    title: "照片",
+    render(body){
+      body.innerHTML=`<div style="padding:14px"><div class="card"><p style="color:var(--muted)">照片功能与 Instagram 共用生图接口，请前往 Instagram 生成图片。</p></div></div>`;
+    }
+  },
+
+facetime: {
+    title: "FaceTime",
+    render(body){ body.innerHTML=`<div class="loader">开发中</div>`; }
+  },
+
+  maps: {
+    title: "地图",
+    async render(body) {
+      const s=store.getState();
+      body.innerHTML=`<div style="padding:14px">
+        <div class="card"><h3>皇后区行动地图</h3>
+<p style="font-size:12px;color:var(--muted);margin:0 0 10px">根据当前剧情由 AI 生成地图。</p>
+          <button class="btn" id="genMap">🖼️ 生成地图</button>
+        </div>
+        <div id="mapArea"></div>
+      </div>`;
+      const area=body.querySelector("#mapArea");
+      const renderMap=async()=>{
+        area.innerHTML=`<div class="loader"><div class="spin"></div>生成地图中...</div>`;
+        try {
+          const ctx=s.currentStory?s.currentStory.slice(0,300):"彼得与玩家的日常起点";
+          const prompt=`Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. Scene: ${ctx}. No text labels.`;
+          const url=await generateImage(prompt);
+          const src=url.startsWith("http")?url:"data:image/png;base64,"+url;
+          area.innerHTML=`<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);">`;
+        } catch(e){area.innerHTML=`<div class="card">生成失败：${esc(e.message)}</div>`;}
+      };
+      body.querySelector("#genMap").onclick=renderMap;
+      renderMap();
+    }
+  },
+
+  contacts: {
+    title: "通讯录",
+    render(body){
+      body.innerHTML=`<div style="padding:14px"><div class="card">
+        <h3>通讯录</h3>
+        <p style="font-size:13px;color:var(--muted);line-height:1.6">联系人与群聊功能已整合到 <b>信息</b> App 内。</p>
+        <button class="btn" style="margin-top:12px" onclick="openApp('messages')">前往信息</button>
+      </div></div>`;
+    }
+  },
+
+  music: {
+    title: "音乐",
+    render(body) {
+      body.innerHTML=`<div style="padding:14px">
+        <div class="card"><h3>本地音乐</h3>
+          <input type="file" id="audioFile" accept="audio/*,.mp3,.m4a,.wav,.ogg,.mp4" style="width:100%;color:#fff;margin-bottom:10px">
+          <audio id="audioPlayer" controls style="width:100%"></audio>
+        </div>
+        <div class="card"><h3>🎵 已上传</h3><div id="trackList" style="color:var(--muted);font-size:13px">暂无</div></div>
+      </div>`;
+      const player=body.querySelector("#audioPlayer");
+      const input=body.querySelector("#audioFile");
+      const trackList=body.querySelector("#trackList");
+      const tracks=JSON.parse(localStorage.getItem("sv_music")||"[]");
+      const renderList=()=>{
+        if(!tracks.length){trackList.textContent="暂无";return;}
+        trackList.innerHTML=tracks.map((t,i)=>`<div style="padding:8px;border-bottom:1px solid #333;cursor:pointer" data-idx="${i}">▶ ${esc(t.name)}</div>`).join("");
+        trackList.querySelectorAll("div[data-idx]").forEach(el=>{
+          el.onclick=()=>{player.src=tracks[parseInt(el.dataset.idx)].url;player.play();};
+        });
+      };
+      renderList();
+      input.onchange=(e)=>{
+        const file=e.target.files[0]; if(!file) return;
+        const reader=new FileReader();
+        reader.onload=()=>{
+          const url=reader.result;
+          tracks.push({name:file.name,url});
+          localStorage.setItem("sv_music",JSON.stringify(tracks));
+          renderList(); player.src=url; player.play().catch(()=>{});
+          toast("已添加："+file.name);
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+  }
+};
+
+function openApp(id) {
+  if(!apps[id]) return toast("开发中");
+  currentApp=id;
+  $("#desktop").classList.remove("active");
+  $("#appView").classList.add("active");
+  $("#appTitle").textContent=apps[id].title;
+  const sb=$("#appSettingsBtn");
+  if(apps[id].hasSettings){sb.style.display="block";sb.onclick=()=>apps[id].renderSettings($("#appBody"));}
+  else{sb.style.display="none";}
+  apps[id].render($("#appBody"));
+}
+
+$("#backBtn").onclick=()=>{
+  if(currentApp&&apps[currentApp].onBack&&apps[currentApp].onBack()) return;
+  $("#appView").classList.remove("active");
+  $("#desktop").classList.add("active");
+};
+
+document.querySelectorAll(".app-icon").forEach(btn=>{btn.onclick=()=>openApp(btn.dataset.app);});
+
+// ===== 10 格存档系统 =====
+const SLOT_COUNT=10;
+function getSlots(){
+  let slots=JSON.parse(localStorage.getItem("sv_slots")||"null");
+  if(!Array.isArray(slots)||slots.length!==SLOT_COUNT){slots=Array(SLOT_COUNT).fill(null);localStorage.setItem("sv_slots",JSON.stringify(slots));}
+  return slots;
+}
+function setSlots(slots){localStorage.setItem("sv_slots",JSON.stringify(slots));}
+
+window.openSlots=(mode)=>{
+  const slots=getSlots();
+  const div=document.createElement("div");
+  div.style.cssText="position:absolute;inset:0;background:#000e;z-index:300;padding:20px;overflow-y:auto;";
+  div.innerHTML=`<h2 style="color:#fff;margin-top:0">${mode==="save"?"💾 存档（共10格）":"📂 读档（共10格）"}</h2><div id="slotList"></div><button class="btn ghost" style="margin-top:12px" onclick="this.parentNode.remove()">关闭</button>`;
+  const list=div.querySelector("#slotList");
+  slots.forEach((snap,i)=>{
+    const filled=!!snap;
+    const label=filled?`${snap.label}<br><span style="color:#888;font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`:"（空白档）";
+    const row=document.createElement("div");
+    row.style.cssText="background:#14141c;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+    row.innerHTML=`<div style="flex:1;color:${filled?'#fff':'#666'};font-size:13px"><b>存档位 ${i+1}</b><br>${label}</div><button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled?(mode==="save"?"覆盖":"读取"):(mode==="save"?"保存":"不可用")}</button>`;
+    list.appendChild(row);
+  });
+  list.addEventListener("click",(e)=>{
+    const btn=e.target.closest("button[data-idx]"); if(!btn) return;
+    const idx=parseInt(btn.dataset.idx);
+    if(mode==="save"){
+      if(slots[idx]&&!confirm(`存档位 ${idx+1} 已有内容，是否覆盖？`)) return;
+      storeSlot(idx); div.remove();
+    } else {
+      if(!slots[idx]) return toast("该存档位为空");
+      loadSlot(idx); div.remove();
+    }
+  });
+  document.querySelector(".device").appendChild(div);
+};
+
+function storeSlot(idx){
+  const slots=getSlots(), s=store.getState();
+  slots[idx]={timestamp:Date.now(),label:`第 ${s.turn} 回合 · 好感度 ${s.affinity}`,state:JSON.parse(JSON.stringify(s)),profile:store.getProfile()};
+  setSlots(slots); toast(`已存档到位置 ${idx+1}`);
+}
+
+function loadSlot(idx){
+  const slots=getSlots(), a=slots[idx]; if(!a) return;
+  if(!confirm("⚠️ 重要警告\n\n读档会把世界线回退到存档时刻。\n读档后会清空所有聊天记录、推特、Instagram 内容。\n\n确认继续？")) return;
+  store.setState(a.state); store.setProfile(a.profile);
+  store.setChats({}); store.setPosts({twitter:[],instagram:[]});
+  toast(`已读取存档位 ${idx+1}，其他 APP 内容已重置`);
+  openApp("worldline");
+}
+
+window.showMemory=()=>{
+  const s=store.getState(), history=s.history||[];
+  const div=document.createElement("div");
+  div.style.cssText="position:absolute;inset:0;background:#000e;z-index:300;padding:20px;overflow-y:auto;color:#ddd;font-size:14px;line-height:1.7;";
+  if(!history.length){
+    div.innerHTML=`<h2 style="color:#fff">📜 回忆</h2><p style="color:#888">还没有任何历史剧情记录。</p><button class="btn" style="margin-top:20px" onclick="this.parentNode.remove()">关闭</button>`;
+  } else {
+    div.innerHTML=`<h2 style="color:#fff;position:sticky;top:0;background:#000e;padding-bottom:10px">📜 回忆 · 共 ${history.length} 段</h2>
+      ${history.map((h,i)=>`<div style="background:#14141c;padding:12px;border-radius:12px;margin-bottom:10px;border-left:3px solid var(--accent-2)">
+        <div style="color:var(--muted);font-size:12px;margin-bottom:6px">— 第 ${i+1} 段 —</div>
+        <div style="white-space:pre-wrap;color:#ccc;max-height:200px;overflow-y:auto">${esc(h.story)}</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #333;color:var(--accent)">➤ 你的选择：${esc(h.choice)}</div>
+      </div>`).join("")}
+      <button class="btn" style="margin-top:10px" onclick="this.parentNode.remove()">关闭</button>`;
+  }
+  document.querySelector(".device").appendChild(div);
+};
+// ===== 剧情联动：NPC 主动发短信 =====
+async function triggerNpcMessage(storyContext) {
+  const contacts = store.getContacts();
+  if (!contacts || contacts.length === 0) return;
+
+  try {
+    // 让 AI 分析剧情，决定谁发短信，发什么
+    const sysPrompt = buildSystem(`根据以下刚刚发生的剧情，判断哪个角色（从联系人列表中选择：${contacts.join(", ")}）会主动给玩家发短信。
+【当前剧情】
+${storyContext.slice(0, 800)}
+
+【要求】
+1. 选出一个最合理的角色。
+2. 生成 1 到 3 条短信内容，口语化，符合角色性格和当前情境。
+3. 严格输出 JSON 格式，不要任何解释：{"sender": "联系人名字", "messages": ["短信1", "短信2"]}`);
+
+    const res = await callAI([{role:"user", content:"分析并生成短信"}], sysPrompt);
+    const match = res.match(/\{[\s\S]*\}/);
+    if (!match) return;
+
+    const data = JSON.parse(match[0]);
+    if (!data.sender || !data.messages || !data.messages.length) return;
+
+    // 如果联系人列表里没有这个角色，就不发了（防止AI瞎编）
+    if (!contacts.includes(data.sender)) return;
+
+    const chats = store.getChats();
+    const arr = chats[data.sender] || [];
+
+    // 将消息加入记录
+    data.messages.forEach(msg => {
+      arr.push({ role: "them", content: msg });
+    });
+    chats[data.sender] = arr;
+    store.setChats(chats);
+
+    // 右上角弹窗提示
+    toast(`📩 ${data.sender} 给你发来了新消息`);
+    
+  } catch(e) {
+    console.warn("NPC主动发信失败:", e);
+  }
+}
+</script>
+</body>
+</html>
