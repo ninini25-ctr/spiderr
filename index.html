@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -507,7 +507,6 @@ ${quoteInstruction}`);
 let replyList = [];
 let heartText = "";
 try {
-  // 移除可能存在的 markdown 标记，并提取第一个大括号块
   let cleanRaw = replyRaw.replace(/```json/g, '').replace(/```/g, '').trim();
   const startIdx = cleanRaw.indexOf('{');
   const endIdx = cleanRaw.lastIndexOf('}');
@@ -515,20 +514,17 @@ try {
     const jsonStr = cleanRaw.substring(startIdx, endIdx + 1);
     const data = JSON.parse(jsonStr);
     replyList = data.replies || [replyRaw];
-    heartText = data.heart || ""; // 成功提取心声
+    heartText = data.heart || ""; 
   } else {
     replyList = replyRaw.split('\n').filter(Boolean);
   }
 } catch (err) {
-  console.warn("解析 JSON 失败:", err);
   replyList = replyRaw.split('\n').filter(Boolean);
 }
-// 如果 JSON 解析后 heart 还是空的，尝试用正则强抓
 if (!heartText) {
   const heartMatch = replyRaw.match(/"heart"\s*:\s*"([^"]+)"/);
   if (heartMatch) heartText = heartMatch[1];
 }
-// 保底处理
 if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
 
       if (heartText) {
@@ -619,56 +615,55 @@ async render(body) {
       body.querySelector("#refreshBtn").onclick=()=>this.refresh();
     },
 async newPost() {
-      const text=prompt("发布推文内容："); if(!text) return;
-      const all=store.getPosts(); all.twitter=all.twitter||[];
+      const text = prompt("发布推文内容："); 
+      if(!text) return;
+      const all = store.getPosts(); 
+      all.twitter = all.twitter || [];
       
-      // 发帖人是你自己，使用你的英文名（如果没设英文名，自动转拼音或使用 "Me"）
       let myName = store.getProfile().name || "Me";
-      // 简单判断是否包含中文，如果有，就用 "Me"
-      if (/[\u4e00-\u9fa5]/.test(myName)) {
-        myName = "Me";
-      }
+      if (/[\u4e00-\u9fa5]/.test(myName)) myName = "Me";
       
-      const newPost={name:myName, text, comments:[], likes:Math.floor(Math.random()*200)+20};
-      all.twitter.unshift(newPost); store.setPosts(all); this.render($("#appBody"));
+      const newPost = { name: myName, text, comments: [], likes: Math.floor(Math.random()*200)+20 };
+      all.twitter.unshift(newPost); 
+      store.setPosts(all); 
+      this.render($("#appBody"));
       
       try {
         const sysPrompt = buildSystem(`用户刚发了推特："${text}"。
 【要求】
-1. 生成至少 5 条随机网友评论。
-2. 评论者名字必须全部为纯英文字符串（如 "tony_stark_fan", "queens_gossip"）。
-3. 评论内容要像真实网友，有生活感、网感，可以对推文进行吐槽、赞同、反对或玩梗。
+1. 生成 5 到 8 条来自世界各地网友的评论（包括纽约本地人、其他国家的网友）。
+2. 评论格式必须包含国家/语言标识。
+3. 评论可以带点各国网络热梗。
 【格式要求】
-严格按以下格式输出，每行一条评论，用 ||| 分隔：
-评论者英文名 ||| 评论内容
+姓名(国家/语言) ||| 评论内容
 不要输出任何解释。`);
         
-        const res=await callAI([{role:"user",content:"生成评论"}], sysPrompt);
+        const res = await callAI([{role:"user",content:"生成评论"}], sysPrompt);
         
-res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
-  const [u,t]=l.split('|||').map(x=>x.trim());
-  if(u&&t) newPost.comments.push({user:u,text:t, replies: []});
-});
+        res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
+          const [u,t] = l.split('|||').map(x=>x.trim());
+          if(u&&t) newPost.comments.push({user:u, text:t, replies: []});
+        });
         
-        const all2=store.getPosts();
-        all2.twitter=all2.twitter.map(p=>(p.text===text&&p.name===newPost.name)?newPost:p);
+        const all2 = store.getPosts();
+        all2.twitter = all2.twitter.map(p=>(p.text===text&&p.name===newPost.name)?newPost:p);
         store.setPosts(all2); this.render($("#appBody"));
-      } catch(e){toast(e.message);}
+      } catch(e){ toast(e.message); }
     },
 async refresh() {
       try {
-        const sysPrompt = buildSystem(`生成 3 条推特动态。
+        const sysPrompt = buildSystem(`生成 6 条推特动态。
 【发帖人要求】
-1. 必须包含彼得·帕克（Peter Parker）以及随机生成的2个不同NPC（如同学、路人、反派下属等）。
-2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"）。
+1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等），包含生活帖、情感吐槽、以及关于蜘蛛侠的粉丝讨论帖（如“蜘蛛侠又出现在哪了”、“蜘蛛侠是好宝宝”、“想和蜘蛛侠合照”，但不能照搬上述例子，要适当扩充）。
+2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"），并在字符串后加上“(翻译自XX语)”。
 3. 禁止出现中文名。
 【内容与评论要求】
 1. 每条推文必须附带 5 到 15 条网友评论。
 2. 评论者名字也必须全部为纯英文字符串（如 "spidey_fan", "NYC_local"）。
-3. 评论内容要像真实网友，有生活感、网感，可以互怼或玩梗。
+3. 评论内容要像真实的该地区网友，有生活感、网感，可以互怼或玩梗。
 【格式要求】
 严格按以下格式输出，每行一条推文，用 ||| 分隔：
-发帖人英文名 ||| @账号 ||| 正文 ||| 点赞数 ||| 评论者英文名1:评论内容1 ;; 评论者英文名2:评论内容2 ;; 评论者英文名3:评论内容3
+发帖人英文名 ||| @账号（翻译自XX语） ||| 正文 ||| 点赞数 ||| 评论者英文名1:评论内容1 ;; 评论者英文名2:评论内容2 ;; 评论者英文名3:评论内容3
 不要输出任何解释。`);
 
         const res=await callAI([{role:"user",content:"刷新"}], sysPrompt);
@@ -680,9 +675,9 @@ async refresh() {
           
           // 解析多条评论
           const comments = commentsStr ? commentsStr.split(';;').map(c => {
-            const [u,t] = c.split(':');
-            return { user: u ? u.trim() : "user", text: t ? t.trim() : c.trim() };
-          }) : [];
+  const [u,t] = c.split(':');
+  return { user: u ? u.trim() : "user", text: t ? t.trim() : c.trim(), replies: [] };
+}) : [];
           
           all.twitter.unshift({name,handle,text,likes:parseInt(likes)||0,comments});
         });
@@ -796,7 +791,7 @@ instagram: {
     
     body.innerHTML = `<div style="padding:14px">
       <div class="row" style="margin-bottom:12px">
-        <button class="btn ghost" id="igRefreshBtn" style="flex:1">🔄 刷新/重新生成</button>
+        <button class="btn ghost" id="igRefreshBtn" style="flex:1">✍️ 发布新帖子</button>
       </div>
       ${posts && posts.length > 0 ? posts.map((p,i)=>`
       <div class="tweet">
@@ -804,7 +799,7 @@ instagram: {
           <div style="width:36px;height:36px;border-radius:50%;background:#3a3a4d;display:flex;align-items:center;justify-content:center;font-weight:700">${esc((p.name||"?")[0])}</div>
           <div><div class="name">${esc(p.name)}</div><div class="handle">${esc(p.handle || '@user')}</div></div>
         </div>
-        < img src="${p.img}" style="width:100%;border-radius:12px;margin-bottom:8px;">
+       ${p.img === "ERROR" ? `<div style="width:100%; aspect-ratio:1; background:#222; border-radius:12px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; padding:20px; text-align:center; color:var(--muted); font-size:14px; line-height:1.6;">[图片生成失败]<br>${esc(p.text)}</div>` : `<img src="${p.img}" style="width:100%;border-radius:12px;margin-bottom:8px;">`}
         <div class="text">${esc(p.text)}</div>
         <div class="foot"><span>♡ ${p.likes||0}</span></div>
         
@@ -828,31 +823,37 @@ instagram: {
       </div>`).join("") : '<div class="card">暂无帖子，点击上方刷新。</div>'}
     </div>`;
 
-    body.querySelector("#igRefreshBtn").onclick = async () => {
-      body.innerHTML = `<div class="loader"><div class="spin"></div>生成动态与图片...</div>`;
+body.querySelector("#igRefreshBtn").onclick = async () => {
+      const text = prompt("发布 Instagram 动态（输入文案）："); 
+      if(!text) return;
+      
+      body.innerHTML = `<div class="loader"><div class="spin"></div>生成配图与评论...</div>`;
       try {
-        const sysPrompt = buildSystem(`生成1条IG动态。
+        const sysPrompt = buildSystem(`用户发了 IG 动态，文案："${text}"。
+【要求】
+1. 根据文案生成 1 个英文生图 Prompt。
+2. 生成 3-5 条来自世界各地网友的评论（带国家/语言标识，可带热梗）。
 【格式要求】
-姓名 ||| @账号 ||| 英文生图Prompt ||| 文案 ||| 点赞 ||| 评论者1:评论1 ;; 评论者2:评论2 ;; 评论者3:评论3
-不要输出任何解释。`);
-        const res = await callAI([{role:"user",content:"刷新"}], sysPrompt);
-        const [name, handle, imgPrompt, text, likes, commentsStr] = res.split('|||').map(s => s.trim());
+英文生图Prompt ||| 评论者1(国家):评论1 ;; 评论者2(国家):评论2 ;; 评论者3(国家):评论3`);
+        const res = await callAI([{role:"user",content:"生成"}], sysPrompt);
+        const [imgPrompt, commentsStr] = res.split('|||').map(s => s.trim());
         
         const comments = commentsStr ? commentsStr.split(';;').map(c => {
           const [u,t] = c.split(':');
           return { user: u ? u.trim() : "user", text: t ? t.trim() : c.trim(), replies: [] };
         }) : [];
+
         body.innerHTML = `<div class="loader"><div class="spin"></div>绘制中...</div>`;
         
         let imgUrl = "";
         try {
           imgUrl = await generateImage(imgPrompt);
         } catch(e) {
-          imgUrl = "https://via.placeholder.com/400x400/14141c/888?text=Error";
+          imgUrl = "ERROR"; // 生图失败时的标记
         }
         
         const all = store.getPosts();
-        all.instagram = [{name, handle, img: imgUrl, text, likes, comments: comments}];
+        all.instagram = [{name: store.getProfile().name || "Me", handle: "@me", img: imgUrl, text: text, likes: Math.floor(Math.random()*200)+20, comments: comments}];
         store.setPosts(all);
         this.render(body);
       } catch(e) {
