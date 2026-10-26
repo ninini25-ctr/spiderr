@@ -126,7 +126,109 @@ input:checked + .slider:before{transform:translateX(20px);}
 <div id="msgBanner" class="banner"></div>
 <audio id="globalMusicPlayer" controls style="display:none;"></audio>
 <script>
-const WORLD = { name:"彼得·本杰明·帕克", timeline:["阶段一：初遇与日常","阶段二：华盛顿纪念碑事件","阶段三：斯塔克渡轮事件","阶段四：复联大厦决战","阶段五：泰坦星响指","阶段六：身份曝光"] };
+// ===== MCU 蜘蛛侠时间线（硬锚定）=====
+const WORLD = {
+  name: "彼得·本杰明·帕克",
+  // 开局时间：2015（彼得刚被蜘蛛咬伤，还没遇到托尼）
+  startYear: 2015,
+  startMonth: 9,   // 高三开学（美式学期）
+  startDay: 1,
+
+  // 6 个阶段，每阶段含：年份、月份区间、允许出现的角色/反派、禁止出现的内容
+ timeline: [
+  {
+    key: "phase1",
+    name: "阶段一：初遇与日常",
+    year: 2015,
+    monthRange: [9, 12],
+    summary: "彼得刚被蜘蛛咬伤约 1 个月，自制连帽衫战衣，在皇后区做'友好邻居蜘蛛侠'。托尼·斯塔克还没有联系他。",
+    allowed: ["彼得·帕克", "内德·利兹", "米歇尔·琼斯(MJ)", "梅·帕克", "Flash Thompson", "Liz Allan(仅同学关系)"],
+    forbidden: ["托尼·斯塔克", "秃鹫", "神秘客", "灭霸", "复仇者联盟", "复联大厦", "钢铁蜘蛛战衣", "Karen AI", "多元宇宙"],
+    events: ["校园日常", "抓小偷", "华盛顿十项全能队训练", "便利店", "地铁通勤"],
+    forcedEvent: null,
+    mutableOutcomes: [],
+    mjRelation: "普通同学/朋友，MJ 对彼得只是有点好奇，暗恋萌芽禁止"
+  },
+  {
+    key: "phase2",
+    name: "阶段二：华盛顿纪念碑事件",
+    year: 2016,
+    monthRange: [1, 6],
+    summary: "彼得随学术十项全能队去华盛顿纪念碑，战衣内的追踪器误触发。彼得还是个'不成熟的高一/高二学生'。",
+    allowed: ["彼得·帕克", "内德·利兹", "米歇尔·琼斯(MJ)", "梅·帕克", "Flash Thompson", "Liz Allan"],
+    forbidden: ["托尼·斯塔克真人出场", "秃鹫登场(只能影子)", "灭霸", "钢铁蜘蛛战衣", "复联"],
+    events: ["华盛顿纪念碑", "酒店", "十项全能比赛", "战衣故障"],
+    forcedEvent: "华盛顿纪念碑事件必然发生：彼得的战衣追踪器会误触发，他必须在无战衣的情况下救出被困的同学。",
+    mutableOutcomes: ["谁被困在电梯里（内德 / MJ / Liz / 都可以变）", "彼得救援成功与否（是否受伤）", "被救同学对彼得的态度变化"],
+    mjRelation: "朋友，可以一起参加十项全能队，一起旅行，但没有恋爱暗示"
+  },
+  {
+    key: "phase3",
+    name: "阶段三：斯塔克渡轮事件",
+    year: 2016,
+    monthRange: [7, 10],
+    summary: "彼得追查秃鹫团伙，斯塔克渡轮裂开，托尼没收战衣。返校节舞会。",
+    allowed: ["彼得·帕克", "内德·利兹", "米歇尔·琼斯(MJ)", "梅·帕克", "托尼·斯塔克(远程/末尾出场)", "秃鹫(阿德里安·图姆斯)", "Liz Allan", "哈皮·霍根"],
+    forbidden: ["灭霸", "神秘客", "钢铁蜘蛛战衣", "复联大厦决战"],
+    events: ["渡轮", "ATM 抢劫", "邮车抢劫", "返校节舞会", "科尼岛海滩", "秃鹫的飞机坠毁"],
+    forcedEvent: "斯塔克渡轮事件必然发生：秃鹫的武器交易导致渡轮裂开，托尼会到场救场并没收战衣，'没有战衣你什么都不是'会成为彼得的核心创伤。",
+    mutableOutcomes: ["彼得是否成功救下渡轮上的乘客", "彼得和秃鹫初次交锋谁受伤", "是否提前得知秃鹫身份（Liz 的父亲）", "彼得在返校节上的表现"],
+    mjRelation: "朋友，MJ 在彼得的社交圈但还没动心，可以一起找线索"
+  },
+  {
+    key: "phase4",
+    name: "阶段四：复联大厦决战",
+    year: 2018,
+    monthRange: [4, 5],
+    summary: "灭霸的黑暗教团入侵纽约。彼得正式穿上钢铁蜘蛛战衣，在纽约街头与灭霸的下属作战，后被钢铁侠带去泰坦星。",
+    allowed: ["彼得·帕克", "托尼·斯塔克", "奇异博士", "王", "布鲁斯·班纳", "灭霸的下属(乌木喉、黑矮星)"],
+    forbidden: ["神秘客", "秃鹫", "元素众", "多元宇宙"],
+    events: ["纽约街头战斗", "外星飞船", "奇异博士被绑架", "钢铁蜘蛛战衣登场"],
+    forcedEvent: "灭霸的黑暗教团入侵纽约必然发生：乌木喉和黑矮星会来绑架奇异博士，彼得必须去救，然后随钢铁侠去泰坦星。",
+    mutableOutcomes: ["彼得是否成功阻止奇异博士被绑架（大概率失败，可延缓）", "彼得在街头的战斗表现（是否受伤）", "彼得与托尼的对话态度（顺从/反抗/恐惧）"],
+    mjRelation: "无（彼得不在纽约）"
+  },
+  {
+    key: "phase5",
+    name: "阶段五：泰坦星响指",
+    year: 2018,
+    monthRange: [5, 6],
+    summary: "彼得随钢铁侠、奇异博士去泰坦星，与灭霸正面对抗，最后被响指化为灰烬。",
+    allowed: ["彼得·帕克", "托尼·斯塔克", "奇异博士", "星爵", "毁灭者", "星云", "灭霸"],
+    forbidden: ["MJ", "内德", "梅婶", "秃鹫", "神秘客"],
+    events: ["泰坦星", "泰坦星废墟", "灭霸战斗", "化为灰烬"],
+    forcedEvent: "响指必然发生：灭霸会打响指，宇宙一半生命会化为灰烬，彼得在托尼怀里消失。这是不可改变的事件本身。",
+    mutableOutcomes: [
+      "彼得是否化为灰烬（可保留，但也可以让玩家选择让彼得提前被奇异博士传送回地球——需要写得有代价）",
+      "谁在彼得面前化灰（可以是星爵 / 毁灭者 / 奇异博士 / 托尼 / 无）",
+      "彼得临死前的最后一句话（台词可自由发挥）",
+      "彼得是否知道 MJ 也被化灰（可留悬念）"
+    ],
+    mjRelation: "无（彼得不在纽约）"
+  },
+  {
+    key: "phase6",
+    name: "阶段六：身份曝光与多元宇宙",
+    year: 2024,
+    monthRange: [6, 12],
+    summary: "5 年后复活，参加托尼葬礼。夏天游学欧洲遇到神秘客。年底身份完全暴露，奇异博士施法让所有人忘记彼得。",
+    allowed: ["彼得·帕克", "内德·利兹", "米歇尔·琼斯(MJ)", "梅·帕克", "神秘客", "奇异博士", "托比版蜘蛛侠", "加菲版蜘蛛侠", "绿魔", "章鱼博士", "电光人", "沙人", "蜥蜴人", "夜魔侠"],
+    forbidden: ["秃鹫(已入狱)", "灭霸(已死)"],
+    events: ["欧洲游学", "威尼斯水怪", "布拉格火怪", "伦敦塔桥战斗", "身份暴露", "多元宇宙撕裂", "梅婶之死", "所有人遗忘彼得"],
+    forcedEvent: "身份暴露 + 梅婶之死 + 所有人遗忘彼得，这三件大事必然发生。多元宇宙反派（绿魔、章鱼博士等）必然会从其他宇宙穿越而来。",
+    mutableOutcomes: [
+      "梅婶是否死亡（可救，但有代价——比如彼得失去战衣 / MJ 失去记忆）",
+      "是否真的让所有人忘记彼得（可保留记忆，但代价是失去奇异博士的信任）",
+      "MJ 和内德是否也被遗忘",
+      "多元宇宙反派谁被治愈、谁被杀死、谁逃回原宇宙"
+    ],
+    mjRelation: "英雄远征里 MJ 才对彼得动心；英雄无归结尾所有人遗忘彼得。开始阶段依然是朋友"
+  }
+],
+
+  // MJ 全局关系锁定
+  mjPolicy: "MJ (米歇尔·琼斯) 与彼得·帕克是朋友/同学关系。禁止 ML 关系。禁止任何恋爱暗示、暗恋、脸红、保护欲等。可以参考普通高中同学间的相处——互怼、分享八卦、一起做作业，但不能有浪漫线。"
+};
 
 const store = {
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
@@ -135,7 +237,22 @@ const store = {
   setConfig(c){this.set("sv_config",c);},
   getProfile(){return this.get("sv_profile",{name:"你",identity:"同学"});},
   setProfile(p){this.set("sv_profile",p);},
-  getState(){return this.get("sv_state",{turn:1,affinity:0,anchor:0,currentStory:"",currentOptions:"",history:[]});},
+  getState(){
+  return this.get("sv_state", {
+    turn: 1,
+    affinity: 0,
+    anchor: 0,
+    // ===== 新增：剧情时间 =====
+    gameYear: WORLD.startYear,        // 2015
+    gameMonth: WORLD.startMonth,      // 9
+    gameDay: WORLD.startDay,          // 1
+    currentStory: "",
+    currentOptions: "",
+    history: [],
+    // ===== 新增：可变的结局变量 =====
+    outcomes: {}                       // 由 AI 在剧情里逐步填写，比如 {snapVictims: ["星爵"], auntMayAlive: false}
+  });
+},
   setState(s){this.set("sv_state",s);},
   getChats(){return this.get("sv_chats",{});},
   setChats(c){this.set("sv_chats",c);},
@@ -433,17 +550,44 @@ async function generateImage(prompt) {
 function buildSystem(extra) {
   const p = store.getProfile();
   const s = store.getState();
-  
+  const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+  const timeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+
   let worldbookPrompt = "";
   try {
     const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
     const activeBooks = books.filter(b => b.enabled);
     if (activeBooks.length > 0) {
-      worldbookPrompt = "\n\n【最高准则 · 世界书设定】" + activeBooks.map(b => `[${b.name}]\n${b.content}`).join("\n\n");
+      worldbookPrompt = "\n\n【世界书设定】" + activeBooks.map(b => `[${b.name}]\n${b.content}`).join("\n\n");
     }
   } catch(e) {}
 
-  return `你是蜘蛛侠世界模拟器的DM。初始时间为2016年，彼得·帕克15岁，性格话痨、善良、有责任感。玩家：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn}/30 回合，世界线好感度 ${s.affinity}/200。剧情节点：${WORLD.timeline[s.anchor]}。文风：电影镜头感，严禁AI句式。${worldbookPrompt}\n\n${extra}`;
+  const forcedStr = phase.forcedEvent
+    ? `\n【本阶段必然发生的大事件 · 不可改变】\n${phase.forcedEvent}\n【可改变的结局变量】\n- ${(phase.mutableOutcomes || []).join("\n- ")}\n⚠️ 注意：大事件本身必然发生，但"谁来承担后果""谁受伤谁活着""如何善后"可以被玩家的选择改变。`
+    : "";
+
+  return `你是蜘蛛侠世界模拟器的 DM。
+
+【游戏内当前日期 · 死锚】${timeStr}
+【当前阶段】${phase.name}（${phase.year}年${phase.monthRange[0]}-${phase.monthRange[1]}月）
+
+【阶段说明】${phase.summary}
+${forcedStr}
+
+【允许出现的角色】${phase.allowed.join("、")}
+【禁止出现的角色】${phase.forbidden.join("、")}
+【禁止跳跃到未来阶段】除非当前日期已经到达下一阶段。
+
+【MJ 关系 · 铁律】
+${WORLD.mjPolicy}
+目前彼得与 MJ 的关系：${phase.mjRelation}
+
+【玩家】姓名：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn} 回合，世界线好感度 ${s.affinity}/200。
+
+【文风】电影镜头感，严禁 AI 句式。多动作、细节、感官描写。彼得对白用斜体英文原文紧跟中文翻译，格式：*"Hey, you okay?"*（嘿，你还好吗？）。剧情里如果出现具体日期，必须写成 ${timeStr} 附近的日期，不要写成其他年份。
+${worldbookPrompt}
+
+${extra}`;
 }
 
 const $ = s => document.querySelector(s);
@@ -453,15 +597,93 @@ setInterval(()=>{const d=new Date();$("#clock").textContent=String(d.getHours())
 
 let currentApp = null;
 
+// ===== 首次开局提示 =====
+(function showStartupNotice() {
+  if (localStorage.getItem("sv_notice_shown_v2")) return;
+  localStorage.setItem("sv_notice_shown_v2", "1");
+
+  setTimeout(() => {
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:#000d;z-index:800;padding:24px;overflow-y:auto;color:#eee;font-size:14px;line-height:1.8;display:flex;flex-direction:column;justify-content:center;";
+    div.innerHTML = `
+      <div style="background:#14141c;border:1px solid var(--line);border-radius:16px;padding:20px;max-width:340px;margin:0 auto;">
+        <h2 style="color:#e62429;margin:0 0 12px;font-size:18px;">🕷️ 世界线锚定完成</h2>
+        <p style="margin:0 0 10px;">本模拟器从 <b style="color:#2d6bff;">2015 年 9 月 1 日</b> 开始。</p >
+        <p style="margin:0 0 10px;">此时彼得·帕克刚被蜘蛛咬伤约 1 个月，还在皇后区的中学读书，<b>尚未</b>遇到托尼·斯塔克，<b>尚未</b>成为复仇者。</p >
+        <p style="margin:0 0 10px;color:#8a8a99;font-size:12px;">时间线将严格锁定每个阶段的锚点，未来事件（如泰坦星、身份曝光）不会提前发生。反派（秃鹫、灭霸、神秘客等）会按剧本时间才登场。</p >
+        <hr style="border:none;border-top:1px dashed #333;margin:14px 0;">
+        <p style="margin:0 0 10px;">💡 <b>关于 MJ：</b>米歇尔·琼斯是彼得的朋友/同学，本模拟器中<b>不涉及任何恋爱关系</b>。</p >
+        <button class="btn" style="margin-top:10px;" onclick="this.closest('div').parentNode.remove()">开始游戏</button>
+      </div>
+    `;
+    document.querySelector(".device").appendChild(div);
+  }, 600);
+})();
+
+// ===== 时间推进工具 =====
+function addDays(year, month, day, add) {
+  const d = new Date(year, month - 1, day);
+  d.setDate(d.getDate() + add);
+  return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+}
+
+// 根据阶段区间和当前 turn 计算"是否该进入下一阶段"
+function shouldAdvancePhase(s) {
+  const phase = WORLD.timeline[s.anchor];
+  if (!phase) return false;
+  // 玩家每选择一次，剧情时间推进 1-7 天
+  const next = addDays(s.gameYear, s.gameMonth, s.gameDay, 3 + Math.floor(Math.random() * 5));
+  s.gameYear = next.year;
+  s.gameMonth = next.month;
+  s.gameDay = next.day;
+
+  // 判断是否超出当前阶段末月
+  const [m1, m2] = phase.monthRange;
+  if (s.gameYear === phase.year && s.gameMonth > m2) {
+    // 进入下一阶段（如果还有）
+    if (s.anchor < WORLD.timeline.length - 1) {
+      s.anchor += 1;
+      // 秒跳到下一阶段的起始时间
+      const np = WORLD.timeline[s.anchor];
+      s.gameYear = np.year;
+      s.gameMonth = np.monthRange[0];
+      s.gameDay = 1;
+      return true;
+    }
+  }
+  // 如果年份已经超过阶段末年份，也进入下一阶段
+  if (s.gameYear > phase.year) {
+    if (s.anchor < WORLD.timeline.length - 1) {
+      s.anchor += 1;
+      const np = WORLD.timeline[s.anchor];
+      s.gameYear = np.year;
+      s.gameMonth = np.monthRange[0];
+      s.gameDay = 1;
+      return true;
+    }
+  }
+  return false;
+}
+
 window.selectOption = (optText) => {
-  if (!optText||!optText.trim()) return toast("请输入内容");
+  if (!optText || !optText.trim()) return toast("请输入内容");
   const s = store.getState();
   if (!s.currentStory) return;
-  s.history = s.history||[];
-  s.history.push({story:s.currentStory,choice:optText});
-  s.currentStory=""; s.currentOptions=""; s.turn+=1;
-  if(s.turn>=5)s.anchor=1; if(s.turn>=10)s.anchor=2; if(s.turn>=15)s.anchor=3; if(s.turn>=20)s.anchor=4; if(s.turn>=25)s.anchor=5;
-  store.setState(s); openApp('worldline');
+  s.history = s.history || [];
+  s.history.push({ story: s.currentStory, choice: optText });
+  s.currentStory = ""; s.currentOptions = ""; s.turn += 1;
+
+  // ===== 剧情时间推进 =====
+  const advanced = shouldAdvancePhase(s);
+  if (advanced) {
+    const np = WORLD.timeline[s.anchor];
+    toast(`时间推进：进入「${np.name}」（${np.year}年${np.monthRange[0]}月）`);
+  } else {
+    toast(`时间推进：${s.gameYear}年${s.gameMonth}月${s.gameDay}日`);
+  }
+
+  store.setState(s);
+  openApp('worldline');
 };
 
 window.addComment = async (platform, postIndex, text, parentCommentIndex = null) => {
@@ -487,9 +709,11 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
   store.setPosts(all);
   openApp(platform);
   
-  try {
+ try {
+    const sNow = store.getState();
+    const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
     const contextStr = parentCommentIndex !== null ? `某网友的评论："${p.comments[parentCommentIndex].text}"` : `帖子内容："${p.text}"`;
- const sysPrompt = buildSystem(`用户刚在${platform}上评论了${contextStr}，内容是："${text.trim()}"。
+    const sysPrompt = buildSystem(`${dateHint}用户刚在${platform}上评论了${contextStr}，内容是："${text.trim()}"。
 【要求】
 1. 生成 1 到 3 条回复。
 2. 其中必须有 1 条是楼主（发帖人：${p.name}）的回复，另外的可以是随机网友。
@@ -778,8 +1002,12 @@ return;
       let quoteInstruction = "";
       if (quoteContent) quoteInstruction = `\n【特别注意】玩家引用了你之前发的消息："${quoteContent}"，请在回复中自然地回应这句引用。`;
       
+   const sSnap = store.getState();
+      const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
       const sysPrompt = buildSystem(`你正在扮演「${self.currentUser}」和玩家发短信。
+【当前游戏内日期】${nowStr}（所有回复必须符合这个时间点的情境，不要出现未来事物）
 【当前关系】${attitude}（好感度：${contact.affinity}/200）。严禁逾越当前关系（如非彼得，禁止恋爱向）。
+【MJ 铁律】${self.currentUser === "米歇尔·琼斯" ? "只能以朋友身份互动，禁止任何暧昧/恋爱语气。" : "正常。"}
 【要求】
 1. 像真人一样口语化，结合上下文情绪。
 2. 情绪激动、紧张或想补充时，拆分成多条短消息发送。
@@ -912,8 +1140,10 @@ async newPost() {
       store.setPosts(all); 
       this.render($("#appBody"));
       
-      try {
-const sysPrompt = buildSystem(`用户刚发了推特："${text}"。
+     try {
+        const sNow = store.getState();
+        const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有推文、评论必须符合这个时间点，不能出现未来事件。\n\n`;
+        const sysPrompt = buildSystem(`${dateHint}用户刚发了推特："${text}"。
 【要求】
 1. 生成 5 到 8 条来自世界各地网友的评论（包括纽约本地人、其他国家的网友）。
 2. 评论者名字后面可以带 (国家/语言) 标识（如 "Mike(NYC)"）。
@@ -950,7 +1180,9 @@ res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
     },
 async refresh() {
       try {
-          const sysPrompt = buildSystem(`生成 6 条推特动态。
+const sNow = store.getState();
+const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
+const sysPrompt = buildSystem(`${dateHint}生成 6 条推特动态。
 【发帖人要求】
 1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等），包含生活帖、情感吐槽、以及关于蜘蛛侠的粉丝讨论帖（如"蜘蛛侠又出现在哪了"、"蜘蛛侠是好宝宝"、"想和蜘蛛侠合照"，但不能照搬上述例子，要适当扩充）。
 2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"），并在字符串后加上"(翻译自XX语)"。
@@ -1036,21 +1268,56 @@ worldline: {
           contextStr = `\n【上一轮剧情】\n${lastTurn.story}\n【玩家上一轮的选择】\n${lastTurn.choice}\n请紧接上述剧情和选择，继续发展。`;
         }
 
+ const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+        const timeLabel = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+
         const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
-【当前时间线锚点】${WORLD.timeline[s.anchor]}
-【当前好感度】${s.affinity}/200（参考此数值决定彼得说话的语气与距离感：0-50普通、51-100朋友、101-150暧昧、151+深爱）
+
+【硬性时间锚点】${timeLabel}
+【当前阶段】${phase.name}
+
+【阶段说明】${phase.summary}
+
+【必须遵守的规则 · 违反即失败】
+1. 剧情发生的时间必须严格锁在 ${timeLabel} 前后（几天之内），禁止跨月、跨年。
+2. 禁止出现 forbidden 列表中的角色或事件（除非玩家已经推进到下一阶段）。
+3. 彼得与 MJ 的关系必须是朋友/同学，禁止任何恋爱暗示。
+4. 如果玩家选项引入未来角色/事件（如"我们去打灭霸"），必须用剧情内的合理方式拒绝。
+5. MJ 如果出场，只能作为同学/朋友互动。
+${phase.forcedEvent ? `
+6. 【大事件硬锚】${phase.forcedEvent}
+7. 【可变结局】允许玩家通过选项改变以下内容：
+${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
+   如果玩家在大事件中做出了"改变结局"的选择，请用剧情自然呈现改变后的结果，不要硬性拒绝。
+` : ""}
+
+【当前好感度】${s.affinity}/200（参考此数值决定彼得说话的语气与距离感：0-50普通、51-100朋友、101+依然只是朋友，禁止越界到暧昧/深爱）
+
 【文风要求 · 极其重要】
 1. 参考经典英美青春小说的叙事节奏与对白质感，多用细节、动作、感官描写，少用形容词堆砌。
-2. 严禁 AI 腔：禁止"他感到…"、"心中涌起…"、"不是…而是…"、"眼神中透露…"、"揉进骨血"等书面化表达。
+2. 严禁 AI 腔：禁止"他感到…"、"心中涌起…"、"不是…而是…"、"眼神中透露…"、"揉进骨血"、"不是他...不是她...真的是你"等书面化表达。
 3. 彼得对话用斜体英文原文，紧跟中文翻译，例如：*"Hey, you okay?"*（嘿，你还好吗？）
 4. 场景描写要贴近纽约皇后区的真实生活——地铁、老旧公寓、便利店、学校走廊。
-5. 剧情必须严格承接上一轮的结尾与玩家的选择，不能割裂。
+5. 剧情必须严格承接上一轮的结尾与玩家的选择。
 6. 生成不少于 1000 字的高质量剧情。
 7. 在剧情末尾，用【选项】列出 A. B. C. D. 四个不同方向选项。
-8. 在剧情末尾标注【好感度变动: +X】或【好感度变动: -X】，X 绝对值 ≤5，且必须与剧情实际互动强度相符。${contextStr}`);
+8. 在剧情末尾标注【好感度变动: +X】或【好感度变动: -X】，X 绝对值 ≤5。
+9. **如果本回合玩家选项导致某个可变结局发生变化，还必须在末尾追加一行**：
+   【结局更新: 变量名=新值】
+   例如：【结局更新: snapVictims=MJ,Ned】【结局更新: auntMayAlive=true】
+${contextStr}`);
 
         const res = await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
         const parts = res.split('【选项】');
+// ===== 解析【结局更新: xxx】=====
+const outcomeMatches = [...res.matchAll(/【结局更新:\s*(.+?)】/g)];
+if (outcomeMatches.length) {
+  s.outcomes = s.outcomes || {};
+  for (const m of outcomeMatches) {
+    const [k, v] = m[1].split("=").map(x => x.trim());
+    if (k && v !== undefined) s.outcomes[k] = v;
+  }
+}
         s.currentStory = (parts[0]||"").replace('【剧情】','').trim();
         s.currentOptions = parts[1] || "";
 
@@ -1084,15 +1351,21 @@ worldline: {
     const opts = (s.currentOptions||"").split('\n').filter(l=>/^[A-D][\.\、]/.test(l.trim()));
     const lastDelta = s.lastDelta || 0;
     const deltaStr = lastDelta === 0 ? "0 (无变化)" : (lastDelta > 0 ? `+${lastDelta}` : lastDelta.toString());
-
-    body.innerHTML = `<div style="padding:14px">
-      <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:bold;color:#e62429;font-size:16px">彼得好感度: ${s.affinity}/200</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">上一轮选项变动: ${deltaStr}</div>
-        </div>
-        <div style="font-size:24px">${s.affinity >= 151 ? '❤️' : s.affinity >= 101 ? '💖' : s.affinity >= 51 ? '💛' : '💙'}</div>
-      </div> <!-- 这里补全了缺失的闭合标签 -->
+const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+  body.innerHTML = `<div style="padding:14px">
+<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #2d6bff;">
+  <div style="font-size:11px;color:#8a8a99;margin-bottom:4px;">📍 当前游戏内日期</div>
+  <div style="font-weight:bold;color:#fff;font-size:14px;">${liveTimeStr}</div>
+  <div style="font-size:11px;color:#8a8a99;margin-top:4px;">${phase.name} · ${phase.summary.slice(0, 40)}...</div>
+</div>
+  <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-weight:bold;color:#e62429;font-size:16px">彼得好感度: ${s.affinity}/200</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">上一轮选项变动: ${deltaStr}</div>
+    </div>
+    <div style="font-size:24px">${s.affinity >= 151 ? '❤️' : s.affinity >= 101 ? '💖' : s.affinity >= 51 ? '💛' : '💙'}</div>
+  </div>
       <div class="row" style="gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5">
         <button class="btn ghost" style="flex:1" onclick="window.openSlots('save')">💾 存档</button>
         <button class="btn ghost" style="flex:1" onclick="window.openSlots('load')">📂 读档</button>
@@ -1209,7 +1482,9 @@ const comments = commentsStr.split(';;').map(c => {
         body.querySelector("#igRefreshBtn").onclick = async () => {
       body.innerHTML = `<div class="loader"><div class="spin"></div>生成 5 条新帖子中（含配图，请稍候）...</div>`;
       try {
-  const sysPrompt = buildSystem(`请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
+        const sNow = store.getState();
+        const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有 IG 帖子必须符合这个时间点。\n\n`;
+        const sysPrompt = buildSystem(`${dateHint}请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
 【要求】
 1. 每条发帖人都不同：可以是彼得·帕克(Peter Parker)、内德·利兹(Ned Leeds)、MJ(Michelle Jones)、Flash Thompson、随机NPC，名字必须英文。
 2. 每条文案符合 IG 风格，可包含 emoji、话题标签 #xxx。
@@ -1295,15 +1570,17 @@ facetime: {
         <div id="mapArea"></div>
       </div>`;
       const area=body.querySelector("#mapArea");
-      const renderMap=async()=>{
-        area.innerHTML=`<div class="loader"><div class="spin"></div>生成地图中...</div>`;
+    const renderMap = async () => {
+        area.innerHTML = `<div class="loader"><div class="spin"></div>生成地图中...</div>`;
         try {
-          const ctx=s.currentStory?s.currentStory.slice(0,300):"彼得与玩家的日常起点";
-          const prompt=`Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. Scene: ${ctx}. No text labels.`;
-          const url=await generateImage(prompt);
-          const src=url.startsWith("http")?url:"data:image/png;base64,"+url;
-          area.innerHTML=`<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);">`;
-        } catch(e){area.innerHTML=`<div class="card">生成失败：${esc(e.message)}</div>`;}
+          const sNow = store.getState();
+          const ctx = s.currentStory ? s.currentStory.slice(0, 300) : "彼得与玩家的日常起点";
+          // 👇 把日期拼进去
+          const prompt = `Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. Scene: ${ctx}. Year: ${sNow.gameYear}. No text labels.`;
+          const url = await generateImage(prompt);
+          const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
+          area.innerHTML = `<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);">`;
+        } catch(e) { area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`; }
       };
       body.querySelector("#genMap").onclick=renderMap;
       renderMap();
@@ -1664,13 +1941,14 @@ window.showMemory=()=>{
   document.querySelector(".device").appendChild(div);
 };
 // ===== 剧情联动：NPC 主动发短信 =====
-async function triggerNpcMessage(storyContext) {
+ async function triggerNpcMessage(storyContext) {
   const contacts = store.getContacts();
   if (!contacts || contacts.length === 0) return;
 
   try {
-    // 让 AI 分析剧情，决定谁发短信，发什么
-    const sysPrompt = buildSystem(`根据以下刚刚发生的剧情，判断哪个角色（从联系人列表中选择：${contacts.join(", ")}）会主动给玩家发短信。
+    const sNow = store.getState();
+    const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。短信内容必须符合这个时间点，不能出现未来事物。\n\n`;
+    const sysPrompt = buildSystem(`${dateHint}根据以下刚刚发生的剧情，判断哪个角色（从联系人列表中选择：${contacts.map(c => c.name).join(", ")}）会主动给玩家发短信。
 【当前剧情】
 ${storyContext.slice(0, 800)}
 
@@ -1686,22 +1964,18 @@ ${storyContext.slice(0, 800)}
     const data = JSON.parse(match[0]);
     if (!data.sender || !data.messages || !data.messages.length) return;
 
-    // 如果联系人列表里没有这个角色，就不发了（防止AI瞎编）
     if (!contacts.find(c => c.name === data.sender)) return;
 
     const chats = store.getChats();
     const arr = chats[data.sender] || [];
 
-    // 将消息加入记录
     data.messages.forEach(msg => {
       arr.push({ role: "them", content: msg });
     });
     chats[data.sender] = arr;
     store.setChats(chats);
 
-    // 右上角弹窗提示
-        showMsgBanner(data.sender, data.messages[0] || "");
-    
+    showMsgBanner(data.sender, data.messages[0] || "");
   } catch(e) {
     console.warn("NPC主动发信失败:", e);
   }
