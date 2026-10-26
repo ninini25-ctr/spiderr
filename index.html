@@ -124,7 +124,7 @@ input:checked + .slider:before{transform:translateX(20px);}
   </div>
 </div>
 <div id="msgBanner" class="banner"></div>
-<audio id="globalAudio" style="display:none;"></audio>
+<audio id="globalMusicPlayer" controls style="display:none;"></audio>
 <script>
 const WORLD = { name:"彼得·本杰明·帕克", timeline:["阶段一：初遇与日常","阶段二：华盛顿纪念碑事件","阶段三：斯塔克渡轮事件","阶段四：复联大厦决战","阶段五：泰坦星响指","阶段六：身份曝光"] };
 
@@ -140,7 +140,7 @@ const store = {
   getChats(){return this.get("sv_chats",{});},
   setChats(c){this.set("sv_chats",c);},
   getPosts(){return this.get("sv_posts",{twitter:[],instagram:[]});},
-  setPosts(p){this.set("sv_posts",p);},
+setPosts(p){this.set("sv_posts",p);},
   getContacts(){ 
     let list = this.get("sv_contacts", []);
     if(!list || list.length === 0) {
@@ -169,7 +169,240 @@ setContacts(c){ this.set("sv_contacts", c); },
   getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10});},
   setChatConfig(c){this.set("sv_chat_cfg",c);}
 };
+const dbHelper = {
+  db: null,
+  async init() {
+    return new Promise((resolve) => {
+      const req = indexedDB.open("SpiderMusicDB", 1);
+      req.onupgradeneeded = e => { e.target.result.createObjectStore("tracks", { keyPath: "id" }); };
+      req.onsuccess = e => { this.db = e.target.result; resolve(); };
+      req.onerror = () => resolve();
+    });
+  },
+  async save(track) {
+  if (!this.db) await this.init();
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = this.db.transaction("tracks", "readwrite");
+      const req = tx.objectStore("tracks").put(track);
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e);
+      tx.onabort = (e) => reject(new Error("事务被中止"));
+    } catch (e) { reject(e); }
+  });
+},
+  async getAll() {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction("tracks", "readonly");
+      const req = tx.objectStore("tracks").getAll();
+      req.onsuccess = () => resolve(req.result || []);
+    });
+  },
+  async delete(id) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction("tracks", "readwrite");
+      tx.objectStore("tracks").delete(id);
+      tx.oncomplete = () => resolve();
+    });
+  }
+};
+dbHelper.init(); // 初始化数据库
+// ===== 音频转码工具（FLAC → MP3/WebM/WAV 兜底）=====
+const audioConverter = {
+  // 选择当前浏览器支持的最佳输出格式
+  pickMime() {
+    const candidates = [
+      "audio/mpeg",           // 真 MP3（Chrome 113+）
+      "audio/webm;codecs=opus", // WebM Opus（绝大多数现代浏览器）
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/ogg"
+    ];
+    if (typeof MediaRecorder === "undefined") return null;
+    for (const m of candidates) {
+      if (MediaRecorder.isTypeSupported(m)) return m;
+    }
+    return null;
+  },
 
+  // 判断是否是需要转换的格式（浏览器能否直接播）
+  needConvert(file) {
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    // 只对 flac / wav（体积太大） / ogg 做转换，mp3/m4a 已经最好，直接存
+    if (ext === "flac") return true;
+    if (ext === "wav") return true;
+    if (ext === "ogg" && !file.type.includes("opus")) return true;
+    return false;
+  },
+
+  // 用 WebAudio 解码 + MediaRecorder 重编码
+  // 返回 Promise<{blob, mime, ext}>
+  async convert(file, onProgress) {
+    const targetMime = this.pickMime();
+    if (!targetMime) {
+      throw new Error("当前浏览器不支持 MediaRecorder，无法转换");
+    }
+
+    // 1. 解码
+    onProgress && onProgress("解码中...");
+    const arrayBuffer = await file.arrayBuffer();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) throw new Error("当前浏览器不支持 WebAudio，无法转换");
+
+    const ctx = new AudioCtx();
+    let audioBuffer;
+    try {
+      audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    } catch (e) {
+      await ctx.close();
+      throw new Error("当前浏览器无法解码该音频（如 iOS Safari 不支持 FLAC），请换 MP3/M4A 文件");
+    }
+
+    // 2. 编码：用一个 MediaStreamDestination 把 AudioBuffer 喂给 MediaRecorder
+    onProgress && onProgress("编码中...");
+    const duration = audioBuffer.duration;
+    const sampleRate = audioBuffer.sampleRate;
+    const channels = Math.min(audioBuffer.numberOfChannels, 2);
+    const frameCount = audioBuffer.length;
+
+    // 手动分块播放 + 录制，避免 WebAudio 一次全局播放
+    const dest = ctx.createMediaStreamDestination();
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(dest);
+    // 不能连到 ctx.destination，否则会边转码边外放
+    // 但某些浏览器要求必须 link 到 destination 才能"跑"，我们连一个静音 gain
+    const silentGain = ctx.createGain();
+    silentGain.gain.value = 0;
+    source.connect(silentGain);
+    silentGain.connect(ctx.destination);
+
+    const recorder = new MediaRecorder(dest.stream, { mimeType: targetMime });
+    const chunks = [];
+    recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
+    const donePromise = new Promise((resolve, reject) => {
+      recorder.onstop = () => {
+        try {
+          const blob = new Blob(chunks, { type: targetMime });
+          const ext = targetMime.includes("mpeg") ? "mp3"
+                    : targetMime.includes("webm") ? "webm"
+                    : targetMime.includes("ogg") ? "ogg"
+                    : "bin";
+          resolve({ blob, mime: targetMime, ext });
+        } catch (e) { reject(e); }
+      };
+      recorder.onerror = (e) => reject(e.error || new Error("MediaRecorder 编码失败"));
+    });
+
+    recorder.start();
+    source.start(0);
+
+    // 等待播放结束（比 audioBuffer.duration 略长一点保险）
+    await new Promise((resolve) => {
+      source.onended = resolve;
+      // 保险：如果 onended 没触发，duration + 1 秒后强制停
+      setTimeout(resolve, (duration + 1) * 1000);
+    });
+    // 给 recorder 一点时间冲最后一块数据
+    await new Promise(r => setTimeout(r, 300));
+    recorder.stop();
+    const result = await donePromise;
+
+    await ctx.close();
+    return result;
+  }
+};
+// ===== 全局音乐播放器（后台持续播放，切换 App 不受影响）=====
+const globalMusic = {
+  audio: null,
+  currentId: null,
+  tracks: [],
+
+  init() {
+    this.audio = document.getElementById("globalMusicPlayer");
+    // 恢复上次播放位置（可选）
+    const saved = JSON.parse(localStorage.getItem("sv_music_state") || "null");
+    if (saved) this.currentId = saved.id;
+  },
+
+  async loadTracks() {
+    this.tracks = await dbHelper.getAll();
+    return this.tracks;
+  },
+
+   play(id) {
+    const t = this.tracks.find(x => x.id === id);
+    if (!t) return;
+    if (this._lastUrl) URL.revokeObjectURL(this._lastUrl);
+
+    let blob;
+    try {
+      blob = t.type ? new Blob([t.data], { type: t.type }) : new Blob([t.data]);
+    } catch (e) {
+      return toast("数据异常：" + e.message);
+    }
+
+    const url = URL.createObjectURL(blob);
+    this._lastUrl = url;
+
+    // ⚠️ 关键修复：不要 removeAttribute + load()，
+    // 直接设置 src 即可。removeAttribute + load() 会触发一次异步 onerror
+    // 导致误报"无法播放"。
+    this.audio.onerror = null;   // 先解绑旧回调
+    this.audio.pause();
+    this.audio.src = url;
+    this.audio.load();
+
+    // 重新绑定错误处理（只处理本次播放的真实错误）
+    const handleError = () => {
+      const err = this.audio.error;
+      let msg = "无法播放（浏览器可能不支持该音频编码）";
+      if (err) {
+        if (err.code === 1) msg = "播放被中止";
+        if (err.code === 2) msg = "网络/解码错误";
+        if (err.code === 3) msg = "解码失败";
+        if (err.code === 4) msg = "格式不支持：浏览器无法解码该音频";
+      }
+      toast(msg);
+    };
+    this.audio.addEventListener("error", handleError, { once: true });
+
+    this.audio.play().catch(e => {
+      toast("播放失败：" + (e.message || e.name));
+    });
+
+    this.currentId = id;
+    localStorage.setItem("sv_music_state", JSON.stringify({ id }));
+    this._notifyUI();
+  },
+
+  pause() { this.audio.pause(); this._notifyUI(); },
+
+  stop() {
+    this.audio.pause();
+    this.audio.currentTime = 0;
+    this._notifyUI();
+  },
+
+  toggle(id) {
+    if (this.currentId === id && !this.audio.paused) {
+      this.pause();
+    } else {
+      this.play(id);
+    }
+  },
+
+  _notifyUI() {
+    // 如果当前在音乐 App，刷新 UI
+    if (currentApp === "music" && window._musicRefreshUI) {
+      window._musicRefreshUI();
+    }
+  }
+};
+globalMusic.init();
 async function callAI(messages, systemPrompt) {
   const cfg = store.getConfig();
   if (!cfg.enabled) throw new Error("AI 未启用");
@@ -256,12 +489,15 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
   
   try {
     const contextStr = parentCommentIndex !== null ? `某网友的评论："${p.comments[parentCommentIndex].text}"` : `帖子内容："${p.text}"`;
-    const sysPrompt = buildSystem(`用户刚在${platform}上评论了${contextStr}，内容是："${text.trim()}"。
+ const sysPrompt = buildSystem(`用户刚在${platform}上评论了${contextStr}，内容是："${text.trim()}"。
 【要求】
 1. 生成 1 到 3 条回复。
 2. 其中必须有 1 条是楼主（发帖人：${p.name}）的回复，另外的可以是随机网友。
 3. 格式：如果是楼主，名字直接写 "${p.name}"；网友则起个英文网名。
 4. 符合网友语气，有生活感。
+5. **翻译规则（极重要）**：
+   - 如果评论用**外语**（英文/日文/法文/韩文等），后面紧接中文翻译，格式：原文（中文翻译）
+   - 如果评论用**中文**，**直接输出中文原文，不加任何括号翻译**。严禁 "中文（中文翻译）" 这种中文又翻译中文。
 【格式要求】
 姓名 ||| 评论内容
 每行一条，不要任何解释。`);
@@ -273,16 +509,31 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
     
     const targetComment = parentCommentIndex !== null ? (np.comments[parentCommentIndex].replies = np.comments[parentCommentIndex].replies || []) : np.comments;
     
-    res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
-      const [u,t] = l.split('|||').map(x=>x.trim());
-      if (u&&t) {
-        if (parentCommentIndex !== null) {
-          np.comments[parentCommentIndex].replies.push({user:u, text:t});
-        } else {
-          np.comments.push({user:u, text:t, replies: []});
-        }
-      }
-    });
+   // 判断是否中文
+const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
+// 去除「中文（中文）」里的重复括号翻译
+const cleanTranslation = (s) => {
+  // 形如 "这是中文（这是中文）" 或 "这是中文（翻译）" 都合并
+  const m = s.match(/^(.+?)（(.+)）$/);
+  if (!m) return s;
+  const before = m[1].trim();
+  const inside = m[2].trim();
+  // 如果括号外是中文，且括号内也是中文，就去掉括号翻译
+  if (isChinese(before) && isChinese(inside)) return before;
+  return s;
+};
+
+res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
+  const [u, t] = l.split('|||').map(x => x.trim());
+  if (u && t) {
+    const cleanT = cleanTranslation(t);
+    if (parentCommentIndex !== null) {
+      np.comments[parentCommentIndex].replies.push({ user: u, text: cleanT });
+    } else {
+      np.comments.push({ user: u, text: cleanT, replies: [] });
+    }
+  }
+});
     newAll[platform] = newList;
     store.setPosts(newAll);
     openApp(platform);
@@ -662,21 +913,35 @@ async newPost() {
       this.render($("#appBody"));
       
       try {
-        const sysPrompt = buildSystem(`用户刚发了推特："${text}"。
+const sysPrompt = buildSystem(`用户刚发了推特："${text}"。
 【要求】
 1. 生成 5 到 8 条来自世界各地网友的评论（包括纽约本地人、其他国家的网友）。
-2. 评论格式必须包含国家/语言标识。
-3. 评论可以带点各国网络热梗。
+2. 评论者名字后面可以带 (国家/语言) 标识（如 "Mike(NYC)"）。
+3. 评论可以带点各国网络热梗，**每条评论末尾根据情境随机加 1 个 emoji**（如 😂 🔥 😭 😤 🐶 🌸 等）。
+4. **翻译规则（极重要）**：
+   - 如果评论用**外语**（英文/俄文/日文/法文等），后面紧跟中文翻译，格式：原文（中文翻译）emoji
+   - 如果评论用**中文**，**只输出中文原文，不加括号翻译**。格式：中文原文 emoji
+   - 严禁 "中文（中文翻译）" 这种中文又翻中文。
 【格式要求】
 姓名(国家/语言) ||| 评论内容
 不要输出任何解释。`);
         
         const res = await callAI([{role:"user",content:"生成评论"}], sysPrompt);
         
-        res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
-          const [u,t] = l.split('|||').map(x=>x.trim());
-          if(u&&t) newPost.comments.push({user:u, text:t, replies: []});
-        });
+       const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
+const cleanTranslation = (s) => {
+  const m = s.match(/^(.+?)（(.+)）$/);
+  if (!m) return s;
+  const before = m[1].trim();
+  const inside = m[2].trim();
+  if (isChinese(before) && isChinese(inside)) return before;
+  return s;
+};
+
+res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
+  const [u, t] = l.split('|||').map(x => x.trim());
+  if (u && t) newPost.comments.push({ user: u, text: cleanTranslation(t), replies: [] });
+});
         
         const all2 = store.getPosts();
         all2.twitter = all2.twitter.map(p=>(p.text===text&&p.name===newPost.name)?newPost:p);
@@ -685,19 +950,24 @@ async newPost() {
     },
 async refresh() {
       try {
-        const sysPrompt = buildSystem(`生成 6 条推特动态。
+          const sysPrompt = buildSystem(`生成 6 条推特动态。
 【发帖人要求】
-1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等），包含生活帖、情感吐槽、以及关于蜘蛛侠的粉丝讨论帖（如“蜘蛛侠又出现在哪了”、“蜘蛛侠是好宝宝”、“想和蜘蛛侠合照”，但不能照搬上述例子，要适当扩充）。
-2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"），并在字符串后加上“(翻译自XX语)”。
+1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等），包含生活帖、情感吐槽、以及关于蜘蛛侠的粉丝讨论帖（如"蜘蛛侠又出现在哪了"、"蜘蛛侠是好宝宝"、"想和蜘蛛侠合照"，但不能照搬上述例子，要适当扩充）。
+2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"），并在字符串后加上"(翻译自XX语)"。
 3. 禁止出现中文名。
 【内容与评论要求】
 1. 每条推文必须附带 5 到 15 条网友评论。
 2. 评论者名字也必须全部为纯英文字符串（如 "spidey_fan", "NYC_local"）。
 3. 评论内容要像真实的该地区网友，有生活感、网感，可以互怼或玩梗。
+4. **每条评论末尾根据情境随机加 1 个 emoji**（如 😂 🔥 😭 😤 🐶 🌸 等）。
+5. **翻译规则**：
+   - 外语评论（英文/日文/法文等）→ 原文（中文翻译）emoji
+   - 中文评论 → 中文原文 emoji，不加括号
+   - **严禁 "中文（中文翻译）" 这种中文又翻中文**。
 【格式要求】
 严格按以下格式输出，每行一条推文，用 ||| 分隔：
-发帖人英文名 ||| @账号（翻译自XX语） ||| 正文 ||| 点赞数 ||| 评论者英文名1:评论内容1 ;; 评论者英文名2:评论内容2 ;; 评论者英文名3:评论内容3
-不要输出任何解释。`);
+发帖人英文名 ||| @账号（翻译自XX语） ||| 正文 ||| 点赞数 ||| 评论者1:评论内容 ;; 评论者2:评论内容 ;; 评论者3:评论内容
+注意：评论者和评论内容之间用 1 个英文冒号 ':' 分隔，多条评论之间用 ';;' 分隔，不要输出任何解释。`);
 
         const res=await callAI([{role:"user",content:"刷新"}], sysPrompt);
         const all=store.getPosts(); all.twitter=all.twitter||[];
@@ -707,10 +977,22 @@ async refresh() {
           if(!name) return;
           
           // 解析多条评论
-          const comments = commentsStr ? commentsStr.split(';;').map(c => {
-  const [u,t] = c.split(':');
-  return { user: u ? u.trim() : "user", text: t ? t.trim() : c.trim(), replies: [] };
-}) : [];
+ const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
+const comments = commentsStr ? commentsStr.split(';;').map(c => {
+  // AI 返回格式：评论者名:评论内容（可能混用中英冒号）
+  const idx = c.search(/[:：]/);
+  if (idx === -1) return null;
+  const user = c.slice(0, idx).trim();
+  let content = c.slice(idx + 1).trim();
+  if (!user || !content) return null;
+  // content 里可能有 "外语原文（中文翻译）" 或 "中文原文"
+  // 如果括号外是中文、括号内也是中文 → 去掉括号
+  const m = content.match(/^(.+?)（(.+)）$/);
+  if (m && isChinese(m[1].trim()) && isChinese(m[2].trim())) {
+    content = m[1].trim();
+  }
+  return { user, text: content, replies: [] };
+}).filter(x => x && x.user) : [];
           
           all.twitter.unshift({name,handle,text,likes:parseInt(likes)||0,comments});
         });
@@ -809,14 +1091,15 @@ worldline: {
           <div style="font-weight:bold;color:#e62429;font-size:16px">彼得好感度: ${s.affinity}/200</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">上一轮选项变动: ${deltaStr}</div>
         </div>
-       <div style="font-size:24px">${s.affinity >= 151 ? '❤️' : s.affinity >= 101 ? '💖' : s.affinity >= 51 ? '💛' : '💙'}</div>
+        <div style="font-size:24px">${s.affinity >= 151 ? '❤️' : s.affinity >= 101 ? '💖' : s.affinity >= 51 ? '💛' : '💙'}</div>
+      </div> <!-- 这里补全了缺失的闭合标签 -->
       <div class="row" style="gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5">
-        <button="btn ghost" style="flex:1" onclick="window.openSlots('save')">💾 存档</button>
+        <button class="btn ghost" style="flex:1" onclick="window.openSlots('save')">💾 存档</button>
         <button class="btn ghost" style="flex:1" onclick="window.openSlots('load')">📂 读档</button>
         <button class="btn ghost" style="flex:1" onclick="window.showMemory()">📜 回忆</button>
       </div>
-      <div class="story-content">${esc(s.currentStory)}</div>
-      ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
+      <div class="story-content" style="word-break:break-word;">${esc(s.currentStory)}</div>
+      ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
       <div class="card">
         <input id="customAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
         <button class="btn" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
@@ -839,12 +1122,13 @@ instagram: {
     const text = prompt("回复该评论：");
     if (text) window.addComment('instagram', postIdx, text, commentIdx);
   },
-  async render(body) {
+async render(body) {
     const posts = store.getPosts().instagram || [];
     
     body.innerHTML = `<div style="padding:14px">
-      <div class="row" style="margin-bottom:12px">
-        <button class="btn ghost" id="igRefreshBtn" style="flex:1">✍️ 发布新帖子</button>
+      <div class="row" style="gap:8px;margin-bottom:12px">
+        <button class="btn" id="igNewPostBtn" style="flex:1">✍️ 发布新帖子</button>
+        <button class="btn ghost" id="igRefreshBtn" style="flex:1">🔄 刷新</button>
       </div>
       ${posts && posts.length > 0 ? posts.map((p,i)=>`
       <div class="tweet">
@@ -873,46 +1157,118 @@ instagram: {
           <input id="igc_${i}" placeholder="写评论..." style="flex:1;padding:6px 10px;border-radius:8px;border:none;background:#222;color:#fff">
           <button onclick="window.addComment('instagram', ${i}, document.getElementById('igc_${i}').value)" style="background:var(--accent-2);color:#fff;border:none;padding:6px 14px;border-radius:8px">💬</button>
         </div>
-      </div>`).join("") : '<div class="card">暂无帖子，点击上方刷新。</div>'}
+      </div>`).join("") : '<div class="card">暂无帖子，点击上方“刷新”获取。</div>'}
     </div>`;
 
-body.querySelector("#igRefreshBtn").onclick = async () => {
+    // 发布帖子
+    body.querySelector("#igNewPostBtn").onclick = async () => {
       const text = prompt("发布 Instagram 动态（输入文案）："); 
       if(!text) return;
       
       body.innerHTML = `<div class="loader"><div class="spin"></div>生成配图与评论...</div>`;
       try {
-               const sysPrompt = buildSystem(`用户发了 IG 动态，文案："${text}"。
+const sysPrompt = buildSystem(`用户发了 IG 动态，文案："${text}"。
 【要求】
 1. 根据文案生成 1 个英文生图 Prompt。
 2. 生成 3-5 条来自世界各地网友的评论。
-3. 评论格式：网名原文 (国家/语言) ||| 评论原文（如法语原文） ||| 中文翻译
+3. **翻译规则（极重要）：
+  用（法文/日文/英文等）→ 原文 + （中文翻译）
+   - 评论用中文 → 直接写中文原文，不加括号翻译
 【格式要求】
-英文生图Prompt ||| 网名1(法语) ||| 评论1原文 ||| 评论1中文 ;; 网名2(日语) ||| 评论2原文 ||| 评论2中文 ;; 网名3(英语) ||| 评论3原文 ||| 评论3中文`);
+英文生图Prompt ||| 网名1(法文) ||| 评论1原文 ||| 评论1中文翻译 ;; 网名2(日文) ||| 评论2原文 ||| 评论2中文翻译 ;; 网名3(英文) ||| 评论3原文 ||| 评论3中文翻译`);
         const res = await callAI([{role:"user",content:"生成"}], sysPrompt);
-      const parts = res.split('|||').map(s => s.trim());
-const imgPrompt = parts[0];
-const commentsStr = parts.slice(1).join('|||');
+        const parts = res.split('|||').map(s => s.trim());
+        const imgPrompt = parts[0];
+        const commentsStr = parts.slice(1).join('|||');
         
-        const comments = commentsStr ? commentsStr.split(';;').map(c => {
-          const seg = c.split('|||').map(x => x.trim());
-          const user = seg[0] || "user";
-          const orig = seg[1] || "";
-          const trans = seg[2] || "";
-          return { user, text: orig + (trans ? `（${trans}）` : ""), replies: [] };
-        }) : [];
+       const isChinese2 = (s) => /[\u4e00-\u9fa5]/.test(s);
+const comments = commentsStr.split(';;').map(c => {
+  const seg = c.split('|||').map(x => x.trim());
+  const user = seg[0] || "user";
+  const orig = seg[1] || "";
+  const trans = seg[2] || "";
+  if (isChinese2(orig) || !trans) return { user, text: orig, replies: [] };
+  return { user, text: `${orig}（${trans}）`, replies: [] };
+}).filter(x => x.user);
 
         body.innerHTML = `<div class="loader"><div class="spin"></div>绘制中...</div>`;
         
         let imgUrl = "";
-        try {
-          imgUrl = await generateImage(imgPrompt);
-        } catch(e) {
-          imgUrl = "ERROR"; // 生图失败时的标记
-        }
+        try { imgUrl = await generateImage(imgPrompt); } catch(e) { imgUrl = "ERROR"; }
         
         const all = store.getPosts();
         all.instagram = [{name: store.getProfile().name || "Me", handle: "@me", img: imgUrl, text: text, likes: Math.floor(Math.random()*200)+20, comments: comments}];
+        store.setPosts(all);
+        this.render(body);
+      } catch(e) {
+        body.innerHTML = `<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;
+      }
+    };
+
+    // 刷新（AI 随机生成 IG 帖）
+        body.querySelector("#igRefreshBtn").onclick = async () => {
+      body.innerHTML = `<div class="loader"><div class="spin"></div>生成 5 条新帖子中（含配图，请稍候）...</div>`;
+      try {
+  const sysPrompt = buildSystem(`请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
+【要求】
+1. 每条发帖人都不同：可以是彼得·帕克(Peter Parker)、内德·利兹(Ned Leeds)、MJ(Michelle Jones)、Flash Thompson、随机NPC，名字必须英文。
+2. 每条文案符合 IG 风格，可包含 emoji、话题标签 #xxx。
+3. 每条评论 3-5 条，至少包含 1 条外语评论（英文/日文/韩文/法文/西班牙文等）。
+4. **翻译规则（极重要）**：
+   - 外语评论 → 原文（中文翻译）
+   - 中文评论 → 只写中文原文，**不加括号翻译**，严禁 "中文（中文翻译）"
+【格式要求 · 严格】
+每条帖子一行，用 ||| 分隔，评论用 ;; 分隔：
+发帖人 ||| 账号 ||| 文案 ||| 英文生图Prompt ||| 评论1网名(语言) ||| 评论1原文 ||| 评论1中文翻译 ;; 评论2网名(语言) ||| 评论2原文 ||| 评论2中文翻译
+最少生成 5 行，不要任何解释性文字。`);
+        const res = await callAI([{role:"user",content:"生成 5 条帖子"}], sysPrompt);
+
+        const lines = res.split('\n').filter(l => l.includes('|||'));
+        const newPosts = [];
+
+        for (const line of lines.slice(0, 5)) {
+          // 用 ||| 切成 ≥5 段
+          const parts = line.split('|||').map(s => s.trim());
+          if (parts.length < 5) continue;
+          const name = parts[0];
+          const handle = parts[1];
+          const text = parts[2];
+          const imgPrompt = parts[3];
+          const commentsStr = parts.slice(4).join('|||');
+
+          // 解析评论
+          const comments = commentsStr.split(';;').map(c => {
+            const seg = c.split('|||').map(x => x.trim());
+            const user = seg[0] || "user";
+            const orig = seg[1] || "";
+            const trans = seg[2] || "";
+            return { user, text: orig + (trans ? `（${trans}）` : ""), replies: [] };
+          }).filter(x => x.user);
+
+          newPosts.push({ name, handle, text, imgPrompt, comments });
+        }
+
+        if (newPosts.length === 0) throw new Error("AI 未按格式返回帖子，请重试");
+
+        // 逐条生成配图
+        const finalPosts = [];
+        for (let i = 0; i < newPosts.length; i++) {
+          body.innerHTML = `<div class="loader"><div class="spin"></div>正在绘制第 ${i+1}/${newPosts.length} 张配图...</div>`;
+          let imgUrl = "ERROR";
+          try { imgUrl = await generateImage(newPosts[i].imgPrompt); } catch(e) {}
+          finalPosts.push({
+            name: newPosts[i].name,
+            handle: newPosts[i].handle,
+            text: newPosts[i].text,
+            img: imgUrl,
+            likes: Math.floor(Math.random()*500)+50,
+            comments: newPosts[i].comments
+          });
+        }
+
+        // 👇 关键：保留旧帖 + 新帖放前面
+        const all = store.getPosts();
+        all.instagram = [...finalPosts, ...(all.instagram || [])];
         store.setPosts(all);
         this.render(body);
       } catch(e) {
@@ -1022,83 +1378,200 @@ worldbook: {
     }
   },
 
- music: {
-    title: "音乐",
-    render(body) {
-      body.innerHTML = `<div style="padding:14px">
-        <div class="card"><h3>本地音乐 (支持 MP3/FLAC)</h3>
-          <input type="file" id="audioFile" accept="audio/*,.mp3,.m4a,.wav,.ogg,.mp4,.flac" multiple style="width:100%;color:#fff;margin-bottom:10px">
-          <p style="color:var(--muted);font-size:12px;margin:0">提示：由于浏览器限制，大文件可能无法永久保存，建议单次添加少量文件。</p>
-        </div>
-        <div class="card">
-          <h3>🎵 播放器</h3>
-          <audio id="inlineAudio" controls style="width:100%"></audio>
-          <div id="nowPlaying" style="font-size:12px;color:var(--muted);margin-top:8px">未播放</div>
-        </div>
-        <div class="card"><h3>🎧 播放列表</h3><div id="trackList" style="color:var(--muted);font-size:13px">暂无</div></div>
-      </div>`;
-      
-      const input = body.querySelector("#audioFile");
-      const trackList = body.querySelector("#trackList");
-      const inlineAudio = body.querySelector("#inlineAudio");
-      const nowPlaying = body.querySelector("#nowPlaying");
-      
-      let tracks = JSON.parse(localStorage.getItem("sv_music") || "[]");
+music: {
+  title: "音乐",
+  async render(body) {
+    body.innerHTML = `<div style="padding:14px">
+      <div class="card"><h3>🎵 后台播放器（切换 App 不中断）</h3>
+        <audio id="musicInlineAudio" controls style="width:100%"></audio>
+        <div id="nowPlaying" style="font-size:12px;color:var(--muted);margin-top:8px">未播放</div>
+      </div>
+      <div class="card"><h3>本地音乐 (支持 MP3/FLAC)</h3>
+        <input type="file" id="audioFile" accept="audio/*,.mp3,.m4a,.wav,.ogg,.mp4,.flac" multiple style="width:100%;color:#fff;margin-bottom:10px">
+        <p style="color:var(--muted);font-size:12px;margin:0">提示：识别歌手与歌名（如：歌手 - 歌名.mp3）。</p>
+      </div>
+      <div class="card"><h3>🎧 播放列表</h3><div id="trackList" style="color:var(--muted);font-size:13px">加载中...</div></div>
+    </div>`;
 
-      const playTrack = (idx) => {
-        const t = tracks[idx];
-        if (!t) return;
-        inlineAudio.src = t.url;
-        inlineAudio.play().catch(e => toast("播放失败："+e.message));
-        nowPlaying.textContent = "正在播放：" + t.name;
-      };
+    const input = body.querySelector("#audioFile");
+    const trackList = body.querySelector("#trackList");
+    const inlineAudio = body.querySelector("#musicInlineAudio");
+    const nowPlaying = body.querySelector("#nowPlaying");
 
-      const renderList = () => {
-        if(!tracks.length){ trackList.textContent="暂无"; return; }
-        trackList.innerHTML = tracks.map((t, i) =>
-          `<div style="padding:10px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center">
-            <span style="cursor:pointer;flex:1" data-play="${i}">▶ ${esc(t.name)}</span>
-            <button class="btn ghost" data-del="${i}" style="width:auto;padding:2px 8px;font-size:12px;color:#e62429;border:none">✕</button>
-          </div>`
-        ).join("");
-        
-        trackList.querySelectorAll("[data-play]").forEach(el => {
-          el.onclick = () => playTrack(parseInt(el.dataset.play));
+    let tracks = await globalMusic.loadTracks();
+
+    // 同步全局 <audio> → App 内 <audio>
+  const mirrorGlobal = () => {
+      if (!globalMusic.audio || !globalMusic.audio.src) return;
+      const gSrc = globalMusic.audio.src.split('#')[0].split('?')[0];
+      const iSrc = inlineAudio.src.split('#')[0].split('?')[0];
+      
+      // 只有当 src 确实不同的时候，才去替换
+      if (gSrc !== iSrc) {
+        inlineAudio.src = globalMusic.audio.src;
+        inlineAudio.load(); // 强制重新加载新源
+      }
+      
+      // 如果全局在播放，但 App 内没播放，才去触发 play
+      if (!globalMusic.audio.paused) {
+        if (inlineAudio.paused) {
+          inlineAudio.currentTime = globalMusic.audio.currentTime;
+          inlineAudio.play().catch(()=>{});
+        }
+      } else {
+        if (!inlineAudio.paused) inlineAudio.pause();
+      }
+    };
+
+    const renderList = () => {
+      if (!tracks.length) { trackList.textContent = "暂无"; return; }
+      trackList.innerHTML = tracks.map((t) => {
+        const isPlaying = globalMusic.currentId === t.id && !globalMusic.audio.paused;
+        return `<div style="padding:10px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center">
+          <span style="cursor:pointer;flex:1" data-play="${t.id}">${isPlaying ? "⏸" : "▶"} ${esc(t.name)}</span>
+          <button class="btn ghost" data-del="${t.id}" style="width:auto;padding:2px 8px;font-size:12px;color:#e62429;border:none">✕</button>
+        </div>`;
+      }).join("");
+
+      trackList.querySelectorAll("[data-play]").forEach(el => {
+        el.onclick = () => {
+          globalMusic.toggle(el.dataset.play);
+          renderList();
+          refreshUI();
+        };
+      });
+      trackList.querySelectorAll("[data-del]").forEach(el => {
+        el.onclick = async (e) => {
+          e.stopPropagation();
+          if (globalMusic.currentId === el.dataset.del) globalMusic.stop();
+          await dbHelper.delete(el.dataset.del);
+          tracks = await globalMusic.loadTracks();
+          renderList();
+          refreshUI();
+          toast("已删除");
+        };
+      });
+    };
+
+    const refreshUI = () => {
+      const cur = globalMusic.tracks.find(x => x.id === globalMusic.currentId);
+      nowPlaying.textContent = cur
+        ? `${globalMusic.audio.paused ? "⏸ 已暂停" : "▶ 正在播放"}：${cur.name}`
+        : "未播放";
+      mirrorGlobal();
+    };
+
+    window._musicRefreshUI = () => {
+      renderList();
+      refreshUI();
+    };
+
+    // 双向同步：App 内 <audio> → 全局 <audio>
+    inlineAudio.onplay = () => {
+      if (globalMusic.audio.paused && globalMusic.currentId) {
+        globalMusic.audio.currentTime = inlineAudio.currentTime;
+        globalMusic.audio.play().catch(()=>{});
+      }
+    };
+    inlineAudio.onpause = () => {
+      if (!globalMusic.audio.paused) globalMusic.audio.pause();
+    };
+    inlineAudio.onseeked = () => {
+      globalMusic.audio.currentTime = inlineAudio.currentTime;
+    };
+
+    renderList();
+    refreshUI();
+
+   input.onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+
+      let added = 0, skipped = 0, converted = 0;
+
+      for (let idx = 0; idx < files.length; idx++) {
+        const file = files[idx];
+
+        // 显示整体进度
+        toast(`处理第 ${idx + 1}/${files.length} 首：${file.name}`);
+        // 让 UI 有机会更新 toast
+        await new Promise(r => setTimeout(r, 50));
+
+        // 1. 先做文件名清洗
+        let displayName = file.name.replace(/\.[^/.]+$/, "");
+        displayName = displayName.replace(/\.(mgg|mgg2|qmc\d?|tm\d?)$/i, "");
+        displayName = displayName.replace(/\[.*?\]|\(.*?\)/g, "").trim();
+        let parts = displayName.split("-");
+        if (parts.length >= 2) {
+          displayName = `${parts[0].trim()} - ${parts.slice(1).join("-").trim()}`;
+        }
+
+        // 2. 判断是否需要转换
+        let finalBuffer = null;
+        let finalMime = "";
+        let didConvert = false;
+
+        if (audioConverter.needConvert(file)) {
+          try {
+            const res = await audioConverter.convert(file, (stage) => {
+              // 进度提示（覆盖上一层 toast）
+              // 用 toast 会排队，这里用 console 避免打扰
+              console.log(`[${file.name}] ${stage}`);
+            });
+            finalBuffer = await res.blob.arrayBuffer();
+            finalMime = res.mime;
+            didConvert = true;
+            converted++;
+          } catch (err) {
+            // 转码失败（如 iOS Safari 不支持 FLAC 解码）→ 明确告知用户，跳过
+            toast("跳过《" + file.name + "》：" + err.message);
+            skipped++;
+            continue;
+          }
+        } else {
+          // 3. 不需要转换，直接存
+          const buffer = await file.arrayBuffer();
+          if (!buffer || buffer.byteLength === 0) {
+            toast("跳过空文件：" + file.name);
+            skipped++;
+            continue;
+          }
+          finalBuffer = buffer;
+          let mime = file.type || "";
+          const ext = (file.name.split(".").pop() || "").toLowerCase();
+          if (!mime) {
+            if (ext === "mp3") mime = "audio/mpeg";
+            else if (ext === "m4a") mime = "audio/mp4";
+            else if (ext === "wav") mime = "audio/wav";
+            else if (ext === "ogg") mime = "audio/ogg";
+            else mime = "";
+          }
+          finalMime = mime;
+        }
+
+        // 4. 保存到 IndexedDB
+        await dbHelper.save({
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
+          name: displayName,
+          type: finalMime,
+          data: finalBuffer,
+          converted: didConvert // 记录一下是否为转码产物（可选）
         });
-        trackList.querySelectorAll("[data-del]").forEach(el => {
-          el.onclick = (e) => {
-            e.stopPropagation();
-            tracks.splice(parseInt(el.dataset.del), 1);
-            localStorage.setItem("sv_music", JSON.stringify(tracks));
-            renderList();
-            toast("已删除");
-          };
-        });
-      };
+        added++;
+      }
+
+      // 5. 刷新列表
+      tracks = await globalMusic.loadTracks();
       renderList();
 
-      input.onchange = (e) => {
-        const files = e.target.files;
-        if(!files.length) return;
-        const total = files.length;
-        let done = 0;
-        Array.from(files).forEach(file => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            tracks.push({ name: file.name, url: reader.result });
-            localStorage.setItem("sv_music", JSON.stringify(tracks));
-            done++;
-            if (done === total) { renderList(); toast("已添加 " + total + " 个文件"); }
-          };
-          reader.onerror = () => {
-            done++;
-            if (done === total) { renderList(); toast("部分文件读取失败"); }
-          };
-          reader.readAsDataURL(file);
-        });
-      };
-    }
+      const summary = [`成功 ${added} 首`];
+      if (converted) summary.push(`已转码 ${converted} 首`);
+      if (skipped) summary.push(`跳过 ${skipped} 首`);
+      toast(summary.join(" / "));
+      input.value = "";
+    };
   }
+}
 };
 
 function openApp(id) {
