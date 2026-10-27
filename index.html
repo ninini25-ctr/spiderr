@@ -16,12 +16,54 @@ body{display:flex;align-items:center;justify-content:center;height:100vh;height:
 .statusbar{position:absolute;top:0;left:0;right:0;height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;z-index:40;color:#fff;font-weight:600;}
 .screen{position:absolute;inset:0;display:none;flex-direction:column;padding-top:44px;}
 .screen.active{display:flex;}
-#desktop .wallpaper{position:absolute;inset:0;background:radial-gradient(circle at 50% 20%,rgba(230,36,41,.35),transparent 60%),radial-gradient(circle at 80% 80%,rgba(45,107,255,.25),transparent 55%),linear-gradient(160deg,#0d0d16,#1a1a28 50%,#08080f);}
+#desktop .wallpaper{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 25% 15%, rgba(230,36,41,.55), transparent 55%),
+    radial-gradient(circle at 85% 85%, rgba(120,10,15,.65), transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(60,0,8,.4), transparent 70%),
+    linear-gradient(160deg, #1a0508 0%, #0d0204 40%, #000000 100%);
+  backdrop-filter: blur(0px);
+}
+/* 毛玻璃质感层 */
+#desktop .wallpaper::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,.05) 0%, transparent 40%, rgba(230,36,41,.06) 100%);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  pointer-events:none;
+  mix-blend-mode: overlay;
+}
 #desktop .app-grid{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:22px 14px;padding:70px 22px;align-content:start;}
 .app-icon{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;color:#fff;font-size:11px;cursor:pointer;}
 .app-icon:active{transform:scale(.9);}
 .app-icon span{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(145deg,#2a2a38,#16161f);box-shadow:0 6px 14px rgba(0,0,0,.4);}
-.app-icon label{color:#eee;text-shadow:0 1px 2px #000;}
+/* 桌面底部水印 */
+.desktop-watermark{
+  position:absolute;
+  bottom:calc(18px + env(safe-area-inset-bottom, 0px));
+  left:50%;
+  transform:translateX(-50%);
+  font-family: "FangSong", "仿宋", "STFangsong", serif;
+  font-size:13px;
+  font-weight:500;
+  color:rgba(255,255,255,.55);
+  letter-spacing:2px;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+  pointer-events:none;
+  z-index:3;
+  user-select:none;
+}
+.app-icon label{
+  color:#eee;
+  text-shadow:0 1px 2px #000;
+  font-family: "FangSong", "仿宋", "FangSong_GB2312", "STFangsong", serif;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
 .app-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(20,20,28,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);min-height:48px;z-index:10;}
 .back-btn{background:none;border:none;color:var(--accent-2);font-size:30px;padding:0 6px;cursor:pointer;}
 .app-header h1{font-size:17px;margin:0;flex:1;text-align:center;font-weight:600;}
@@ -115,6 +157,7 @@ input:checked + .slider:before{transform:translateX(20px);}
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
     </div>
+<div class="desktop-watermark">@nini</div>
   </div>
   <div id="appView" class="screen">
     <header class="app-header">
@@ -264,11 +307,11 @@ setPosts(p){this.set("sv_posts",p);},
     let list = this.get("sv_contacts", []);
     if(!list || list.length === 0) {
       list = [
-        { name:"彼得·帕克", desc:"中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" },
-        { name:"内德·利兹", desc:"彼得的好哥们，热爱电脑和乐高，话很多。", affinity: 0, heart: "暂无" },
-        { name:"米歇尔·琼斯", desc:"彼得的同学，性格直率，观察力敏锐，有些愤世嫉俗。", affinity: 0, heart: "暂无" },
-        { name:"梅婶", desc:"彼得的监护人，坚强独立，非常关心彼得。", affinity: 0, heart: "暂无" }
-      ];
+  { name:"彼得·帕克", desc:"中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" },
+  { name:"内德·利兹", desc:"彼得的好哥们。技术宅，擅长黑客技术、编程和拆解外星科技。话痨，容易激动，对蜘蛛侠的一切充满狂热。", affinity: 0, heart: "暂无" },
+  { name:"米歇尔·琼斯", desc:"彼得的同学（MJ）。外冷内热，观察力极其敏锐，喜欢冷幽默和讽刺。热爱阅读（不仅是文学，还包括哲学和社会学）、关注社会议题、喜欢独立电影和地下乐队。", affinity: 0, heart: "暂无" },
+  { name:"梅婶", desc:"彼得的监护人，坚强独立，非常关心彼得。", affinity: 0, heart: "暂无" }
+];
     } else {
       // 兼容旧数据，补齐缺失字段
       list = list.map(c => {
@@ -984,7 +1027,15 @@ body.querySelector("#groupBtn").onclick = () => {
 };
 return;
     }
-    
+    // ===== 校验聊天对象 =====
+if (!self.currentUser || !store.getContacts().find(c => c.name === self.currentUser)) {
+  // 如果当前聊天对象不存在，回退到列表
+  self.view = "list";
+  self.currentUser = "";
+  self.render(body);
+  return;
+}
+
     const chats=store.getChats(), msgs=chats[self.currentUser]||[], cfg=store.getChatConfig();
     
     let chatHtml = `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''}">`;
@@ -1029,10 +1080,20 @@ return;
     body.querySelector("#msgInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();body.querySelector("#sendBtn").click();}});
   },
   async sendMessage(body, text, isRetry) {
-    const self = this;
-    const thread = body.querySelector("#chatThread");
-    const chatsNow = store.getChats();
-    const arr = chatsNow[self.currentUser] || [];
+  const self = this;
+  const thread = body.querySelector("#chatThread");
+  
+  // ===== 校验聊天对象 =====
+  if (!self.currentUser || !store.getContacts().find(c => c.name === self.currentUser)) {
+    toast("聊天对象已失效，已回到列表");
+    self.view = "list";
+    self.currentUser = "";
+    self.render(body);
+    return;
+  }
+  
+  const chatsNow = store.getChats();
+  const arr = chatsNow[self.currentUser] || [];
     const quoteContent = self.quoteData;
     self.quoteData = null;
     body.querySelector("#quotePreview").style.display = "none";
@@ -1077,10 +1138,33 @@ return;
       
    const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
+// 1. 先定义角色专属特征
+      let characterVibe = "";
+      if (self.currentUser === "内德·利兹") {
+        characterVibe = `【内德的话痨与技术宅属性】
+- 聊天经常跑题，喜欢突然聊起：最近的漫威电影（比如吐槽雷神）、新出的电子游戏、他刚写的代码、或者是他在网上看到的外星人阴谋论。
+- 极度崇拜蜘蛛侠，经常想当彼得的“后台技术支持”（“兄弟，你需要我帮你黑进那个系统吗？”）。
+- 偶尔会提到他的女朋友（贝蒂），或者他为了追女孩做的蠢事。
+- 容易激动，经常用感叹号和连发多条消息。`;
+      } else if (self.currentUser === "米歇尔·琼斯") {
+        characterVibe = `【MJ 的冷幽默与社会观察】
+- 说话直接、一针见血，经常带点讽刺和冷幽默（比如吐槽学校的制度、或者是美国的社会现状）。
+- 聊天话题非常广泛：最近读的哲学书（如加缪、萨特）、独立电影、地下乐队、或者是对某个社会现象的犀利点评。
+- 不喜欢无意义的寒暄，但如果聊到她感兴趣的深层话题，会变得非常专注。
+- 偶尔会调侃彼得“总是神神秘秘的”或者“又去哪打工了”，但不会直接拆穿。`;
+      } else if (self.currentUser === "梅婶") {
+        characterVibe = `【梅婶的关心与生活气息】
+- 聊天内容多围绕日常生活：今晚吃什么、房租、彼得的学业、或者是她在社区做志愿者的见闻。
+- 偶尔会提起自己年轻时的经历（带点叛逆和浪漫色彩）。
+- 说话温暖但带着大人的威严，经常叮嘱彼得注意安全。`;
+      }
+
+      // 2. 重新构建完整的 sysPrompt（把 characterVibe 用 ${} 拼进去）
       const sysPrompt = buildSystem(`你正在扮演「${self.currentUser}」和玩家发短信。
 【当前游戏内日期】${nowStr}（所有回复必须符合这个时间点的情境，不要出现未来事物）
 【当前关系】${attitude}（好感度：${contact.affinity}/200）。严禁逾越当前关系（如非彼得，禁止恋爱向）。
 【MJ 铁律】${self.currentUser === "米歇尔·琼斯" ? "只能以朋友身份互动，禁止任何暧昧/恋爱语气。" : "正常。"}
+${characterVibe}
 【要求】
 1. 像真人一样口语化，结合上下文情绪。
 2. 情绪激动、紧张或想补充时，拆分成多条短消息发送。
@@ -1260,6 +1344,11 @@ const sysPrompt = buildSystem(`${dateHint}生成 6 条推特动态。
 1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等），包含生活帖、情感吐槽、以及关于蜘蛛侠的粉丝讨论帖（如"蜘蛛侠又出现在哪了"、"蜘蛛侠是好宝宝"、"想和蜘蛛侠合照"，但不能照搬上述例子，要适当扩充）。
 2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"），并在字符串后加上"(翻译自XX语)"。
 3. 禁止出现中文名。
+【特定角色发帖主题限定（极重要）】
+- 如果发帖人是 Spiderman：可以是日常吐槽、抓小偷的见闻、或者抱怨，话痨，贴合蜘蛛侠的人设。
+- 如果发帖人是 Peter Parker：可以是日常学业以及生活吐槽、或者隐晦的抱怨，不能主动说自己是蜘蛛侠，要贴合中城高中学生人设。
+- 如果发帖人是 Ned Leeds：发帖内容必须围绕【技术、电子游戏、外星人阴谋论、或者对蜘蛛侠的狂热吹捧】。例如：“刚黑进了一个超酷的系统，感觉自己像个特工！”或者“有人注意到蜘蛛侠今天用的蛛丝发射器有升级吗？”
+- 如果发帖人是 Michelle Jones (MJ)：发帖内容必须围绕【社会观察、哲学思考、冷幽默、独立电影/乐队推荐】。例如：“纽约地铁的早高峰是对资本主义运作方式的最好隐喻。”或者“今晚在布鲁克林的一个地下俱乐部，发现了一个很棒的乐队。”
 【内容与评论要求】
 1. 每条推文必须附带 5 到 15 条网友评论。
 2. 评论者名字也必须全部为纯英文字符串（如 "spidey_fan", "NYC_local"）。
@@ -1562,7 +1651,10 @@ const comments = commentsStr.split(';;').map(c => {
 1. 每条发帖人都不同：可以是彼得·帕克(Peter Parker)、内德·利兹(Ned Leeds)、MJ(Michelle Jones)、Flash Thompson、随机NPC，名字必须英文。
 2. 每条文案符合 IG 风格，可包含 emoji、话题标签 #xxx。
 3. 每条评论 3-5 条，至少包含 1 条外语评论（英文/日文/韩文/法文/西班牙文等）。
-4. **翻译规则（极重要）**：
+4. **特定角色发帖限定**：
+    - 内德：配图可以是他的电脑屏幕（代码）、新买的乐高、或者他和朋友的自拍。文案要兴奋。
+    - MJ：配图可以是黑白的街头摄影、一本正在读的书、或者地下俱乐部的模糊抓拍。文案要简短、讽刺、或者带点哲学意味。
+5. **翻译规则（极重要）**：
    - 外语评论 → 原文（中文翻译）
    - 中文评论 → 只写中文原文，**不加括号翻译**，严禁 "中文（中文翻译）"
 【格式要求 · 严格】
@@ -2039,16 +2131,34 @@ ${storyContext.slice(0, 800)}
 
     if (!contacts.find(c => c.name === data.sender)) return;
 
-    const chats = store.getChats();
-    const arr = chats[data.sender] || [];
+    // ===== 如果玩家正在和这个 sender 聊天，不要重复插入（避免「正在聊天时突然刷屏」） =====
+const isCurrentlyChatting = apps.messages.currentUser === data.sender && apps.messages.view === "chat";
+if (isCurrentlyChatting) {
+  // 直接在当前聊天线程里插入
+  const chats0 = store.getChats();
+  const arr0 = chats0[data.sender] || [];
+  data.messages.forEach(msg => {
+    arr0.push({ role: "them", content: msg });
+  });
+  chats0[data.sender] = arr0;
+  store.setChats(chats0);
+  // 刷新当前聊天界面
+  if (apps.messages.view === "chat") {
+    apps.messages.render(document.getElementById("appBody"));
+  }
+  return;
+}
 
-    data.messages.forEach(msg => {
-      arr.push({ role: "them", content: msg });
-    });
-    chats[data.sender] = arr;
-    store.setChats(chats);
+const chats = store.getChats();
+const arr = chats[data.sender] || [];
 
-    showMsgBanner(data.sender, data.messages[0] || "");
+data.messages.forEach(msg => {
+  arr.push({ role: "them", content: msg });
+});
+chats[data.sender] = arr;
+store.setChats(chats);
+
+showMsgBanner(data.sender, data.messages[0] || "");
   } catch(e) {
     console.warn("NPC主动发信失败:", e);
   }
@@ -2072,12 +2182,18 @@ window.showMsgBanner = (sender, preview) => {
   }, 10000);
   
   el.onclick = () => {
-    el.classList.remove("show");
-    clearTimeout(window._bannerTimer);
-    apps.messages.currentUser = sender;
-    apps.messages.view = "chat";
-    openApp("messages");
-  };
+  el.classList.remove("show");
+  clearTimeout(window._bannerTimer);
+  // 保存当前聊天对象（如果有）
+  const previousUser = apps.messages.currentUser;
+  const previousView = apps.messages.view;
+  // 切换到这个 NPC
+  apps.messages.currentUser = sender;
+  apps.messages.view = "chat";
+  openApp("messages");
+  // 如果用户想返回，可以点「返回」回到列表（不影响之前彼得那边）
+  // 不再额外覆盖 previousUser
+};
 };
 </script>
 </body>
