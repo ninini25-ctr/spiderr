@@ -1479,10 +1479,19 @@ if (!self.currentUser || !store.getContacts().find(c => c.name === self.currentU
 【当前关系】${attitude}（好感度：${contact.affinity}/200）。严禁逾越当前关系（如非彼得，禁止恋爱向）。
 【MJ 铁律】${self.currentUser === "米歇尔·琼斯" ? "只能以朋友身份互动，禁止任何暧昧/恋爱语气。" : "正常。"}
 ${characterVibe}
+
+【语言铁律 · 绝对优先】
+- 所有 replies 必须是纯中文。
+- 严禁出现英文原句，严禁出现 "英文原句（中文翻译）" 这种格式。
+- 严禁出现 "原文（翻译）"、"Chinese (English)"之类的中英混写。
+- 特殊情况：如果角色想骂人、爆粗、或者一时情绪激动，可以用中文脏话/拟声词直接写中文，不要切换成英文。
+- 即使对方角色设定是外国人（梅婶也住纽约），聊天也只用中文沟通，理由不重要，铁律是中文。
+- 只有一种例外：玩家在消息里主动用英文写，你才可以混合少量英文，但翻译仍不显示。
+
 【要求】
 1. 像真人一样口语化，结合上下文情绪。
 2. 情绪激动、紧张或想补充时，拆分成多条短消息发送。
-3. 严格输出 JSON 格式，不要任何其他文字：{"replies": ["第一条", "第二条"], "heart": "你此时内心的真实想法，50-300字"}
+3. 严格输出 JSON 格式，不要任何其他文字：{"replies": ["第一条", "第二条"], "heart": "看到回复时你此时内心的真实想法，50-300字"}
 ${quoteInstruction}`);
       
       const replyRaw = await callAI(recent.map(m=>({role:m.role==="me"?"user":"assistant",content:m.content})), sysPrompt);
