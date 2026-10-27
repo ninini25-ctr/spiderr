@@ -1,0 +1,11 @@
+{
+  "name": "蜘蛛侠世界模拟器",
+  "short_name": "蜘蛛侠",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#e62429",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
