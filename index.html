@@ -151,7 +151,7 @@ input:checked + .slider:before{transform:translateX(20px);}
       <button class="app-icon" data-app="twitter"><span>𝕏</span><label>推特</label></button>
       <button class="app-icon" data-app="facetime"><span>📹</span><label>FaceTime</label></button>
       <button class="app-icon" data-app="worldline"><span>🌐</span><label>世界线</label></button>
-      <button class="app-icon" data-app="maps"><span>🗺️</span><label>地图</label></button>
+      <button class="app-icon" data-app="Spider_Terminal"><span>🕷️</span><label>蜘蛛终端</label></button>
      <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>通讯录</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
@@ -272,7 +272,45 @@ const WORLD = {
 ],
 
   // MJ 全局关系锁定
-  mjPolicy: "MJ (米歇尔·琼斯) 与彼得·帕克是朋友/同学关系。禁止 ML 关系。禁止任何恋爱暗示、暗恋、脸红、保护欲等。可以参考普通高中同学间的相处——互怼、分享八卦、一起做作业，但不能有浪漫线。"
+  mjPolicy: "MJ (米歇尔·琼斯) 与彼得·帕克是朋友/同学关系。禁止 ML 关系。禁止任何恋爱暗示、暗恋、脸红、保护欲等。可以参考普通高中同学间的相处——互怼、分享八卦、一起做作业，但不能有浪漫线。",
+// ===== 支线剧情存档（独立于主线，无限档位）=====
+  // 结构：[{ id, title, story, choices, choice, date, createdAt, closed }]
+  // 存储 key: "sv_sidequests"
+  getSideQuests() {
+    try {
+      return JSON.parse(localStorage.getItem("sv_sidequests") || "[]");
+    } catch (e) { return []; }
+  },
+  saveSideQuests(list) {
+    localStorage.setItem("sv_sidequests", JSON.stringify(list));
+  },
+  addSideQuest(q) {
+    const list = this.getSideQuests();
+    list.push(q);
+    this.saveSideQuests(list);
+    return q;
+  },
+  updateSideQuest(id, patch) {
+    const list = this.getSideQuests();
+    const idx = list.findIndex(x => x.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...patch };
+    this.saveSideQuests(list);
+    return list[idx];
+  },
+  deleteSideQuest(id) {
+    const list = this.getSideQuests().filter(x => x.id !== id);
+    this.saveSideQuests(list);
+  },
+  // 获取当前未完结的支线
+  getActiveSideQuest() {
+    return this.getSideQuests().find(x => !x.closed) || null;
+  },
+  // 生成标题（根据剧情内容概括为 5 个字）
+  makeSideQuestTitle(text) {
+    const t = String(text || "").replace(/\s+/g, "").trim();
+    return t.slice(0, 12) || "未知事件";
+  }
 };
 
 const store = {
@@ -710,6 +748,126 @@ function shouldAdvancePhase(s) {
   return false;
 }
 
+// ===== 打开/渲染支线剧情 =====
+window.openSideQuestView = (id) => {
+  const q = WORLD.getSideQuests().find(x => x.id === id);
+  if (!q) return toast("支线不存在");
+  currentApp = "sidequest";
+  $("#desktop").classList.remove("active");
+  $("#appView").classList.add("active");
+  $("#appTitle").textContent = "支线 · " + q.title;
+  const sb = $("#appSettingsBtn");
+  sb.style.display = "block";
+  sb.textContent = "‹ 返回蜘蛛终端";
+  sb.onclick = () => { openApp("Spider_Terminal"); };
+  renderSideQuestBody($("#appBody"), q);
+};
+
+function renderSideQuestBody(body, q) {
+  const isClosed = q.closed;
+  body.innerHTML = `<div style="padding:14px">
+    <div class="card" style="border-left:3px solid #e62429;padding:12px;margin-bottom:8px;">
+      <div style="font-size:11px;color:#8a8a99;">🎬 支线档案 · ${esc(q.date)} · ${isClosed ? "✅ 已完结" : "▶ 进行中"}</div>
+      <div style="font-weight:bold;color:#fff;font-size:15px;margin-top:4px;">${esc(q.title)}</div>
+    </div>
+    <div class="card" style="padding:12px;margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--muted);">已推进 ${q.choices.length} 轮 · 好感度 ${q.affinity || 0} 变动</div>
+    </div>
+    <div class="story-content" style="word-break:break-word;">${esc(q.story)}</div>
+    ${!isClosed ? `
+      <div id="sqOptions"></div>
+      <div class="card">
+        <input id="sqCustomAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
+        <button class="btn" id="sqSendBtn">发送</button>
+      </div>
+    ` : `
+      <div class="card" style="text-align:center;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">这个支线已经完结。</div>
+        <button class="btn ghost" onclick="openApp('Spider_Terminal')">返回蜘蛛终端</button>
+      </div>
+    `}
+  </div>`;
+
+  if (!isClosed) {
+    // 选项
+    const optsEl = body.querySelector("#sqOptions");
+    const opts = (q.options || "").split('\n').filter(l => /^[A-D][\.\、]/.test(l.trim()));
+    optsEl.innerHTML = opts.map(o =>
+      `<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.advanceSideQuest('${q.id}', '${esc(o).replace(/'/g, "\\'")}')">${esc(o)}</button>`
+    ).join("");
+
+    // 自定义行动
+    const input = body.querySelector("#sqCustomAct");
+    const send = () => {
+      const v = input.value.trim();
+      if (!v) return toast("请输入行动");
+      window.advanceSideQuest(q.id, v);
+    };
+    body.querySelector("#sqSendBtn").onclick = send;
+    input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); send(); } });
+  }
+}
+
+// 推进支线一轮
+window.advanceSideQuest = async (id, choice) => {
+  const q = WORLD.getSideQuests().find(x => x.id === id);
+  if (!q || q.closed) return toast("该支线已完结");
+
+  q.choices = q.choices || [];
+  q.choices.push({ story: q.story, choice });
+  q.affinity = q.affinity || 0;
+
+  // 渲染 loading
+  const body = $("#appBody");
+  body.innerHTML = `<div class="loader"><div class="spin"></div>剧情推进中...</div>`;
+
+  try {
+    const sNow = store.getState();
+    const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+    const last = q.choices[q.choices.length - 1];
+
+    const sysPrompt = buildSystem(`你正在续写一段**支线剧情**（独立于主线）。
+
+【支线标题】${q.title}
+【当前游戏内日期】${date}
+【已推进轮数】${q.choices.length}
+【上一轮剧情】${last.story.slice(0, 800)}
+【玩家选择】${choice}
+
+【要求】
+1. 承接上一轮剧情和玩家选择继续发展，写 400-800 字。
+2. 结尾用【选项】列出 A. B. C. D.。
+3. **不要在任何位置标注好感度变动**（支线不影响主线好感度）。
+4. **如果这一轮剧情已经可以自然收尾，在末尾另写一行**：**【支线完结】**
+   不要拖太长，支线一般 2-4 轮完结，最多 5 轮。
+
+【风格】电影镜头感，纽约皇后区，严禁 AI 腔。`);
+
+    const res = await callAI([{role:"user",content:"继续"}], sysPrompt);
+    const isFinished = /【支线完结】/.test(res);
+    const optionsIdx = res.indexOf("【选项】");
+    const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+      .replace("【剧情】","").replace(/【好感度变动:\s*[+-]\d+】/g, "").replace("【支线完结】","").trim();
+    const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).replace("【支线完结】","").trim() : "";
+
+   // 更新支线记录（不改好感度）
+    q.story = storyText;
+    q.options = optionsText;
+    q.closed = isFinished || q.choices.length >= 5;
+
+    WORLD.updateSideQuest(id, q);
+
+    // 如果完结，自动封档
+    if (q.closed) {
+      toast("🎬 支线已完结：" + q.title);
+      setTimeout(() => openApp("Spider_Terminal"), 800);
+    } else {
+      renderSideQuestBody(body, q);
+    }
+  } catch (e) {
+    body.innerHTML = `<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;
+  }
+};
 window.selectOption = (optText) => {
   if (!optText || !optText.trim()) return toast("请输入内容");
   const s = store.getState();
@@ -1403,7 +1561,42 @@ replyToComment(postIdx, commentIdx) {
 worldline: {
   title: "世界线",
   async render(body) {
-    const s = store.getState();
+  // ===== 入口分流 =====
+  if (!window._worldlineMode) {
+      $("#appSettingsBtn").style.display = "none";
+    body.innerHTML = `<div style="padding:14px">
+      <div class="card" style="text-align:center;padding:24px 16px;">
+        <h2 style="color:#e62429;margin:0 0 12px;">🌐 世界线</h2>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 20px;">选择要进入的剧情线</p >
+        <button class="btn" id="enterMain" style="margin-bottom:10px;">📖 主线剧情</button>
+        <button class="btn ghost" id="enterSide">🎬 分支剧情</button>
+      </div>
+      <div class="card">
+        <h3>说明</h3>
+        <p style="font-size:12px;color:var(--muted);line-height:1.7;margin:0;">
+          <b>主线剧情：</b>按 MCU 时间线推进，影响彼得好感度、结局变量、角色状态。<br><br>
+          <b>分支剧情：</b>独立于主线，在蜘蛛终端 App 中开启。完成一个支线会自动封档为「分支·标题」，不影响主线进度。
+        </p >
+      </div>
+    </div>`;
+    body.querySelector("#enterMain").onclick = () => {
+      window._worldlineMode = "main";
+      apps.worldline.render(body);
+    };
+    body.querySelector("#enterSide").onclick = () => {
+      // 检查是否有进行中的支线
+      const active = WORLD.getActiveSideQuest();
+      if (active) {
+        window.openSideQuestView(active.id);
+      } else {
+        toast("暂无进行中的支线，请先到「蜘蛛终端」App 开始新支线");
+        openApp("Spider_Terminal");
+      }
+    };
+    return;
+  }
+  // ===== 主线渲染 =====
+     const s = store.getState();
 
     const sb = $("#appSettingsBtn");
     sb.style.display = "block";
@@ -1543,11 +1736,16 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
     const ci = body.querySelector("#customAct");
     ci.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); window.selectOption(ci.value); } });
   },
-  onBack() {
+ onBack() {
     const sb = $("#appSettingsBtn");
     sb.style.display = "none";
     sb.onclick = null;
-    return false;
+    // 如果当前在入口页，直接返回桌面
+    if (!window._worldlineMode) return false;
+    // 如果当前在主线里，按返回键应该是回到入口页
+    window._worldlineMode = null;
+    apps.worldline.render($("#appBody"));
+    return true;
   }
 },
 
@@ -1723,32 +1921,115 @@ facetime: {
     render(body){ body.innerHTML=`<div class="loader">开发中</div>`; }
   },
 
-  maps: {
-    title: "地图",
+Spider_Terminal: {
+    title: "蜘蛛终端",
     async render(body) {
-      const s=store.getState();
-      body.innerHTML=`<div style="padding:14px">
-        <div class="card"><h3>皇后区行动地图</h3>
-<p style="font-size:12px;color:var(--muted);margin:0 0 10px">根据当前剧情由 AI 生成地图。</p>
-          <button class="btn" id="genMap">🖼️ 生成地图</button>
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card">
+          <h3>🗺️ 皇后区行动地图</h3>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px">主线剧情之外，地图上随机刷新支线事件。点击下方「开始新支线」由 AI 生成一段独立剧情（独立于主线，不影响主线进度）。</p >
+          <button class="btn" id="genMapBtn" style="margin-bottom:8px;">🖼️ 生成地图</button>
+          <button class="btn" id="startSideQuestBtn">✨ 开始新支线</button>
         </div>
         <div id="mapArea"></div>
+        <div class="card" id="sideQuestListCard">
+          <h3>🎬 支线档案（共 <span id="sqCount">0</span> 个）</h3>
+          <div id="sqList" style="font-size:13px;color:var(--muted)">加载中...</div>
+        </div>
       </div>`;
-      const area=body.querySelector("#mapArea");
-    const renderMap = async () => {
+
+      const area = body.querySelector("#mapArea");
+      const sqListEl = body.querySelector("#sqList");
+      const sqCountEl = body.querySelector("#sqCount");
+
+      // ===== 1. 地图生成 =====
+      const renderMap = async () => {
         area.innerHTML = `<div class="loader"><div class="spin"></div>生成地图中...</div>`;
         try {
           const sNow = store.getState();
-          const ctx = s.currentStory ? s.currentStory.slice(0, 300) : "彼得与玩家的日常起点";
-          // 👇 把日期拼进去
+          const ctx = sNow.currentStory ? sNow.currentStory.slice(0, 300) : "彼得与玩家的日常起点";
           const prompt = `Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. Scene: ${ctx}. Year: ${sNow.gameYear}. No text labels.`;
           const url = await generateImage(prompt);
           const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
-          area.innerHTML = `<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);">`;
+          area.innerHTML = `<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
         } catch(e) { area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`; }
       };
-      body.querySelector("#genMap").onclick=renderMap;
+      body.querySelector("#genMapBtn").onclick = renderMap;
+
+      // ===== 2. 渲染支线列表 =====
+      const renderSideQuests = () => {
+        const list = WORLD.getSideQuests();
+        sqCountEl.textContent = list.length;
+        if (!list.length) {
+          sqListEl.innerHTML = "暂无支线剧情，点击上方「开始新支线」开始。";
+          return;
+        }
+        sqListEl.innerHTML = list.map((q) => `
+          <div style="padding:10px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:bold;color:#fff;font-size:13px;">${esc(q.title)}</div>
+              <div style="font-size:11px;color:#888;margin-top:2px;">${q.closed ? "✅ 已完结" : "▶ 进行中"} · ${q.date}</div>
+            </div>
+            <button class="btn ghost" data-open="${q.id}" style="width:auto;padding:4px 10px;font-size:12px;">查看</button>
+          </div>
+        `).join("");
+        sqListEl.querySelectorAll("[data-open]").forEach(el => {
+          el.onclick = () => window.openSideQuestView(el.dataset.open);
+        });
+      };
+
+      // ===== 3. 开始新支线 =====
+      body.querySelector("#startSideQuestBtn").onclick = async () => {
+        const active = WORLD.getActiveSideQuest();
+        if (active) {
+          return toast("你有一个未完结的支线：「" + active.title + "」，请先去世界线-分支入口完成它");
+        }
+        area.innerHTML = `<div class="loader"><div class="spin"></div>正在生成一段随机支线剧情...</div>`;
+        try {
+          const sNow = store.getState();
+          const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+          const phase = WORLD.timeline[sNow.anchor] || WORLD.timeline[0];
+          const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM，正在生成一段**支线剧情**（独立于主线，不影响主线进度）。
+
+【支线要求】
+1. 时间严格在 ${date} 前后，不能跳跃到未来。
+2. 结合当前阶段「${phase.name}」允许的环境，从以下方向随机选一个：街头突发事件、街区小委托、随机 NPC 遭遇、小装备/小线索收集、日常社交意外。
+3. 开头交代事件起因，生成不少于 1000 字的剧情。
+4. 结尾用【选项】列出 A. B. C. D. 四个选项。
+5. 结尾另起一行标注【支线标题: 短标题】（不超过 10 个字）。
+6. **不要在任何位置标注好感度变动**（支线不影响主线好感度）。
+
+【风格】
+电影镜头感，贴近纽约皇后区生活，严禁 AI 腔。`);
+
+          const res = await callAI([{role:"user",content:"生成支线剧情"}], sysPrompt);
+          const titleMatch = res.match(/【支线标题:\s*(.+?)】/);
+          const optionsIdx = res.indexOf("【选项】");
+          const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res).replace("【剧情】","").replace(/【支线标题:.*?】/,"").trim();
+          const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+          const title = titleMatch ? titleMatch[1].trim() : WORLD.makeSideQuestTitle(storyText);
+
+          const q = {
+            id: "sq_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            title: title,
+            date: date,
+            story: storyText,
+            options: optionsText,
+            choices: [],
+            closed: false,
+            createdAt: Date.now()
+          };
+          WORLD.addSideQuest(q);
+
+          window.openSideQuestView(q.id);
+          toast("新支线已开始：" + title);
+        } catch(e) {
+          area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`;
+        }
+      };
+
       renderMap();
+      renderSideQuests();
     }
   },
 
@@ -2029,6 +2310,7 @@ function openApp(id) {
 }
 
 $("#backBtn").onclick=()=>{
+  if (currentApp === "sidequest") { openApp("Spider_Terminal"); return; }
   if(currentApp&&apps[currentApp].onBack&&apps[currentApp].onBack()) return;
   $("#appView").classList.remove("active");
   $("#desktop").classList.add("active");
