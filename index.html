@@ -270,7 +270,9 @@ body.theme-light .notch{ background:#1d1d1f; }
       <button class="app-icon" data-app="facetime"><span>📹</span><label>FaceTime</label></button>
       <button class="app-icon" data-app="worldline"><span>🌐</span><label>世界线</label></button>
       <button class="app-icon" data-app="Spider_Terminal"><span>🕷️</span><label>蜘蛛终端</label></button>
-     <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
+      <button class="app-icon" data-app="Theater"><span>🎭</span><label>小剧场</label></button>
+      <button class="app-icon" data-app="Diary"><span>📓</span><label>日记</label></button>
+      <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>通讯录</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
@@ -1190,6 +1192,73 @@ res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
   } catch(e) { toast(e.message); }
 };
 
+window.advanceTheater = async (id, choice) => {
+  const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+  const q = list.find(x => x.id === id);
+  if (!q || q.closed) return toast("该小剧场已完结");
+
+  q.history = q.history || [];
+  q.history.push({ story: q.story, choice: choice });
+
+  const body = $("#appBody");
+  body.innerHTML = `<div class="loader"><div class="spin"></div>剧情推进中...</div>`;
+
+  try {
+    const sNow = store.getState();
+    const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+
+    const sysPrompt = `你是一个剧情 DM，正在续写一个**独立小剧场**（与 MCU 主线无关）。
+
+【背景设定】
+${q.background}
+
+【玩家身份】${q.identity}
+【氛围倾向】${q.tone}
+【当前游戏内日期】${date}
+【已推进轮数】${q.history.length}
+
+【上一轮剧情】
+${q.story.slice(0, 800)}
+
+【玩家选择】
+${choice}
+
+【要求】
+1. 承接上一轮剧情和玩家选择继续发展，写 600~1000 字。
+2. 结尾用【选项】列出 A. B. C. D.。
+3. 如果故事已经自然收尾，在末尾另写一行：**【小剧场完结】**
+4. 不要标注好感度、不要提 MCU 主线。
+
+【文风】电影镜头感，英文对白用 *"..."*（中文翻译）格式。`;
+
+    const res = await callAI([{ role: "user", content: "继续" }], sysPrompt);
+    const isFinished = /【小剧场完结】/.test(res);
+    const optionsIdx = res.indexOf("【选项】");
+    const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+      .replace("【剧情】", "")
+      .replace("【小剧场完结】", "")
+      .trim();
+    const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).replace("【小剧场完结】", "").trim() : "";
+
+    q.story = storyText;
+    q.options = optionsText;
+    q.closed = isFinished || q.history.length >= 8;
+
+    const idx = list.findIndex(x => x.id === id);
+    if (idx !== -1) list[idx] = q;
+    localStorage.setItem("sv_theaters", JSON.stringify(list));
+
+    if (q.closed) {
+      toast("🎭 小剧场已完结：" + q.title);
+      setTimeout(() => openApp("Theater"), 800);
+    } else {
+      apps.Theater.renderQuest(body, q);
+    }
+  } catch (e) {
+    body.innerHTML = `<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;
+  }
+};
+
 const apps = {
   settings: {
     title: "设置",
@@ -1648,8 +1717,31 @@ return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">$
    const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
 // 1. 先定义角色专属特征
-      let characterVibe = "";
-      if (self.currentUser === "内德·利兹") {
+     // ===== 小剧场专属：优先判断 =====
+      const contactInfo = store.getContacts().find(c => c.name === self.currentUser);
+      if (contactInfo && contactInfo.isTheater) {
+        const theaters = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+        const tq = theaters.find(t => t.id === contactInfo.theaterId);
+        if (tq) {
+          characterVibe = `【小剧场 · ${tq.title}】
+你现在在小剧场里扮演一个 NPC，和玩家互动。以下是这个世界的背景与设定：
+
+【背景设定】
+${tq.background}
+
+【玩家身份】${tq.identity}
+【氛围倾向】${tq.tone}
+【当前剧情进展】
+${tq.story.slice(0, 800)}
+
+【你的扮演要求】
+- 严格贴合这个背景设定，不要说破"这是小剧场"。
+- 你和玩家是这个世界里的角色，正常互动、对话、反应。
+- 情绪、语言风格符合【氛围倾向】${tq.tone}。
+- 不涉及主线时间线、不涉及 MCU 大事件（除非背景里明确设置了）。
+- 一句话：把玩家当成你在这个世界里的对话对象，自然回应。`;
+        }
+      } else if (self.currentUser === "内德·利兹") {
         characterVibe = `【内德的话痨与技术宅属性】
 - 聊天经常跑题，喜欢突然聊起：最近的漫威电影（比如吐槽雷神）、新出的电子游戏、他刚写的代码、或者是他在网上看到的外星人阴谋论。
 - 极度崇拜蜘蛛侠，经常想当彼得的“后台技术支持”（“兄弟，你需要我帮你黑进那个系统吗？”）。
@@ -2583,6 +2675,414 @@ Spider_Terminal: {
 
       renderMap();
       renderSideQuests();
+    }
+  },
+
+Theater: {
+    title: "小剧场",
+    async render(body) {
+      const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      const active = list.find(x => !x.closed);
+
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card">
+          <h3>🎭 小剧场</h3>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">
+            自由设定背景，独立于主线和支线。开始后可以在 <b>信息</b> App 里继续聊，暂时跟小剧场剧情走。
+          </p >
+          <button class="btn" id="startTheaterBtn" ${active ? "disabled" : ""}>
+            ${active ? "▶ 正在进行中：" + esc(active.title) : "✨ 开始新小剧场"}
+          </button>
+          ${active ? `<button class="btn ghost" id="openActiveBtn" style="margin-top:8px;">打开当前剧情</button>` : ""}
+        </div>
+        <div class="card">
+          <h3>📜 历史小剧场（${list.length}）</h3>
+          ${list.length ? list.map(q => `
+            <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:13px;">${esc(q.title)}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${q.closed ? "✅ 完结" : "▶ 进行中"} · ${esc(q.date)}</div>
+              </div>
+              <button class="btn ghost" data-open="${esc(q.id)}" style="width:auto;padding:4px 10px;font-size:12px;">查看</button>
+            </div>
+          `).join("") : '<p style="color:var(--muted);font-size:13px;">暂无小剧场</p >'}
+        </div>
+      </div>`;
+
+      const sb = $("#appSettingsBtn");
+      sb.style.display = "none";
+
+      body.querySelectorAll("[data-open]").forEach(el => {
+        el.onclick = () => this.openQuest(el.dataset.open);
+      });
+
+      if (active) {
+        body.querySelector("#openActiveBtn").onclick = () => this.openQuest(active.id);
+      }
+
+      body.querySelector("#startTheaterBtn").onclick = () => {
+        if (active) return;
+        this.showSetup(body);
+      };
+    },
+
+    showSetup(body) {
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card">
+          <h3>🎬 小剧场设置</h3>
+          <div class="field"><label>背景设定（最重要）</label>
+            <textarea id="th_bg" rows="4" placeholder="例如：平行宇宙，彼得和玩家都是中城高中二年级学生，学校组织去欧洲游学，在威尼斯遇到神秘客……"></textarea>
+          </div>
+          <div class="field"><label>你的身份</label>
+            <input id="th_identity" value="${esc(store.getProfile().identity || "同学")}">
+          </div>
+          <div class="field"><label>氛围倾向</label>
+            <select id="th_tone">
+              <option value="日常">日常轻喜剧</option>
+              <option value="悬疑">悬疑紧张</option>
+              <option value="情感">情感细腻</option>
+              <option value="战斗">战斗动作</option>
+              <option value="自由">自由发挥</option>
+            </select>
+          </div>
+          <button class="btn" id="th_gen">生成开场</button>
+          <button class="btn ghost" id="th_cancel" style="margin-top:8px;">取消</button>
+        </div>
+      </div>`;
+
+      body.querySelector("#th_cancel").onclick = () => this.render(body);
+
+      body.querySelector("#th_gen").onclick = async () => {
+        const bg = body.querySelector("#th_bg").value.trim();
+        const identity = body.querySelector("#th_identity").value.trim() || "同学";
+        const tone = body.querySelector("#th_tone").value;
+        if (!bg) return toast("请填写背景设定");
+
+        body.innerHTML = `<div class="loader"><div class="spin"></div>生成开场中...</div>`;
+
+        try {
+          const sNow = store.getState();
+          const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+
+          const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
+
+【用户自定义背景】
+${bg}
+
+【玩家身份】${identity}
+【氛围倾向】${tone}
+【当前游戏内日期】${date}（如果背景暗示其他时间，可以合理调整）
+
+【要求】
+1. 先写 500~900 字的开场剧情，立刻把玩家拉入场景。
+2. 不要解释"这是一个小剧场"，直接讲故事。
+3. 结尾用【选项】列出 A. B. C. D. 四个方向。
+4. 最后一行单独标：【小剧场标题: 不超过8个字】
+
+【文风】
+电影镜头感，多动作、细节、感官描写，严禁 AI 腔。英文对白用 *"..."*（中文翻译）格式。`;
+
+          const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
+
+          const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+          const optionsIdx = res.indexOf("【选项】");
+          const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+            .replace("【剧情】", "")
+            .replace(/【小剧场标题[:：].*?】/g, "")
+            .trim();
+          const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+          const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toLocaleTimeString());
+
+          const q = {
+            id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            title: title,
+            background: bg,
+            identity: identity,
+            tone: tone,
+            date: date,
+            story: storyText,
+            options: optionsText,
+            history: [],
+            closed: false,
+            createdAt: Date.now()
+          };
+          const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+          all.unshift(q);
+          localStorage.setItem("sv_theaters", JSON.stringify(all));
+
+          this.bindChat(q);
+          toast("小剧场开场已生成：" + title);
+          this.openQuest(q.id);
+        } catch (e) {
+          body.innerHTML = `<div style="padding:14px"><div class="card">生成失败: ${esc(e.message)}</div></div>`;
+        }
+      };
+    },
+
+    bindChat(q) {
+      const chatName = "🎭 " + q.title;
+      const contacts = store.getContacts();
+      if (!contacts.find(c => c.name === chatName)) {
+        contacts.push({
+          name: chatName,
+          desc: "小剧场伙伴（" + q.background.slice(0, 30) + "...）",
+          affinity: 0,
+          heart: "暂无",
+          isTheater: true,
+          theaterId: q.id
+        });
+        store.setContacts(contacts);
+      }
+    },
+
+    openQuest(id) {
+      const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      const q = list.find(x => x.id === id);
+      if (!q) return toast("小剧场不存在");
+
+      currentApp = "theater";
+      $("#desktop").classList.remove("active");
+      $("#appView").classList.add("active");
+      $("#appTitle").textContent = "小剧场 · " + q.title;
+      const sb = $("#appSettingsBtn");
+      sb.style.display = "block";
+      sb.textContent = "‹ 返回列表";
+      sb.onclick = () => { currentApp = "Theater"; openApp("Theater"); };
+      this.renderQuest($("#appBody"), q);
+    },
+
+    renderQuest(body, q) {
+      const isClosed = q.closed;
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card" style="border-left:3px solid #e62429;padding:12px;margin-bottom:8px;">
+          <div style="font-size:11px;color:#8a8a99;">🎭 小剧场 · ${esc(q.date)}</div>
+          <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:15px;margin-top:4px;">${esc(q.title)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">背景：${esc(q.background.slice(0, 80))}...</div>
+        </div>
+        <div class="card" style="padding:10px;margin-bottom:10px;">
+          <button class="btn ghost" id="gotoChatBtn" style="font-size:12px;">💬 去「信息」App 继续聊</button>
+        </div>
+        <div class="story-content" style="word-break:break-word;">${formatDialogue(q.story)}</div>
+        ${!isClosed ? `
+          <div id="thOptions"></div>
+          <div class="card">
+            <input id="thCustomAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
+            <button class="btn" id="thSendBtn">发送</button>
+          </div>
+        ` : `
+          <div class="card" style="text-align:center;">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">这个小剧场已经完结。</div>
+            <button class="btn ghost" onclick="openApp('Theater')">返回列表</button>
+          </div>
+        `}
+      </div>`;
+
+      body.querySelector("#gotoChatBtn").onclick = () => {
+        apps.messages.currentUser = "🎭 " + q.title;
+        apps.messages.view = "chat";
+        openApp("messages");
+      };
+
+      if (!isClosed) {
+        const optsEl = body.querySelector("#thOptions");
+        const opts = (q.options || "").split('\n').filter(l => /^[A-D][\.\、]/.test(l.trim()));
+        optsEl.innerHTML = opts.map(o =>
+          `<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.advanceTheater('${q.id}', '${esc(o).replace(/'/g, "\\'")}')">${esc(o)}</button>`
+        ).join("");
+
+        const input = body.querySelector("#thCustomAct");
+        const send = () => {
+          const v = input.value.trim();
+          if (!v) return toast("请输入行动");
+          window.advanceTheater(q.id, v);
+        };
+        body.querySelector("#thSendBtn").onclick = send;
+        input.addEventListener("keydown", e => {
+          if (e.key === "Enter") { e.preventDefault(); send(); }
+        });
+      }
+    }
+  },
+
+Diary: {
+    title: "彼得的日记",
+    async render(body) {
+      const diary = JSON.parse(localStorage.getItem("sv_diary") || "[]");
+      const s = store.getState();
+      const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+
+     body.innerHTML = `<div style="padding:14px">
+        <div class="card" style="border-left:3px solid #2d6bff;padding:12px;margin-bottom:12px;">
+          <div style="font-size:11px;color:#8a8a99;margin-bottom:4px;">📓 彼得的日记本</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+            当前日期：<b style="color:var(--text);">${s.gameYear}年${s.gameMonth}月${s.gameDay}日</b><br>
+            所处阶段：${phase.name}<br>
+            共 ${diary.length} 篇日记
+          </div>
+        </div>
+
+        <div class="card">
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">
+            日记由彼得·帕克根据最近的主线剧情、与玩家的聊天、日常状态撰写。生成一篇新日记会保留旧日记；重置只会删除最新那一篇。
+          </p >
+          <div class="row" style="gap:8px;">
+            <button class="btn" id="diaryGenBtn" style="flex:1;">✍️ 生成新日记</button>
+            <button class="btn ghost" id="diaryResetBtn" style="flex:1;color:#e62429;border-color:#e62429;">🗑️ 重置最新一篇</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>📖 日记本（${diary.length} 篇）</h3>
+          <div id="diaryList">
+            ${diary.length ? diary.slice().reverse().map((d, i) => {
+              const realIdx = diary.length - 1 - i;
+              return `<div data-idx="${realIdx}" style="padding:10px;border-bottom:1px solid var(--line);cursor:pointer;">
+                <div style="font-size:11px;color:#8a8a99;">${esc(d.date)} · ${esc(d.stage || "")}</div>
+                <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:14px;margin-top:4px;">${esc(d.title)}</div>
+              </div>`;
+            }).join("") : '<p style="color:var(--muted);font-size:13px;">还没有日记。点上方「生成新日记」开始。</p >'}
+          </div>
+        </div>
+      </div>`;
+
+      const sb = $("#appSettingsBtn");
+      sb.style.display = "none";
+
+      body.querySelectorAll("#diaryList [data-idx]").forEach(el => {
+        el.onclick = () => {
+          const idx = parseInt(el.dataset.idx);
+          const d = diary[idx];
+          if (!d) return;
+          this.showDiary(d);
+        };
+      });
+
+      body.querySelector("#diaryGenBtn").onclick = () => {
+        this.generate(body);
+      };
+
+      body.querySelector("#diaryResetBtn").onclick = () => {
+        if (!diary.length) return toast("还没有日记可重置");
+        if (!confirm("确定要删除最新一篇日记吗？（此操作不可恢复）")) return;
+        diary.pop();
+        localStorage.setItem("sv_diary", JSON.stringify(diary));
+        toast("已删除最新一篇日记");
+        this.render(body);
+      };
+    },
+
+   async generate(body) {
+      body.innerHTML = `<div class="loader"><div class="spin"></div>彼得正在写日记...</div>`;
+
+      try {
+ sState();
+        const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+        const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+        const diaries = JSON.parse(localStorage.getItem("sv_diary") || "[]");
+
+        const history = s.history || [];
+        const recentMain = history.slice(-3).map(h => h.story).join("\n\n———\n\n").slice(0, 1500);
+
+        let recentChats = "";
+        const chats = store.getChats();
+        for (const name of ["彼得·帕克", "内德·利兹", "米歇尔·琼斯", "梅婶"]) {
+          const arr = chats[name] || [];
+          const last = arr.slice(-3).filter(m => m.content && !m.content.startsWith("[语音]"));
+          if (last.length) {
+            recentChats += `【与${name}最近的短信】\n` + last.map(m =>
+              (m.role === "me" ? "我：" : name + "：") + m.content.replace(/[“”"']/g, "")
+            ).join("\n") + "\n\n";
+          }
+        }
+
+        const lastDiary = diaries.length ? diaries[diaries.length - 1] : null;
+        const lastDiaryHint = lastDiary
+          ? `\n【上一篇日记（${lastDiary.date}）标题】${lastDiary.title}\n【上一篇日记大约结尾】${lastDiary.content.slice(-200)}\n（新日记要衔接、体现成长或变化，但不要重复上一篇。）`
+          : "";
+
+        const sysPrompt = `你现在是漫威的「彼得·帕克」，正在写你自己的私人日记。
+
+【当前日期】${date}
+【当前阶段】${phase.name}
+【阶段概述】${phase.summary}
+【当前彼得好感度（与你关系最近的人）】${s.affinity}/200
+
+【最近发生的主线剧情（供参考）】
+${recentMain || "（暂无主线记录）"}
+
+【最近和朋友的短信（供参考）】
+${recentChats || "（暂无）"}
+${lastDiaryHint}
+
+【绝对铁律 · 违反即失败】
+1. 这是一篇**私人日记**！就像高中生偷偷写在笔记本里的那种。
+2. 视角是彼得·帕克本人，用"我"来写。
+3. 严禁使用"他/她"来指代自己。
+4. 严禁出现小说化描写（如"深吸一口气""阳光洒进窗户"这类英文小说翻译腔）。
+5. 严禁出现任何括号 () （） 或星号 * * 来标注动作、情绪、场景。
+6. 严禁使用"英文原句（中文翻译）"格式！全部用中文日记口吻写。
+7. 严禁出现 MCU 主线之外的内容（不提前出现秃鹫、灭霸、神秘客等）。
+8. 不要标注好感度、不要括号说明、不要结尾提问。
+
+【内容要求】
+1. 长度 300~600 字。
+2. 内容可以包含：今天发生的事、学校/打工/梅婶/内德/MJ 的日常、蜘蛛侠相关的烦恼或小确幸、自己内心的自嘲和吐槽。
+3. 语气要贴近彼得：有点话痨、有点自嘲、有点焦虑、但又很真诚。
+4. 贴合当前阶段：${phase.name}（${phase.summary}）
+5. 时间、地点、人物、事件必须与当前日期 ${date} 和阶段自洽，不能跳跃未来。
+
+【格式要求 · 严格】
+第一行：【标题: 6个字以内的短标题】
+第二行空一行
+第三行开始写正文（纯中文，不要小标题，不要分段标记，正常分段即可）
+
+不要输出任何解释性文字，只输出日记本身。`;
+
+      const res = await callAI([{ role: "user", content: "写今天的日记" }], sysPrompt);
+
+  const lines = res.replace(/```/g, "").trim().split("\n");
+  let title = "无题";
+  let startIdx = 0;
+
+  if (lines[0] && lines[0].includes("标题")) {
+    title = lines[0].replace(/【.*?标题[:：]\s*/, "").replace(/】/g, "").trim().slice(0, 12) || "无题";
+    startIdx = 1;
+    while (startIdx < lines.length && !lines[startIdx].trim()) startIdx++;
+  }
+
+  const content = lines.slice(startIdx).join("\n").trim();
+  if (!content) throw new Error("日记内容为空，请重试");
+
+  diaries.push({
+    date: date,
+    title: title,
+    content: content,
+    stage: phase.name,
+    createdAt: Date.now()
+  });
+  localStorage.setItem("sv_diary", JSON.stringify(diaries));
+
+  toast("日记已生成：" + title);
+  this.render(body);
+} catch (e) {
+        body.innerHTML = `<div style="padding:14px"><div class="card">生成失败: ${esc(e.message)}</div></div>`;
+      }
+    },
+
+    showDiary(d) {
+      const div = document.createElement("div");
+      div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:300;padding:20px;overflow-y:auto;color:#ddd;font-size:14px;line-height:1.8;";
+      div.innerHTML = `
+        <div style="max-width:520px;margin:0 auto;">
+          <div style="background:#14141c;padding:20px;border-radius:12px;border-left:3px solid #2d6bff;margin-bottom:16px;">
+            <div style="font-size:11px;color:#8a8a99;margin-bottom:6px;">${esc(d.date)} · ${esc(d.stage || "")}</div>
+            <div style="font-size:16px;font-weight:bold;color:var(--sidebar-title-color);margin-bottom:12px;">${esc(d.title)}</div>
+            <div style="white-space:pre-wrap;color:var(--sidebar-text-color);font-family:'SimSun','宋体',serif;">${esc(d.content)}</div>
+          </div>
+          <button class="btn" onclick="this.parentNode.parentNode.remove()">关闭</button>
+        </div>
+      `;
+      document.querySelector(".device").appendChild(div);
     }
   },
 
