@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -2828,10 +2828,13 @@ ${povRule}`;
           const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
 
           const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
-          const optionsIdx = res.indexOf("【选项】");
-          const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
-            .replace("【剧情】", "")
-            .replace(/【小剧场标题[:：].*?】TextMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toLocaleTimeString());
+const optionsIdx = res.indexOf("【选项】");
+const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+  .replace("【剧情】", "")
+  .replace(/【小剧场标题[:：].*?】/g, "")
+  .trim();
+const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toLocaleTimeString());
 
           const q = {
             id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
