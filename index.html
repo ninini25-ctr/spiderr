@@ -2730,27 +2730,27 @@ Theater: {
     },
 
     showSetup(body) {
-      body.innerHTML = `<div style="padding:14px">
-        <div class="card">
+      body.innerHTML = `<div style="padding:14px;box-sizing:border-box;overflow-x:hidden;width:100%;">
+        <div class="card" style="box-sizing:border-box;overflow:hidden;">
           <h3>🎬 小剧场设置</h3>
           <div class="field"><label>背景设定（最重要）</label>
-            <textarea id="th_bg" rows="4" placeholder="例如：平行宇宙，彼得和玩家都是中城高中二年级学生，学校组织去欧洲游学，在威尼斯遇到神秘客……"></textarea>
+            <textarea id="th_bg" rows="4" style="box-sizing:border-box;width:100%;" placeholder="例如：平行宇宙，彼得和玩家都是中城高中二年级学生，学校组织去欧洲游学，在威尼斯遇到神秘客……"></textarea>
           </div>
           <div class="field"><label>你的身份</label>
-            <input id="th_identity" value="${esc(store.getProfile().identity || "同学")}">
+            <input id="th_identity" style="box-sizing:border-box;width:100%;" value="${esc(store.getProfile().identity || "同学")}">
           </div>
           <div class="field"><label>叙事人称</label>
-            <select id="th_pov">
+            <select id="th_pov" style="box-sizing:border-box;width:100%;">
               <option value="first">第一人称（"我"）</option>
               <option value="second" selected>第二人称（"你"）</option>
               <option value="third">第三人称（"某某"）</option>
             </select>
           </div>
           <div class="field" id="th_nameField" style="display:none;"><label>第三人称下你的名字</label>
-            <input id="th_name" value="${esc(store.getProfile().name || "玩家")}">
+            <input id="th_name" style="box-sizing:border-box;width:100%;" value="${esc(store.getProfile().name || "玩家")}">
           </div>
           <div class="field"><label>氛围倾向</label>
-            <select id="th_tone">
+            <select id="th_tone" style="box-sizing:border-box;width:100%;">
               <option value="日常">日常轻喜剧</option>
               <option value="悬疑">悬疑紧张</option>
               <option value="情感">情感细腻</option>
@@ -2782,48 +2782,40 @@ Theater: {
         body.innerHTML = `<div class="loader"><div class="spin"></div>生成开场中...</div>`;
 
         try {
-          const sNow = store.getState();
-          const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+const sNow = store.getState();
+          const date = sNow.gameYear + "年" + sNow.gameMonth + "月" + sNow.gameDay + "日";
 
-const povRule = q.pov === "first"
-      ? `【叙事人称 · 第一人称】全程用「我」称呼玩家。玩家=我。彼得等其他角色永远不是你，是被描述的外部人物。`
-      : q.pov === "second"
-      ? `【叙事人称 · 第二人称】全程用「你」称呼玩家。玩家=你。彼得等其他角色永远不是你，是被描述的外部人物。`
-      : `【叙事人称 · 第三人称】全程用「${q.userName}」称呼玩家。玩家=${q.userName}。彼得等其他角色永远不是${q.userName}，${q.userName}只指玩家本人。`;
+          const povRule = pov === "first"
+            ? "【叙事人称 · 第一人称】全程用「我」称呼玩家。玩家=我。彼得等其他角色永远不是你，是被描述的外部人物。"
+            : pov === "second"
+            ? "【叙事人称 · 第二人称】全程用「你」称呼玩家。玩家=你。彼得等其他角色永远不是你，是被描述的外部人物。"
+            : "【叙事人称 · 第三人称】全程用「" + userName + "」称呼玩家。玩家=" + userName + "。彼得等其他角色永远不是" + userName + "，" + userName + "只指玩家本人。";
 
-    const sysPrompt = `你是一个剧情 DM，正在续写一个**独立小剧场**（与 MCU 主线无关）。
+          const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
 
-【背景设定】
-${q.background}
+【用户自定义背景】
+${bg}
 
-【玩家身份】${q.identity}
-【氛围倾向】${q.tone}
-【当前游戏内日期】${date}
-【已推进轮数】${q.history.length}
-
-【上一轮剧情】
-${q.story.slice(0, 800)}
-
-【玩家下一步选择】
-${choice}
+【玩家身份】${identity}
+【氛围倾向】${tone}
+【当前游戏内日期】${date}（如果背景暗示其他时间，可以合理调整）
 
 ${povRule}
 
 【绝对铁律 · 主角归属】
-1. **玩家 = 视角中心**。整篇剧情必须以玩家的感官/行动/位置为基准展开。
-2. **禁止跳到彼得·帕克视角。** 彼得是场景里的另一个角色（NPC），不是主角。只能写彼得的表情、动作、台词（从玩家能观察到的外部视角），不能写"彼得心想…""彼得感到…"。
-3. 玩家刚刚做出的选择（${choice}）**已经发生**，你要写它带来的**外部反应**（谁看见了、谁说话了、环境怎么变了），但**不要把玩家的下一步行动也提前写掉**。
-4. 剧情要停在"玩家再次面临选择"的位置，交给选项。
-5. **禁止代替玩家说话或做决定**。除非玩家选择里明确说了要说什么，否则不能让玩家开口。
+1. 玩家 = 视角中心。整篇剧情必须以玩家的感官/行动/位置为基准展开。
+2. 禁止跳到彼得·帕克视角。彼得是场景里的另一个角色（NPC），不是主角。只能写彼得的表情、动作、台词（从玩家能观察到的外部视角），不能写"彼得心想…""彼得感到…"。
+3. 玩家的行动要留白：剧情只写到"你/我/${userName}面临选择"的位置，然后交给选项，不要替玩家决定下一步。
+4. 禁止代替玩家说话或做决定。不能写"我说…""你走过去…"这种预先执行玩家行动的句子，只能写"对面的人看着你/我/${userName}，等你回应"。
 
 【要求】
-1. 承接上一轮的"玩家选择"继续发展，写 600~1000 字。
-2. 结尾用【选项】列出 A. B. C. D. 四个**行动方向**。
-3. 如果故事已经自然收尾，在末尾另写一行：**【小剧场完结】**
-4. 不要标注好感度、不要提 MCU 主线。
+1. 先写一段围绕玩家视角的开场剧情，500~900 字。
+2. 结尾用【选项】列出 A. B. C. D. 四个行动方向（不是"你怎么想"，而是"你可以做什么"）。
+3. 最后一行单独标：【小剧场标题: 不超过8个字】
 
-【文风】电影镜头感，英文对白用 *"..."*（中文翻译）格式。
-${povRule}`;
+【文风】
+电影镜头感，多动作、细节、感官描写，严禁 AI 腔。
+英文对白用 *"..."*（中文翻译）格式。`;
 
           const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
 
