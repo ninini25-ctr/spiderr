@@ -487,6 +487,11 @@ const store = {
 setPosts(p){this.set("sv_posts",p);},
   getContacts(){ 
     let list = this.get("sv_contacts", []);
+// 清理旧版小剧场遗留的联系人（🎭 标题），只保留主线彼得
+if (list.some(c => c.name && c.name.startsWith("🎭"))) {
+  list = list.filter(c => !(c.name && c.name.startsWith("🎭")));
+  this.set("sv_contacts", list);
+}
     if(!list || list.length === 0) {
       list = [
   { name:"彼得·帕克", desc:"中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" },
@@ -510,7 +515,9 @@ setPosts(p){this.set("sv_posts",p);},
     return list; 
   },
 setContacts(c){ this.set("sv_contacts", c); },
-  getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10});},
+  getPeterBinding(){ return this.get("sv_peter_binding", null); },
+  setPeterBinding(b){ this.set("sv_peter_binding", b); },
+  getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10});},  
   setChatConfig(c){this.set("sv_chat_cfg",c);}
 };
 const dbHelper = {
@@ -748,12 +755,21 @@ const globalMusic = {
 };
 globalMusic.init();
 async function callAI(messages, systemPrompt) {
+  // 过滤掉空 content，避免 400
+  messages = (messages || []).filter(m => m && typeof m.content === "string" && m.content.trim() !== "");
   const cfg = store.getConfig();
   if (!cfg.enabled) throw new Error("AI 未启用");
   if (!cfg.apiKey) throw new Error("请先填入 API Key");
   const url = (cfg.baseUrl||"https://api.openai.com/v1").replace(/\/+$/,"") + "/chat/completions";
   const res = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.apiKey},body:JSON.stringify({model:cfg.model,messages:[{role:"system",content:systemPrompt},...messages],temperature:0.85})});
-  if (!res.ok) throw new Error("API 报错: "+res.status);
+  if (!res.ok) {
+  let detail = "";
+  try {
+    const errBody = await res.text();
+    detail = " | " + errBody.slice(0, 300);
+  } catch (_) {}
+  throw new Error("API 报错: " + res.status + detail);
+}
   return (await res.json()).choices[0].message.content.trim();
 }
 
@@ -796,7 +812,10 @@ function buildSystem(extra) {
   const p = store.getProfile();
   const s = store.getState();
   const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
-  const timeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+const year = s.gameYear || WORLD.startYear;
+const month = s.gameMonth || WORLD.startMonth;
+const day = s.gameDay || WORLD.startDay;
+const timeStr = `${year}年${month}月${day}日`;
 
   let worldbookPrompt = "";
   try {
@@ -1248,9 +1267,11 @@ ${choice}
     if (idx !== -1) list[idx] = q;
     localStorage.setItem("sv_theaters", JSON.stringify(list));
 
-    if (q.closed) {
-      toast("🎭 小剧场已完结：" + q.title);
-      setTimeout(() => openApp("Theater"), 800);
+   if (q.closed) {
+  const pb = store.getPeterBinding();
+  if (pb && pb.theaterId === q.id) store.setPeterBinding(null);
+  toast("🎭 小剧场已完结：" + q.title);
+  setTimeout(() => openApp("Theater"), 800);
     } else {
       apps.Theater.renderQuest(body, q);
     }
@@ -1498,6 +1519,10 @@ return;
     // ===== 校验聊天对象 =====
 if (!self.currentUser || !store.getContacts().find(c => c.name === self.currentUser)) {
   // 如果当前聊天对象不存在，回退到列表
+  if (self.view === "list" && self.currentUser === "") {
+    // 已经在列表页，直接返回，避免递归
+    return;
+  }
   self.view = "list";
   self.currentUser = "";
   self.render(body);
@@ -1506,7 +1531,7 @@ if (!self.currentUser || !store.getContacts().find(c => c.name === self.currentU
 
     const chats=store.getChats(), msgs=chats[self.currentUser]||[], cfg=store.getChatConfig();
     
-    let chatHtml = `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''}">`;
+   let chatHtml = `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''} padding-top:44px;">`;
     chatHtml += msgs.map((m, idx) => {
       const quoteHtml = m.quote
         ? `<div style="font-size:11px;color:var(--muted);border-left:2px solid #666;padding-left:6px;margin-bottom:4px;opacity:0.8">引用: ${esc(m.quote)}</div>`
@@ -1545,11 +1570,22 @@ if (m.content && m.content.startsWith("[语音]")) {
 return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">${quoteHtml}${esc(m.content)}</div>`;
     }).join("");
     chatHtml += `</div>`;
+      chatHtml += `<div style="position:absolute;top:0;left:0;right:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;">
+      <button id="backToListBtn" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;">‹</button>
+      <div style="font-size:13px;color:var(--muted);">当前对话：<b style="color:var(--text);">${esc(self.currentUser)}</b></div>
+    </div>`;
     chatHtml += `<div id="quotePreview" style="display:none;padding:8px 14px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12px;color:var(--muted);"><div style="display:flex;justify-content:space-between;align-items:center;"><span id="quoteText"></span><span id="cancelQuote" style="cursor:pointer;color:var(--accent)">✕</span></div></div>`;
     chatHtml += `<div class="composer"><input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}..."><button id="sendBtn">发送</button></div>`;
     
-    body.innerHTML = chatHtml;
+   body.innerHTML = chatHtml;
     
+    body.querySelector("#backToListBtn").onclick = () => {
+      self.view = "list";
+      self.currentUser = "";
+      store.setPeterBinding(null);   // 从剧场聊天退出时，彼得自动回到主线
+      self.render(body);
+    };
+
     const thread=body.querySelector("#chatThread");
     thread.scrollTop=thread.scrollHeight;
     
@@ -1635,6 +1671,12 @@ return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">$
       el.addEventListener("contextmenu", showMenu);
     });
     
+body.querySelector("#backToListBtn").onclick = () => {
+      self.view = "list";
+      self.currentUser = "";
+      self.render(body);
+    };
+
     body.querySelector("#cancelQuote").onclick = () => { body.querySelector("#quotePreview").style.display = "none"; self.quoteData = null; };
     body.querySelector("#sendBtn").onclick = () => {
       const text = body.querySelector("#msgInput").value.trim();
@@ -1717,14 +1759,23 @@ return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">$
    const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
 // 1. 先定义角色专属特征
+let characterVibe = "";
+
      // ===== 小剧场专属：优先判断 =====
       const contactInfo = store.getContacts().find(c => c.name === self.currentUser);
-      if (contactInfo && contactInfo.isTheater) {
+     // ===== 彼得绑定小剧场时，走小剧场人设 =====
+      const peterBinding = store.getPeterBinding();
+      let theaterTheme = null;
+      if (self.currentUser === "彼得·帕克" && peterBinding && peterBinding.theaterId) {
         const theaters = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-        const tq = theaters.find(t => t.id === contactInfo.theaterId);
-        if (tq) {
-          characterVibe = `【小剧场 · ${tq.title}】
-你现在在小剧场里扮演一个 NPC，和玩家互动。以下是这个世界的背景与设定：
+        const tq = theaters.find(t => t.id === peterBinding.theaterId && !t.closed);
+        if (tq) theaterTheme = tq;
+      }
+
+      if (theaterTheme) {
+        const tq = theaterTheme;
+        characterVibe = `【小剧场模式 · ${tq.title}】
+你现在既扮演彼得·帕克，也扮演这个剧场世界里的所有 NPC。以下是剧场背景：
 
 【背景设定】
 ${tq.background}
@@ -1737,13 +1788,11 @@ ${tq.background}
 ${tq.story.slice(0, 800)}
 
 【你的扮演要求】
-- 严格贴合这个背景设定，不要说破"这是小剧场"。
-- 你和玩家是这个世界里的角色，正常互动、对话、反应。
-- 你永远不是玩家。玩家是${tq.pov === "first" ? "「我」" : tq.pov === "second" ? "「你」" : "「" + (tq.userName || "玩家") + "」"}，你是彼得/isTheater NPC 里的角色。
+- 严格贴合剧场背景，不要说破"这是小剧场"。
+- 你永远不是玩家。玩家是${tq.pov === "first" ? "「我」" : tq.pov === "second" ? "「你」" : "「" + (tq.userName || "玩家") + "」"}。
 - 情绪、语言风格符合【氛围倾向】${tq.tone}。
 - 不涉及主线时间线、不涉及 MCU 大事件（除非背景里明确设置了）。
-- 一句话：把玩家当成你在这个世界里的对话对象，自然回应。`;
-        }
+- 短信形式简短、口语化，符合角色说话风格。`;
       } else if (self.currentUser === "内德·利兹") {
         characterVibe = `【内德的话痨与技术宅属性】
 - 聊天经常跑题，喜欢突然聊起：最近的漫威电影（比如吐槽雷神）、新出的电子游戏、他刚写的代码、或者是他在网上看到的外星人阴谋论。
@@ -2141,6 +2190,9 @@ replyToComment(postIdx, commentIdx) {
 worldline: {
   title: "世界线",
   async render(body) {
+if (window._worldlineMode === "main") {
+  store.setPeterBinding(null);
+}
   // ===== 入口分流 =====
   if (!window._worldlineMode) {
       $("#appSettingsBtn").style.display = "none";
@@ -2658,16 +2710,16 @@ Spider_Terminal: {
           const title = titleMatch ? titleMatch[1].trim() : WORLD.makeSideQuestTitle(storyText);
 
           const q = {
-            id: "sq_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-            title: title,
-            date: date,
-            story: storyText,
-            options: optionsText,
-            choices: [],
-            closed: false,
-            createdAt: Date.now()
-          };
-          WORLD.addSideQuest(q);
+  id: "sq_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+  title: title,
+  date: date,
+  story: storyText,
+  options: optionsText,
+  choices: [],
+  closed: false,
+  createdAt: Date.now()
+};
+WORLD.addSideQuest(q);
 
           window.openSideQuestView(q.id);
           toast("新支线已开始：" + title);
@@ -2686,6 +2738,14 @@ Theater: {
     async render(body) {
       const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
       const active = list.find(x => !x.closed);
+// 同步 binding：如果当前有一个未完结的剧场，就把彼得绑定到它
+const binding = store.getPeterBinding();
+if (active && (!binding || binding.theaterId !== active.id)) {
+  store.setPeterBinding({ theaterId: active.id });
+}
+if (!active && binding) {
+  store.setPeterBinding(null);
+}
 
       body.innerHTML = `<div style="padding:14px">
         <div class="card">
@@ -2701,14 +2761,15 @@ Theater: {
         <div class="card">
           <h3>📜 历史小剧场（${list.length}）</h3>
           ${list.length ? list.map(q => `
-            <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:13px;">${esc(q.title)}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${q.closed ? "✅ 完结" : "▶ 进行中"} · ${esc(q.date)}</div>
-              </div>
-              <button class="btn ghost" data-open="${esc(q.id)}" style="width:auto;padding:4px 10px;font-size:12px;">查看</button>
-            </div>
-          `).join("") : '<p style="color:var(--muted);font-size:13px;">暂无小剧场</p >'}
+  <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:6px;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:13px;">${esc(q.title)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">${q.closed ? "✅ 完结" : "▶ 进行中"} · ${esc(q.date)}</div>
+    </div>
+    <button class="btn ghost" data-open="${esc(q.id)}" style="width:auto;padding:4px 10px;font-size:12px;">查看</button>
+    <button class="btn ghost" data-del="${esc(q.id)}" style="width:auto;padding:4px 10px;font-size:12px;color:#e62429;border-color:#e62429;">删除</button>
+  </div>
+`).join("") : '<p style="color:var(--muted);font-size:13px;">暂无小剧场</p >'}
         </div>
       </div>`;
 
@@ -2727,7 +2788,28 @@ Theater: {
         if (active) return;
         this.showSetup(body);
       };
-    },
+
+body.querySelectorAll("[data-del]").forEach(el => {
+  el.onclick = () => {
+    const id = el.dataset.del;
+    const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+    const q = list.find(x => x.id === id);
+    if (!q) return toast("小剧场不存在");
+    if (!confirm("确定删除小剧场「" + q.title + "」吗？此操作不可恢复。")) return;
+
+    const newList = list.filter(x => x.id !== id);
+    localStorage.setItem("sv_theaters", JSON.stringify(newList));
+
+    const binding = store.getPeterBinding();
+    if (binding && binding.theaterId === id) {
+      store.setPeterBinding(null);
+    }
+
+    toast("已删除小剧场：" + q.title);
+    this.render(body);
+  };
+});
+ },
 
     showSetup(body) {
       body.innerHTML = `<div style="padding:14px;box-sizing:border-box;overflow-x:hidden;width:100%;">
@@ -2843,6 +2925,8 @@ const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toL
             closed: false,
             createdAt: Date.now()
           };
+q.openingStory = storyText;
+q.openingOptions = optionsText;
           const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
           all.unshift(q);
           localStorage.setItem("sv_theaters", JSON.stringify(all));
@@ -2857,20 +2941,17 @@ const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toL
     },
 
     bindChat(q) {
-      const chatName = "🎭 " + q.title;
-      const contacts = store.getContacts();
-      if (!contacts.find(c => c.name === chatName)) {
-        contacts.push({
-          name: chatName,
-          desc: "小剧场伙伴（" + q.background.slice(0, 30) + "...）",
-          affinity: 0,
-          heart: "暂无",
-          isTheater: true,
-          theaterId: q.id
-        });
-        store.setContacts(contacts);
-      }
-    },
+  // 不新建联系人，改为把"彼得·帕克"绑定到当前剧场
+  const contacts = store.getContacts();
+  let peter = contacts.find(c => c.name === "彼得·帕克");
+  if (!peter) {
+    // 极端情况下彼得联系人被删了，补回来
+    peter = { name: "彼得·帕克", desc: "中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" };
+    contacts.push(peter);
+    store.setContacts(contacts);
+  }
+  store.setPeterBinding({ theaterId: q.id });
+},
 
     openQuest(id) {
       const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
@@ -2884,7 +2965,13 @@ const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toL
       const sb = $("#appSettingsBtn");
       sb.style.display = "block";
       sb.textContent = "‹ 返回列表";
-      sb.onclick = () => { currentApp = "Theater"; openApp("Theater"); };
+     sb.onclick = () => {
+  currentApp = "Theater";
+  $("#appTitle").textContent = "小剧场";
+  sb.style.display = "none";
+  sb.onclick = null;
+  apps.Theater.render($("#appBody"));
+};
       this.renderQuest($("#appBody"), q);
     },
 
@@ -2900,8 +2987,11 @@ const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toL
 </div>
         </div>
         <div class="card" style="padding:10px;margin-bottom:10px;">
-          <button class="btn ghost" id="gotoChatBtn" style="font-size:12px;">💬 去「信息」App 继续聊</button>
-        </div>
+  <div class="row" style="gap:8px;">
+    <button class="btn ghost" id="gotoChatBtn" style="font-size:12px;flex:1;">💬 去「信息」App 继续聊</button>
+    <button class="btn ghost" id="refreshQuestBtn" style="font-size:12px;flex:1;">🔄 刷新（重置当前）</button>
+  </div>
+</div>
         <div class="story-content" style="word-break:break-word;">${formatDialogue(q.story)}</div>
         ${!isClosed ? `
           <div id="thOptions"></div>
@@ -2917,11 +3007,41 @@ const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toL
         `}
       </div>`;
 
-      body.querySelector("#gotoChatBtn").onclick = () => {
-        apps.messages.currentUser = "🎭 " + q.title;
-        apps.messages.view = "chat";
-        openApp("messages");
-      };
+    body.querySelector("#gotoChatBtn").onclick = () => {
+  // 先把彼得绑定到当前剧场（防止中途丢了）
+  store.setPeterBinding({ theaterId: q.id });
+  apps.messages.currentUser = "彼得·帕克";
+  apps.messages.view = "chat";
+  currentApp = "messages";
+  $("#appView").classList.add("active");
+  $("#desktop").classList.remove("active");
+  $("#appTitle").textContent = "信息";
+  const sb = $("#appSettingsBtn");
+  sb.style.display = "flex";
+  sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+  apps.messages.render($("#appBody"));
+};
+
+body.querySelector("#refreshQuestBtn").onclick = async () => {
+  if (!confirm("刷新会重置当前小剧场剧情，回到这一集的开场（文字所有进度清空），确认？")) return;
+
+  const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+  const idx = list.findIndex(x => x.id === q.id);
+  if (idx === -1) return toast("小剧场不存在");
+
+  // 用第一次生成的结果重置（存在 q.openingStory / q.openingOptions 里）
+  const openingStory = list[idx].openingStory || list[idx].story;
+  const openingOptions = list[idx].openingOptions || list[idx].options;
+
+  list[idx].story = openingStory;
+  list[idx].options = openingOptions;
+  list[idx].history = [];
+  list[idx].closed = false;
+  localStorage.setItem("sv_theaters", JSON.stringify(list));
+
+  toast("已重置当前小剧场");
+  this.openQuest(q.id);
+};
 
       if (!isClosed) {
         const optsEl = body.querySelector("#thOptions");
@@ -3408,6 +3528,14 @@ console.log("openApp 尝试:", id, "→ 存在:", !!(id && apps[id]));
 
 $("#backBtn").onclick=()=>{
   if (currentApp === "sidequest") { openApp("Spider_Terminal"); return; }
+  if (currentApp === "theater") {
+    currentApp = "Theater";
+    $("#appTitle").textContent = "小剧场";
+    $("#appSettingsBtn").style.display = "none";
+    $("#appSettingsBtn").onclick = null;
+    apps.Theater.render($("#appBody"));
+    return;
+  }
   if(currentApp&&apps[currentApp].onBack&&apps[currentApp].onBack()) return;
   $("#appView").classList.remove("active");
   $("#desktop").classList.add("active");
