@@ -1731,12 +1731,15 @@ ${tq.background}
 
 【玩家身份】${tq.identity}
 【氛围倾向】${tq.tone}
+【叙事人称】${tq.pov === "first" ? "第一人称（我=玩家）" : tq.pov === "second" ? "第二人称（你=玩家）" : "第三人称（" + (tq.userName || "玩家") + "=玩家）"}
+【玩家名字】${tq.pov === "third" ? (tq.userName || "玩家") : "（按人称代词称呼）"}
 【当前剧情进展】
 ${tq.story.slice(0, 800)}
 
 【你的扮演要求】
 - 严格贴合这个背景设定，不要说破"这是小剧场"。
 - 你和玩家是这个世界里的角色，正常互动、对话、反应。
+- 你永远不是玩家。玩家是${tq.pov === "first" ? "「我」" : tq.pov === "second" ? "「你」" : "「" + (tq.userName || "玩家") + "」"}，你是彼得/isTheater NPC 里的角色。
 - 情绪、语言风格符合【氛围倾向】${tq.tone}。
 - 不涉及主线时间线、不涉及 MCU 大事件（除非背景里明确设置了）。
 - 一句话：把玩家当成你在这个世界里的对话对象，自然回应。`;
@@ -2736,6 +2739,16 @@ Theater: {
           <div class="field"><label>你的身份</label>
             <input id="th_identity" value="${esc(store.getProfile().identity || "同学")}">
           </div>
+          <div class="field"><label>叙事人称</label>
+            <select id="th_pov">
+              <option value="first">第一人称（"我"）</option>
+              <option value="second" selected>第二人称（"你"）</option>
+              <option value="third">第三人称（"某某"）</option>
+            </select>
+          </div>
+          <div class="field" id="th_nameField" style="display:none;"><label>第三人称下你的名字</label>
+            <input id="th_name" value="${esc(store.getProfile().name || "玩家")}">
+          </div>
           <div class="field"><label>氛围倾向</label>
             <select id="th_tone">
               <option value="日常">日常轻喜剧</option>
@@ -2752,10 +2765,18 @@ Theater: {
 
       body.querySelector("#th_cancel").onclick = () => this.render(body);
 
+      const povSel = body.querySelector("#th_pov");
+      const nameField = body.querySelector("#th_nameField");
+      povSel.onchange = () => {
+        nameField.style.display = povSel.value === "third" ? "flex" : "none";
+      };
+
       body.querySelector("#th_gen").onclick = async () => {
         const bg = body.querySelector("#th_bg").value.trim();
         const identity = body.querySelector("#th_identity").value.trim() || "同学";
         const tone = body.querySelector("#th_tone").value;
+        const pov = povSel.value;
+        const userName = body.querySelector("#th_name").value.trim() || "玩家";
         if (!bg) return toast("请填写背景设定");
 
         body.innerHTML = `<div class="loader"><div class="spin"></div>生成开场中...</div>`;
@@ -2764,23 +2785,45 @@ Theater: {
           const sNow = store.getState();
           const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
 
-          const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
+const povRule = q.pov === "first"
+      ? `【叙事人称 · 第一人称】全程用「我」称呼玩家。玩家=我。彼得等其他角色永远不是你，是被描述的外部人物。`
+      : q.pov === "second"
+      ? `【叙事人称 · 第二人称】全程用「你」称呼玩家。玩家=你。彼得等其他角色永远不是你，是被描述的外部人物。`
+      : `【叙事人称 · 第三人称】全程用「${q.userName}」称呼玩家。玩家=${q.userName}。彼得等其他角色永远不是${q.userName}，${q.userName}只指玩家本人。`;
 
-【用户自定义背景】
-${bg}
+    const sysPrompt = `你是一个剧情 DM，正在续写一个**独立小剧场**（与 MCU 主线无关）。
 
-【玩家身份】${identity}
-【氛围倾向】${tone}
-【当前游戏内日期】${date}（如果背景暗示其他时间，可以合理调整）
+【背景设定】
+${q.background}
+
+【玩家身份】${q.identity}
+【氛围倾向】${q.tone}
+【当前游戏内日期】${date}
+【已推进轮数】${q.history.length}
+
+【上一轮剧情】
+${q.story.slice(0, 800)}
+
+【玩家下一步选择】
+${choice}
+
+${povRule}
+
+【绝对铁律 · 主角归属】
+1. **玩家 = 视角中心**。整篇剧情必须以玩家的感官/行动/位置为基准展开。
+2. **禁止跳到彼得·帕克视角。** 彼得是场景里的另一个角色（NPC），不是主角。只能写彼得的表情、动作、台词（从玩家能观察到的外部视角），不能写"彼得心想…""彼得感到…"。
+3. 玩家刚刚做出的选择（${choice}）**已经发生**，你要写它带来的**外部反应**（谁看见了、谁说话了、环境怎么变了），但**不要把玩家的下一步行动也提前写掉**。
+4. 剧情要停在"玩家再次面临选择"的位置，交给选项。
+5. **禁止代替玩家说话或做决定**。除非玩家选择里明确说了要说什么，否则不能让玩家开口。
 
 【要求】
-1. 先写 500~900 字的开场剧情，立刻把玩家拉入场景。
-2. 不要解释"这是一个小剧场"，直接讲故事。
-3. 结尾用【选项】列出 A. B. C. D. 四个方向。
-4. 最后一行单独标：【小剧场标题: 不超过8个字】
+1. 承接上一轮的"玩家选择"继续发展，写 600~1000 字。
+2. 结尾用【选项】列出 A. B. C. D. 四个**行动方向**。
+3. 如果故事已经自然收尾，在末尾另写一行：**【小剧场完结】**
+4. 不要标注好感度、不要提 MCU 主线。
 
-【文风】
-电影镜头感，多动作、细节、感官描写，严禁 AI 腔。英文对白用 *"..."*（中文翻译）格式。`;
+【文风】电影镜头感，英文对白用 *"..."*（中文翻译）格式。
+${povRule}`;
 
           const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
 
@@ -2788,10 +2831,7 @@ ${bg}
           const optionsIdx = res.indexOf("【选项】");
           const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
             .replace("【剧情】", "")
-            .replace(/【小剧场标题[:：].*?】/g, "")
-            .trim();
-          const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
-          const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toLocaleTimeString());
+            .replace(/【小剧场标题[:：].*?】TextMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toLocaleTimeString());
 
           const q = {
             id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
@@ -2799,6 +2839,8 @@ ${bg}
             background: bg,
             identity: identity,
             tone: tone,
+            pov: pov,
+            userName: userName,
             date: date,
             story: storyText,
             options: optionsText,
@@ -2858,6 +2900,9 @@ ${bg}
           <div style="font-size:11px;color:#8a8a99;">🎭 小剧场 · ${esc(q.date)}</div>
           <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:15px;margin-top:4px;">${esc(q.title)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:6px;">背景：${esc(q.background.slice(0, 80))}...</div>
+<div style="font-size:11px;color:var(--muted);margin-top:2px;">
+  人称：${q.pov === "first" ? "第一人称（我）" : q.pov === "second" ? "第二人称（你）" : "第三人称（" + esc(q.userName || "玩家") + "）"} · 氛围：${esc(q.tone)}
+</div>
         </div>
         <div class="card" style="padding:10px;margin-bottom:10px;">
           <button class="btn ghost" id="gotoChatBtn" style="font-size:12px;">💬 去「信息」App 继续聊</button>
@@ -2975,7 +3020,7 @@ Diary: {
       body.innerHTML = `<div class="loader"><div class="spin"></div>彼得正在写日记...</div>`;
 
       try {
- sState();
+const s = store.getState();
         const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
         const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
         const diaries = JSON.parse(localStorage.getItem("sv_diary") || "[]");
