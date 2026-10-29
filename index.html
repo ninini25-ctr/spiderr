@@ -1147,9 +1147,9 @@ let currentApp = null;
     let isCustomMode = false;
 
     const confirmBtn = wrap.querySelector("#startConfirmBtn");
-    const customPanel = wrap.querySelector("#startCustomPanel");
+const customPanel = wrap.querySelector("#startCustomPanel");
 
-    const updateConfirmBtn = () => {
+const updateConfirmBtn = () => {
   if (selectedNode || customDate) {
     confirmBtn.style.opacity = "1";
     confirmBtn.style.pointerEvents = "auto";
@@ -1164,7 +1164,7 @@ let currentApp = null;
   }
 };
 
-// 绑定节点卡片点击
+// 节点卡片点击
 wrap.querySelectorAll(".start-node-card").forEach(card => {
   card.onclick = () => {
     wrap.querySelectorAll(".start-node-card").forEach(c => {
@@ -1173,7 +1173,7 @@ wrap.querySelectorAll(".start-node-card").forEach(card => {
     });
     card.style.borderColor = "#e62429";
     card.style.background = "#1f1518";
-    const idx = parseInt(c.dataset.idx);
+    const idx = parseInt(card.dataset.idx);
     selectedNode = nodes[idx];
     customDate = null;
     isCustomMode = false;
@@ -1183,91 +1183,86 @@ wrap.querySelectorAll(".start-node-card").forEach(card => {
   };
 });
 
-    // 切换自定义模式
-    wrap.querySelector("#startCustomToggle").onclick = () => {
-      isCustomMode = !isCustomMode;
-      if (isCustomMode) {
-        customPanel.style.display = "block";
-        wrap.querySelectorAll(".start-node-card").forEach(c => {
-          c.style.borderColor = "#2a2a38";
-          c.style.background = "#1a1a24";
-        });
-        selectedNode = null;
-        wrap.querySelector("#startCustomToggle").style.color = "#e62429";
-      } else {
-        customPanel.style.display = "none";
-        customDate = null;
-        wrap.querySelector("#startCustomToggle").style.color = "#5b8dff";
-        updateConfirmBtn();
-      }
-    };
-
-    // 输入自定义日期
-    const updateCustomDate = () => {
-      const y = parseInt(wrap.querySelector("#sc_year").value);
-      const m = parseInt(wrap.querySelector("#sc_month").value);
-      const d = parseInt(wrap.querySelector("#sc_day").value) || 1;
-      if (y && m) {
-        customDate = { year: y, month: m, day: d };
-      } else {
-        customDate = null;
-      }
-      updateConfirmBtn();
-    };
-    ["#sc_year", "#sc_month", "#sc_day"].forEach(sel => {
-      wrap.querySelector(sel).addEventListener("input", updateCustomDate);
+// 切换自定义模式
+wrap.querySelector("#startCustomToggle").onclick = () => {
+  isCustomMode = !isCustomMode;
+  if (isCustomMode) {
+    customPanel.style.display = "block";
+    wrap.querySelectorAll(".start-node-card").forEach(c => {
+      c.style.borderColor = "#2a2a38";
+      c.style.background = "#1a1a24";
     });
+    selectedNode = null;
+    wrap.querySelector("#startCustomToggle").style.color = "#e62429";
+  } else {
+    customPanel.style.display = "none";
+    customDate = null;
+    wrap.querySelector("#startCustomToggle").style.color = "#5b8dff";
+    updateConfirmBtn();
+  }
+};
 
-    // 确认进入
-    confirmBtn.onclick = () => {
-      let chosen;
-      if (selectedNode) {
-        chosen = {
-          key: selectedNode.key,
-          anchor: selectedNode.anchor,
-          year: selectedNode.year,
-          month: selectedNode.month,
-          day: selectedNode.day,
-          label: selectedNode.label,
-          custom: false
-        };
-      } else if (customDate) {
-        // 自定义：根据年月推算 anchor
-        const y = customDate.year, m = customDate.month;
-        let anchor = 0;
-        for (let i = 0; i < WORLD.timeline.length; i++) {
-          const t = WORLD.timeline[i];
-          if (y > t.year || (y === t.year && m > t.monthRange[1])) {
-            anchor = Math.min(i + 1, WORLD.timeline.length - 1);
-          } else if (y === t.year && m >= t.monthRange[0] && m <= t.monthRange[1]) {
-            anchor = i;
-            break;
-          }
-        }
-        chosen = {
-          key: "custom",
-          anchor,
-          year: y,
-          month: m,
-          day: customDate.day,
-          label: `自定义：${y}年${m}月${customDate.day}日`,
-          custom: true
-        };
-      } else {
-        return;
-      }
+// 自定义日期输入
+const updateCustomDate = () => {
+  const y = parseInt(wrap.querySelector("#sc_year").value);
+  const m = parseInt(wrap.querySelector("#sc_month").value);
+  const d = parseInt(wrap.querySelector("#sc_day").value) || 1;
+  if (y && m) {
+    customDate = { year: y, month: m, day: d };
+  } else {
+    customDate = null;
+  }
+  updateConfirmBtn();
+};
+["#sc_year", "#sc_month", "#sc_day"].forEach(sel => {
+  wrap.querySelector(sel).addEventListener("input", updateCustomDate);
+});
 
-      // 写入 localStorage
-      localStorage.setItem("sv_start_node", JSON.stringify(chosen));
-      localStorage.setItem("sv_start_node_chosen_v1", "1");
-
-      // 清空可能存在的旧 sv_state，让 getState 用新开局
-      localStorage.removeItem("sv_state");
-
-      // 通知并刷新
-      toast("✅ 已选择：" + chosen.label);
-      setTimeout(() => location.reload(), 500);
+// 确认按钮
+confirmBtn.onclick = () => {
+  let chosen;
+  if (selectedNode) {
+    chosen = {
+      key: selectedNode.key,
+      anchor: selectedNode.anchor,
+      year: selectedNode.year,
+      month: selectedNode.month,
+      day: selectedNode.day,
+      label: selectedNode.label,
+      custom: false
     };
+  } else if (customDate) {
+    const y = customDate.year, m = customDate.month;
+    let anchor = 0;
+    for (let i = 0; i < WORLD.timeline.length; i++) {
+      const t = WORLD.timeline[i];
+      if (y > t.year || (y === t.year && m > t.monthRange[1])) {
+        anchor = Math.min(i + 1, WORLD.timeline.length - 1);
+      } else if (y === t.year && m >= t.monthRange[0] && m <= t.monthRange[1]) {
+        anchor = i;
+        break;
+      }
+    }
+    chosen = {
+      key: "custom",
+      anchor,
+      year: y,
+      month: m,
+      day: customDate.day,
+      label: `自定义：${y}年${m}月${customDate.day}日`,
+      custom: true
+    };
+  } else {
+    return;
+  }
+
+  localStorage.setItem("sv_start_node", JSON.stringify(chosen));
+  localStorage.setItem("sv_start_node_chosen_v1", "1");
+  localStorage.removeItem("sv_state");
+
+  toast("✅ 已选择：" + chosen.label);
+  setTimeout(() => location.reload(), 500);
+};
   }, 400);
 })();
 
