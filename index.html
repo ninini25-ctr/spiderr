@@ -51,6 +51,19 @@ body.theme-light {
   --input-comment-bg:#f0f0f5;          /* 评论输入框：浅灰，与卡片融合 */
   --input-comment-text:#1d1d1f;        /* 评论输入框文字：黑色 */
 }
+/* ===== 白版推特间隔线 ===== */
+body.theme-light .tw-tweet {
+  border-bottom: 1px solid #d2d2d7;      /* 白版：灰色实线 */
+}
+body.theme-light .tw-comment-line + .tw-comment-line {
+  border-top: 1px dashed rgba(0,0,0,.08);
+}
+body.theme-light .tw-actions {
+  border-top: 1px dashed rgba(0,0,0,.1);
+}
+body.theme-light .tw-comments-preview {
+  background: #f0f0f5;
+}
 body{
   display:flex; align-items:center; justify-content:center;
   height:100vh; height:100dvh;
@@ -240,6 +253,121 @@ body.theme-light .toast{
 .banner .banner-body { flex: 1; min-width: 0; }
 .banner .banner-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
 .banner .banner-text { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ===== 推特 UI 重绘 ===== */
+.tw-wrap { padding: 0; }
+.tw-tabs {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5;
+}
+.tw-tab {
+  padding: 8px 14px; font-size: 14px; font-weight: 600;
+  color: var(--muted); cursor: pointer; border-radius: 20px;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+}
+.tw-tab:hover { background: var(--panel-2); color: var(--text); }
+.tw-tab-spacer { flex: 1; }
+.tw-btn-icon {
+  background: none; border: none; color: var(--text);
+  font-size: 16px; cursor: pointer; padding: 6px 8px; border-radius: 50%;
+}
+.tw-btn-icon:hover { background: var(--panel-2); }
+
+.tw-empty {
+  padding: 40px 20px; text-align: center;
+  color: var(--muted); font-size: 13px;
+}
+
+.tw-tweet {
+  border-bottom: 1px solid #ffffff33;   
+  padding: 18px 16px 20px;        
+  transition: background .15s;
+}
+.tw-tweet:hover { background: rgba(255,255,255,.02); }
+.tw-retweet-hint {
+  font-size: 12px; color: var(--muted); margin-bottom: 6px;
+  padding-left: 44px;
+}
+.tw-tweet-inner { display: flex; gap: 10px; }
+.tw-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--panel-2); color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; flex-shrink: 0; font-size: 16px;
+}
+.tw-content { flex: 1; min-width: 0; }
+.tw-head { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.tw-name { font-weight: 700; font-size: 14px; color: var(--text); }
+.tw-handle { font-size: 12px; color: var(--muted); }
+.tw-text {
+  font-size: 14px; line-height: 1.6; color: var(--text);
+  margin: 8px 0 12px;              
+  white-space: pre-wrap; word-break: break-word;
+}
+.tw-comments-preview {
+  background: var(--panel-2); border-radius: 12px;
+  padding: 12px 14px;             
+  margin: 10px 0 12px;         
+}
+.tw-comment-line {
+  font-size: 12.5px; color: var(--text);
+  padding: 5px 0;       
+  line-height: 1.5;
+}
+.tw-comment-line + .tw-comment-line {
+  border-top: 1px dashed rgba(255,255,255,.06); 
+}
+.tw-comment-line b { color: var(--accent-2); font-weight: 600; }
+.tw-more-comments {
+  font-size: 12px; color: var(--accent-2); cursor: pointer;
+  padding: 4px 0 0 0;
+}
+.tw-actions {
+  display: flex; gap: 6px;
+  margin-top: 12px;      
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255,255,255,.08);
+}
+.tw-act {
+  background: none; border: none; color: var(--muted);
+  font-size: 13px; padding: 4px 8px; border-radius: 16px;
+  cursor: pointer; display: flex; align-items: center; gap: 4px;
+  transition: background .15s, color .15s;
+}
+.tw-act:hover { background: rgba(45,107,255,.12); color: var(--accent-2); }
+.tw-act.liked { color: var(--accent); }
+.tw-act.liked:hover { background: rgba(230,36,41,.12); color: var(--accent); }
+
+.tw-comments-full {
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+.tw-comment-item { margin-bottom: 8px; }
+.tw-comment-reply-trigger {
+  font-size: 13px; color: var(--text); cursor: pointer;
+  padding: 4px 0; line-height: 1.5;
+}
+.tw-comment-reply-trigger b { color: var(--accent-2); font-weight: 600; }
+.tw-replies {
+  padding-left: 14px; border-left: 2px solid var(--line);
+  margin-top: 2px;
+}
+.tw-reply-line { font-size: 12px; color: var(--muted); padding: 2px 0; }
+.tw-reply-line b { color: var(--text); font-weight: 600; }
+.tw-comment-input-row { display: flex; gap: 6px; margin-top: 10px; }
+.tw-comment-input {
+  flex: 1; background: var(--input-comment-bg); color: var(--input-comment-text);
+  border: 1px solid var(--line); border-radius: 20px;
+  padding: 8px 14px; font-size: 13px; outline: none;
+}
+.tw-comment-send {
+  background: var(--accent-2); color: #fff; border: none;
+  border-radius: 20px; padding: 0 16px; font-weight: 600;
+  font-size: 13px; cursor: pointer;
+}
 /* 对话类专用 */
 .dialogue-text {
   font-family: var(--font-dialogue);
@@ -415,6 +543,74 @@ const WORLD = {
   }
 ],
 
+  // ===== 开局时间节点 =====
+  // 每个节点对应 timeline 里的 anchor 索引 + 精确日期
+  startNodes: [
+    {
+      key: "start_phase1",
+      anchor: 0,
+      year: 2015, month: 9, day: 1,
+      label: "2015年9月 · 刚被蜘蛛咬伤",
+      event: "彼得刚获得能力，自制连帽衫战衣，在皇后区做友好邻居。托尼还没联系他。"
+    },
+    {
+      key: "start_phase2",
+      anchor: 1,
+      year: 2016, month: 3, day: 15,
+      label: "2016年3月 · 华盛顿纪念碑前夕",
+      event: "十项全能队即将前往华盛顿，战衣追踪器即将误触发。"
+    },
+    {
+      key: "start_phase2_after",
+      anchor: 1,
+      year: 2016, month: 5, day: 1,
+      label: "2016年5月 · 华盛顿事件之后",
+      event: "华盛顿事件已结束，彼得回到日常，秃鹫的阴影正在靠近。"
+    },
+    {
+      key: "start_phase3",
+      anchor: 2,
+      year: 2016, month: 7, day: 15,
+      label: "2016年7月 · 秃鹫追查",
+      event: "彼得正在追查秃鹫团伙，渡轮事件即将爆发。"
+    },
+    {
+      key: "start_phase3_homecoming",
+      anchor: 2,
+      year: 2016, month: 9, day: 20,
+      label: "2016年9月 · 返校节前夕",
+      event: "斯塔克渡轮事件已发生，托尼没收了战衣，彼得在低谷期。返校节舞会即将到来。"
+    },
+    {
+      key: "start_phase4",
+      anchor: 3,
+      year: 2018, month: 4, day: 25,
+      label: "2018年4月 · 复联大厦前夕",
+      event: "灭霸的黑暗教团即将入侵纽约，钢铁蜘蛛战衣即将登场。"
+    },
+    {
+      key: "start_phase5",
+      anchor: 4,
+      year: 2018, month: 5, day: 5,
+      label: "2018年5月 · 泰坦星",
+      event: "彼得随钢铁侠前往泰坦星，即将与灭霸正面交锋。响指即将发生。"
+    },
+    {
+      key: "start_phase6_europe",
+      anchor: 5,
+      year: 2024, month: 7, day: 1,
+      label: "2024年7月 · 欧洲游学",
+      event: "彼得复活后参加欧洲游学，即将遇到神秘客。身份即将暴露。"
+    },
+    {
+      key: "start_phase6_multiverse",
+      anchor: 5,
+      year: 2024, month: 10, day: 15,
+      label: "2024年10月 · 多元宇宙撕裂",
+      event: "神秘客事件已结束，身份暴露，奇异博士的咒语撕裂了多元宇宙。"
+    }
+  ],
+
   // MJ 全局关系锁定
   mjPolicy: "MJ (米歇尔·琼斯) 与彼得·帕克是朋友/同学关系。禁止 ML 关系。禁止任何恋爱暗示、暗恋、脸红、保护欲等。可以参考普通高中同学间的相处——互怼、分享八卦、一起做作业，但不能有浪漫线。",
 // ===== 支线剧情存档（独立于主线，无限档位）=====
@@ -465,21 +661,28 @@ const store = {
   getProfile(){return this.get("sv_profile",{name:"你",identity:"同学"});},
   setProfile(p){this.set("sv_profile",p);},
   getState(){
-  return this.get("sv_state", {
+  // 如果用户选过开局节点，按节点初始化
+  const chosen = this.get("sv_start_node", null);
+  let init = {
     turn: 1,
     affinity: 0,
     anchor: 0,
-    // ===== 新增：剧情时间 =====
-    gameYear: WORLD.startYear,        // 2015
-    gameMonth: WORLD.startMonth,      // 9
-    gameDay: WORLD.startDay,          // 1
+    gameYear: WORLD.startYear,
+    gameMonth: WORLD.startMonth,
+    gameDay: WORLD.startDay,
     sceneTurns: 0,
     currentStory: "",
     currentOptions: "",
     history: [],
-    // ===== 新增：可变的结局变量 =====
-    outcomes: {}                       // 由 AI 在剧情里逐步填写，比如 {snapVictims: ["星爵"], auntMayAlive: false}
-  });
+    outcomes: {}
+  };
+  if (chosen) {
+    init.anchor = chosen.anchor ?? 0;
+    init.gameYear = chosen.year ?? WORLD.startYear;
+    init.gameMonth = chosen.month ?? WORLD.startMonth;
+    init.gameDay = chosen.day ?? WORLD.startDay;
+  }
+  return this.get("sv_state", init);
 },
   setState(s){this.set("sv_state",s);},
   getChats(){return this.get("sv_chats",{});},
@@ -862,6 +1065,26 @@ ${extraFields.join("\n")}
 当前进度：第 ${s.turn} 回合，世界线好感度 ${s.affinity}/200。
 
 【文风】电影镜头感，严禁 AI 句式。多动作、细节、感官描写。彼得对白用斜体英文原文紧跟中文翻译，格式：*"Hey, you okay?"*（嘿，你还好吗？）。剧情里如果出现具体日期，必须写成 ${timeStr} 附近的日期，不要写成其他年份。
+
+【亲密互动 · 主动性与多样性 · 铁律】
+1. 好感度 ≥ 51（好朋友及以上）时，彼得**不再是永远被动等待玩家主动的那一方**。他会根据当下的情绪、地点、氛围，**主动**做出亲密举动：牵手、拥抱、靠近耳边说话、故意逗弄、轻轻拍肩、顺手拨头发、贴贴、亲吻（好感度 ≥ 101 且场合允许时）等。
+2. 亲密反应**不能只有脸红、害羞、不知所措**这一套。彼得可以：
+   - **若无其事**地继续说话，像什么都没发生（比如亲完继续吐槽作业）
+   - **反客为主**，先逗玩家，等玩家脸红了自己反而淡定
+   - **窘迫但嘴硬**地找借口掩饰
+   - **认真直视**对方，不闪躲
+   - **忽然沉默**，只用一个动作回应
+   - **坏笑 / 挑眉 / 用玩笑化解**尴尬
+   - **紧张到说错话**，但下一秒强行装没事
+   - **用行动代替语言**（比如把外套直接披上、把对方拽过来）
+3. 双方**都可以是主动方**。不是只有玩家可以主动亲彼得，彼得也会在合适的时机突然靠近、突然亲吻、突然抱住。互动是双向的、有来回的。
+4. 不同场景、不同好感度、不同情绪下，彼得的反应**必须不同**。禁止连续几回合都用"脸红/害羞/心跳加速"三件套。每回合的亲密度表现都要有新鲜感。
+5. 亲密行为的尺度必须符合好感度：
+   - 0-50：普通朋友，仅限偶然的肢体接触（递东西碰到手），无主动亲密
+   - 51-100：信任的好友，可主动靠近、拍肩、击掌、并肩坐、开玩笑式的戳一下
+   - 101-150：暧昧期，可主动牵手、拥抱、贴耳说话、故意逗弄、眼神停留
+   - 151-200：亲密关系，可主动亲吻、搂抱、更进一步的身体接触（不涉及露骨内容）
+6. 亲密行为要**自然嵌进剧情**，不要生硬插入。比如：一起走路时突然牵住手、看完电影走出影院时自然靠过来、玩家说了一句让他心动的话时直接靠近……让读者感觉"就该是这样"，而不是"AI 想加个亲密桥段"。
 ${worldbookPrompt}
 
 ${extra}`;
@@ -874,27 +1097,178 @@ setInterval(()=>{const d=new Date();$("#clock").textContent=String(d.getHours())
 
 let currentApp = null;
 
-// ===== 首次开局提示 =====
-(function showStartupNotice() {
-  if (localStorage.getItem("sv_notice_shown_v2")) return;
-  localStorage.setItem("sv_notice_shown_v2", "1");
+// ===== 首次开局：时间节点选择 =====
+(function showStartupChooser() {
+  if (localStorage.getItem("sv_start_node_chosen_v1")) return;
 
   setTimeout(() => {
-    const div = document.createElement("div");
-    div.style.cssText = "position:absolute;inset:0;background:#000d;z-index:800;padding:24px;overflow-y:auto;color:var(--text);font-size:14px;line-height:1.8;display:flex;flex-direction:column;justify-content:center;";
-    div.innerHTML = `
-      <div style="background:#14141c;border:1px solid var(--line);border-radius:16px;padding:20px;max-width:340px;margin:0 auto;">
-        <h2 style="color:#e62429;margin:0 0 12px;font-size:18px;">🕷️ 世界线锚定完成</h2>
-        <p style="margin:0 0 10px;">本模拟器从 <b style="color:#2d6bff;">2015 年 9 月 1 日</b> 开始。</p >
-        <p style="margin:0 0 10px;">此时彼得·帕克刚被蜘蛛咬伤约 1 个月，还在皇后区的中学读书，<b>尚未</b>遇到托尼·斯塔克，<b>尚未</b>成为复仇者。</p >
-        <p style="margin:0 0 10px;color:#8a8a99;font-size:12px;">时间线将严格锁定每个阶段的锚点，未来事件（如泰坦星、身份曝光）不会提前发生。反派（秃鹫、灭霸、神秘客等）会按剧本时间才登场。</p >
-        <hr style="border:none;border-top:1px dashed #333;margin:14px 0;">
-        <p style="margin:0 0 10px;">💡 <b>关于 MJ：</b>米歇尔·琼斯是彼得的朋友/同学，本模拟器中<b>不涉及任何恋爱关系</b>。</p >
-        <button class="btn" style="margin-top:10px;" onclick="this.closest('div').parentNode.remove()">开始游戏</button>
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "position:absolute;inset:0;background:#000e;z-index:800;padding:20px;overflow-y:auto;color:var(--text);font-size:14px;line-height:1.7;";
+
+    const nodes = WORLD.startNodes || [];
+    const nodeCards = nodes.map((n, i) => `
+      <div class="start-node-card" data-idx="${i}" style="background:#1a1a24;border:1px solid #2a2a38;border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s;">
+        <div style="font-weight:bold;color:#fff;font-size:14px;margin-bottom:4px;">${esc(n.label)}</div>
+        <div style="font-size:12px;color:#a0a0b0;line-height:1.5;">${esc(n.event)}</div>
+      </div>
+    `).join("");
+
+    wrap.innerHTML = `
+      <div style="max-width:400px;margin:20px auto;">
+        <div style="background:#14141c;border:1px solid #2a2a38;border-radius:16px;padding:20px;">
+          <h2 style="color:#e62429;margin:0 0 8px;font-size:18px;">🕷️ 选择开局时间</h2>
+          <p style="margin:0 0 16px;color:#8a8a99;font-size:12px;">选择你要从哪个大事件节点进入这个蜘蛛侠世界线。</p >
+
+          <div id="startNodeList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px;">
+            ${nodeCards}
+          </div>
+
+          <div id="startCustomPanel" style="display:none;background:#1a1a24;border-radius:12px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:12px;color:#8a8a99;margin-bottom:8px;">自定义开局日期（可只填年月，日默认 1 号）</div>
+            <div style="display:flex;gap:6px;">
+              <input id="sc_year" type="number" placeholder="年" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a38;background:#0f0f15;color:#fff;font-size:13px;">
+              <input id="sc_month" type="number" min="1" max="12" placeholder="月" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a38;background:#0f0f15;color:#fff;font-size:13px;">
+              <input id="sc_day" type="number" min="1" max="31" placeholder="日" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a38;background:#0f0f15;color:#fff;font-size:13px;">
+            </div>
+          </div>
+
+          <div id="startCustomToggle" style="background:#222230;border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:13px;color:#5b8dff;margin-bottom:12px;">
+            ✏️ 或者：自定义进入时间
+          </div>
+
+          <button class="btn" id="startConfirmBtn" style="opacity:.4;pointer-events:none;width:100%;">请选择一个时间节点</button>
+        </div>
       </div>
     `;
-    document.querySelector(".device").appendChild(div);
-  }, 600);
+    document.querySelector(".device").appendChild(wrap);
+
+    let selectedNode = null;    // 预置节点
+    let customDate = null;      // 自定义日期 {year, month, day}
+    let isCustomMode = false;
+
+    const confirmBtn = wrap.querySelector("#startConfirmBtn");
+    const customPanel = wrap.querySelector("#startCustomPanel");
+
+    const updateConfirmBtn = () => {
+  if (selectedNode || customDate) {
+    confirmBtn.style.opacity = "1";
+    confirmBtn.style.pointerEvents = "auto";
+    const label = selectedNode
+      ? selectedNode.label
+      : (customDate ? `自定义：${customDate.year}年${customDate.month}月${customDate.day}日` : "");
+    confirmBtn.textContent = "✅ 从这个时间进入：" + label;
+  } else {
+    confirmBtn.style.opacity = "0.4";
+    confirmBtn.style.pointerEvents = "none";
+    confirmBtn.textContent = "请选择一个时间节点";
+  }
+};
+
+// 绑定节点卡片点击
+wrap.querySelectorAll(".start-node-card").forEach(card => {
+  card.onclick = () => {
+    wrap.querySelectorAll(".start-node-card").forEach(c => {
+      c.style.borderColor = "#2a2a38";
+      c.style.background = "#1a1a24";
+    });
+    card.style.borderColor = "#e62429";
+    card.style.background = "#1f1518";
+    const idx = parseInt(c.dataset.idx);
+    selectedNode = nodes[idx];
+    customDate = null;
+    isCustomMode = false;
+    customPanel.style.display = "none";
+    wrap.querySelector("#startCustomToggle").style.color = "#5b8dff";
+    updateConfirmBtn();
+  };
+});
+
+    // 切换自定义模式
+    wrap.querySelector("#startCustomToggle").onclick = () => {
+      isCustomMode = !isCustomMode;
+      if (isCustomMode) {
+        customPanel.style.display = "block";
+        wrap.querySelectorAll(".start-node-card").forEach(c => {
+          c.style.borderColor = "#2a2a38";
+          c.style.background = "#1a1a24";
+        });
+        selectedNode = null;
+        wrap.querySelector("#startCustomToggle").style.color = "#e62429";
+      } else {
+        customPanel.style.display = "none";
+        customDate = null;
+        wrap.querySelector("#startCustomToggle").style.color = "#5b8dff";
+        updateConfirmBtn();
+      }
+    };
+
+    // 输入自定义日期
+    const updateCustomDate = () => {
+      const y = parseInt(wrap.querySelector("#sc_year").value);
+      const m = parseInt(wrap.querySelector("#sc_month").value);
+      const d = parseInt(wrap.querySelector("#sc_day").value) || 1;
+      if (y && m) {
+        customDate = { year: y, month: m, day: d };
+      } else {
+        customDate = null;
+      }
+      updateConfirmBtn();
+    };
+    ["#sc_year", "#sc_month", "#sc_day"].forEach(sel => {
+      wrap.querySelector(sel).addEventListener("input", updateCustomDate);
+    });
+
+    // 确认进入
+    confirmBtn.onclick = () => {
+      let chosen;
+      if (selectedNode) {
+        chosen = {
+          key: selectedNode.key,
+          anchor: selectedNode.anchor,
+          year: selectedNode.year,
+          month: selectedNode.month,
+          day: selectedNode.day,
+          label: selectedNode.label,
+          custom: false
+        };
+      } else if (customDate) {
+        // 自定义：根据年月推算 anchor
+        const y = customDate.year, m = customDate.month;
+        let anchor = 0;
+        for (let i = 0; i < WORLD.timeline.length; i++) {
+          const t = WORLD.timeline[i];
+          if (y > t.year || (y === t.year && m > t.monthRange[1])) {
+            anchor = Math.min(i + 1, WORLD.timeline.length - 1);
+          } else if (y === t.year && m >= t.monthRange[0] && m <= t.monthRange[1]) {
+            anchor = i;
+            break;
+          }
+        }
+        chosen = {
+          key: "custom",
+          anchor,
+          year: y,
+          month: m,
+          day: customDate.day,
+          label: `自定义：${y}年${m}月${customDate.day}日`,
+          custom: true
+        };
+      } else {
+        return;
+      }
+
+      // 写入 localStorage
+      localStorage.setItem("sv_start_node", JSON.stringify(chosen));
+      localStorage.setItem("sv_start_node_chosen_v1", "1");
+
+      // 清空可能存在的旧 sv_state，让 getState 用新开局
+      localStorage.removeItem("sv_state");
+
+      // 通知并刷新
+      toast("✅ 已选择：" + chosen.label);
+      setTimeout(() => location.reload(), 500);
+    };
+  }, 400);
 })();
 
 // ===== 时间推进工具 =====
@@ -1150,26 +1524,36 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
   if (!text||!text.trim()) return toast("请输入评论");
   const all = store.getPosts();
   const list = all[platform]||[];
-  const p = list[postIndex];
+
+  // ★ 支持 id（字符串）或索引（数字）定位
+  let realIdx;
+  if (typeof postIndex === "string") {
+    realIdx = list.findIndex(x => x.id === postIndex);
+  } else {
+    realIdx = postIndex;
+  }
+  const p = list[realIdx];
   if (!p) return;
-  
+
   p.comments = p.comments || [];
-  
+
   if (parentCommentIndex !== null) {
-    // 回复某一条具体评论
     const parentC = p.comments[parentCommentIndex];
     parentC.replies = parentC.replies || [];
     parentC.replies.push({user:"我", text:text.trim()});
   } else {
-    // 直接评论帖子
     p.comments.push({user:"我",text:text.trim(), replies: []});
   }
-  
+
   all[platform] = list;
   store.setPosts(all);
-  openApp(platform);
-  
- try {
+  if (platform === "twitter") {
+    apps.twitter.render(document.getElementById("appBody"));
+  } else {
+    openApp(platform);
+  }
+
+  try {
     const sNow = store.getState();
     const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
     const contextStr = parentCommentIndex !== null ? `某网友的评论："${p.comments[parentCommentIndex].text}"` : `帖子内容："${p.text}"`;
@@ -1188,8 +1572,8 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
     
     const res = await callAI([{role:"user",content:"生成回复"}], sysPrompt);
     const newAll = store.getPosts();
-    const newList = newAll[platform]||[];
-    const np = newList[postIndex];
+    const newList = newAll[platform] || [];
+    const np = newList[realIdx]; 
     
     const targetComment = parentCommentIndex !== null ? (np.comments[parentCommentIndex].replies = np.comments[parentCommentIndex].replies || []) : np.comments;
     
@@ -1220,7 +1604,11 @@ res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
 });
     newAll[platform] = newList;
     store.setPosts(newAll);
-    openApp(platform);
+    if (platform === "twitter") {
+  apps.twitter.render(document.getElementById("appBody"));
+} else {
+  openApp(platform);
+}
   } catch(e) { toast(e.message); }
 };
 
@@ -1550,7 +1938,18 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
           </div>
           <button class="btn" id="saveTheme">应用外观</button>
         </div>
-       <div class="card"><h3>我的角色设定</h3>
+       <div class="card"><h3>⏳ 开局时间</h3>
+   <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">
+     当前开局：<b style="color:var(--text);">${(() => {
+       try {
+         const n = JSON.parse(localStorage.getItem("sv_start_node") || "null");
+         return n ? esc(n.label) : "默认（2015年9月1日）";
+       } catch(e) { return "默认"; }
+     })()}</b>
+   </p >
+   <button class="btn ghost" id="resetStartNodeBtn" style="color:#e62429;border-color:#e62429;">🔄 重新选择开局时间（会清空当前进度）</button>
+ </div>
+<div class="card"><h3>我的角色设定</h3>
           <div class="field"><label>姓名（必填）</label>
             <input id="p_name" value="${esc(p.name)}" placeholder="例如：你">
           </div>
@@ -1623,6 +2022,17 @@ const themeSel = body.querySelector("#s_theme");
         if(sel.value==="google"){body.querySelector("#c_url").value="https://generativelanguage.googleapis.com/v1beta/openai";body.querySelector("#c_model").value="gemini-1.5-flash";}
         if(sel.value==="deepseek"){body.querySelector("#c_url").value="https://api.deepseek.com/v1";body.querySelector("#c_model").value="deepseek-chat";}
       };
+body.querySelector("#resetStartNodeBtn").onclick = () => {
+  if (!confirm("⚠️ 重新选择开局会清空当前所有剧情进度（好感度、回合、聊天记录、推特等全部重置），确认继续？")) return;
+  localStorage.removeItem("sv_start_node");
+  localStorage.removeItem("sv_start_node_chosen_v1");
+  localStorage.removeItem("sv_state");
+  // 顺便清空帖子，避免旧数据污染
+  localStorage.removeItem("sv_posts");
+  localStorage.removeItem("sv_chats");
+  toast("已重置，即将刷新");
+  setTimeout(() => location.reload(), 600);
+};
       body.querySelector("#fetchModel").onclick = async (e) => {
         e.target.textContent="...";
         try {
@@ -2209,11 +2619,31 @@ ${tq.story.slice(0, 800)}
 - 说话温暖但带着大人的威严，经常叮嘱彼得注意安全。`;
       }
 
-      // 2. 重新构建完整的 sysPrompt（把 characterVibe 用 ${} 拼进去）
+// 只在彼得聊天时启用主动亲密提示
+      const peterInitiativeHint = (self.currentUser === "彼得·帕克" && contact.affinity >= 51)
+        ? `
+【彼得主动性 · 铁律】
+1. 好感度 ≥ 51 时，彼得会**主动**在聊天里表现出亲密和靠近，不只是被动回复。
+2. 他可以用这些方式主动：
+   - 突然问"你现在在哪？"然后真的跑过来
+   - 主动发"想见你"但不解释原因
+   - 发语音、发照片（比如刚打完一场、手上有伤还硬说没事）
+   - 用玩笑或吐槽掩盖关心
+   - 忽然安静一段时间然后冒出来一句真诚的话
+3. 彼得的亲密**风格多样**，不要每回合都"害羞/脸红/心跳"三件套。他可以：
+   - 若无其事地说撩人的话，然后自己反而先转移话题
+   - 直接说"我想你了"，然后紧接着发一条"别回太肉麻"
+   - 用调侃代替肉麻，但只要玩家一撒娇他就顶不住
+   - 装酷失败后自嘲
+4. 聊天里可以**主动邀约**（"晚上有空吗？"）、**主动关心**（"你今天吃了吗，别骗我"）、**主动示好**（"那个……你喜欢的东西我记着了"）。
+`
+        : "";
+
       const sysPrompt = buildSystem(`你正在扮演「${self.currentUser}」和玩家发短信。
 【当前游戏内日期】${nowStr}（所有回复必须符合这个时间点的情境，不要出现未来事物）
 【当前关系】${attitude}（好感度：${contact.affinity}/200）。严禁逾越当前关系（如非彼得，禁止恋爱向）。
-【MJ 铁律】${self.currentUser === "米歇尔·琼斯" ? "只能以朋友身份互动，禁止任何暧昧/恋爱语气。" : "正常。"}
+【MJ 铁律】${self.currentUser === "米歇尔·琼斯" ? "只能以朋友身份和彼得·帕克互动，禁止任何暧昧/恋爱语气。" : "正常。"}
+${peterInitiativeHint}
 ${characterVibe}
 
 【语言铁律 · 绝对优先】
@@ -2423,172 +2853,544 @@ if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
 
   twitter: {
     title: "推特",
-async render(body) {
-  const posts = store.getPosts().twitter||[];
-  body.innerHTML = `<div style="padding:14px">
-  <div class="row" style="gap:8px;margin-bottom:12px">
-    <button class="btn" id="newPostBtn" style="flex:1">✍️ 发帖</button>
-    <button class="btn ghost" id="refreshBtn" style="flex:1">🔄 刷新</button>
-  </div>
-  <div id="feed">
-    ${posts.map((p,i)=>`
-    <div class="tweet">
-  <div style="font-weight:bold;color:var(--text)">${esc(p.name)}</div>
-  <div style="margin:6px 0;color:var(--text)">${esc(p.text)}</div>
-      <div style="color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding-bottom:6px">♡ ${p.likes||0} · 💬 ${(p.comments||[]).length}</div>
-      
-      <div style="padding:6px 0">
-        ${(p.comments||[]).map((c, ci)=>`
-          <div class="comment" style="margin-bottom:6px">
-            <div onclick="apps.twitter.replyToComment(${i}, ${ci})" style="cursor:pointer">
-              <b>${esc(c.user)}:</b> ${esc(c.text)}
-            </div>
-            ${c.replies && c.replies.length > 0 ? `<div style="padding-left:16px;border-left:1px solid #444;margin-top:4px">
-               ${c.replies.map(r=>`<div style="font-size:12px;margin-top:2px"><b>${esc(r.user)}:</b> ${esc(r.text)}</div>`).join("")}
-            </div>` : ""}
-          </div>
-        `).join("")}
-      </div>
+    currentTab: "foryou",
 
-      <div class="row" style="margin-top:8px">
-       <input id="twc_${i}" placeholder="写评论..." style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-comment-bg);color:var(--input-comment-text);font-size:13px">
-<button onclick="window.addComment('twitter', ${i}, document.getElementById('twc_${i}').value)" style="background:var(--accent-2);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer">💬</button>
-      </div>
-    </div>`).join("")}
-  </div>
-</div>`;
-      body.querySelectorAll(".cmtBtn").forEach(btn=>{
-        btn.onclick=()=>{const i=parseInt(btn.dataset.idx);window.addComment("twitter",i,body.querySelector("#twc_"+i).value);};
-      });
-      posts.forEach((_,i)=>{
-        const inp=body.querySelector("#twc_"+i);
-        if(inp) inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();window.addComment("twitter",i,inp.value);}});
-      });
-      body.querySelector("#newPostBtn").onclick=()=>this.newPost();
-      body.querySelector("#refreshBtn").onclick=()=>this.refresh();
+    getTimelineAvengers() {
+      const s = store.getState();
+      const y = s.gameYear, m = s.gameMonth;
+      if (y === 2018 && m >= 4 && m <= 6) {
+        return ["Tony Stark", "Doctor Strange", "Bruce Banner", "Wong"];
+      }
+      if (y === 2024 && m >= 6) {
+        return ["Doctor Strange", "Daredevil", "Matt Murdock"];
+      }
+      return [];
     },
-async newPost() {
-      const text = prompt("发布推文内容："); 
-      if(!text) return;
-      const all = store.getPosts(); 
-      all.twitter = all.twitter || [];
-      
-      let myName = store.getProfile().name || "Me";
-      if (/[\u4e00-\u9fa5]/.test(myName)) myName = "Me";
-      
-      const newPost = { name: myName, text, comments: [], likes: Math.floor(Math.random()*200)+20 };
-      all.twitter.unshift(newPost); 
-      store.setPosts(all); 
-      this.render($("#appBody"));
-      
-     try {
-        const sNow = store.getState();
-        const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有推文、评论必须符合这个时间点，不能出现未来事件。\n\n`;
-        const myName = store.getProfile().name || "Me";
-        const contactsList = store.getContacts().map(c => c.name).join("、");
-        
-        const sysPrompt = buildSystem(`${dateHint}用户刚发了推特，发帖人名字是："${myName}"，内容是："${text}"。
-【绝对铁律 · 违反即失败】
-1. 严禁让任何随机网友使用 "${myName}" 这个名字！玩家名字绝对不能出现在评论区。
-2. 评论区**必须**包含以下所有联系人的回复：${contactsList}（他们必须看到这条推文并留言）。
-3. 除了上述联系人，再额外生成 3 到 5 条来自世界各地的随机网友评论（如纽约本地人、其他国家网友）。
-4. 评论者名字后面带 (国家/语言) 标识，符合网友语气，有生活感。
-5. **翻译规则（极重要）**：
-   - 如果评论用**外语**，后面紧跟中文翻译，格式：原文（中文翻译）emoji
-   - 如果评论用**中文**，只输出中文原文，不加括号翻译。格式：中文原文 emoji
-   - 严禁 "中文（中文翻译）" 这种中文又翻中文。
-【格式要求】
-姓名(国家/语言) ||| 评论内容
-每行一条，不要任何解释。`);
-        
-        const res = await callAI([{role:"user",content:"生成评论"}], sysPrompt);
-        
-       const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
-const cleanTranslation = (s) => {
-  const m = s.match(/^(.+?)（(.+)）$/);
-  if (!m) return s;
-  const before = m[1].trim();
-  const inside = m[2].trim();
-  if (isChinese(before) && isChinese(inside)) return before;
-  return s;
+
+    async render(body) {
+      const all = store.getPosts();
+      const posts = all.twitter || [];
+
+      let needSave = false;
+const contactNames = store.getContacts().map(c => c.name);
+
+// 判断一个名字是否是联系人（含彼得/内德的英文全名）
+const isContactName = (rawName) => {
+  const n = String(rawName || "").trim();
+  if (!n) return false;
+  // 中文名精确匹配
+  if (contactNames.some(cn => cn === n)) return true;
+  // 英文别名兜底（AI 可能用英文原名）
+  const aliases = {
+    "Peter Parker": "彼得·帕克",
+    "Peter": "彼得·帕克",
+    "Ned Leeds": "内德·利兹",
+    "Ned": "内德·利兹",
+    "Michelle Jones": "米歇尔·琼斯",
+    "MJ": "米歇尔·琼斯",
+    "Aunt May": "梅婶",
+    "May Parker": "梅婶"
+  };
+  if (aliases[n]) return contactNames.includes(aliases[n]);
+  return contactNames.some(cn => n.includes(cn));
 };
 
-res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
-  const [u, t] = l.split('|||').map(x => x.trim());
-  if (u && t) newPost.comments.push({ user: u, text: cleanTranslation(t), replies: [] });
-});
-        
-        const all2 = store.getPosts();
-        all2.twitter = all2.twitter.map(p=>(p.text===text&&p.name===newPost.name)?newPost:p);
-        store.setPosts(all2); this.render($("#appBody"));
-      } catch(e){ toast(e.message); }
-    },
-async refresh() {
-      try {
-const sNow = store.getState();
-const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
-const myName = store.getProfile().name || "Me";
-const contactsList = store.getContacts().map(c => c.name).join("、");
-
-const sysPrompt = buildSystem(`${dateHint}生成 6 条推特动态。
-【发帖人要求】
-1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等）。
-2. 发帖人的姓名必须全部为纯英文字符串，并加上"(翻译自XX语)"。
-3. **严禁使用 "${myName}" 或任何中文字符串作为发帖人名称！**
-【特定角色发帖主题限定（极重要）】
-- 如果发帖人是 Spiderman：日常吐槽、抓小偷的见闻、抱怨，话痨。
-- 如果发帖人是 Peter Parker：日常学业生活吐槽，隐晦抱怨，不能主动说自己是蜘蛛侠。
-- 如果发帖人是 Ned Leeds：围绕技术、电子游戏、外星人阴谋论、对蜘蛛侠的狂热吹捧。
-- 如果发帖人是 Michelle Jones (MJ)：围绕社会观察、哲学思考、冷幽默、独立电影/乐队推荐。
-【内容与评论要求】
-1. 每条推文必须附带 5 到 15 条网友评论。
-2. 评论者名字也必须全部为纯英文字符串。
-3. **严禁让任何网友使用 "${myName}" 这个名字！**
-4. **每条推文的评论区，必须包含以下所有联系人的留言：${contactsList}**（如果语言不通可以用外语+翻译，但名字必须是他们）。
-5. 评论内容要像真实的该地区网友，有生活感、网感，可以互怼或玩梗。
-6. **每条评论末尾随机加 1 个 emoji**。
-7. **翻译规则**：外语评论 → 原文（中文翻译）emoji；中文评论 → 中文原文 emoji，严禁中文翻中文。
-【格式要求】
-严格按以下格式输出，每行一条推文，用 ||| 分隔：
-发帖人英文名 ||| @账号（翻译自XX语） ||| 正文 ||| 点赞数 ||| 评论者1:评论内容 ;; 评论者2:评论内容 ;; 评论者3:评论内容
-注意：评论者和评论内容之间用 1 个英文冒号 ':' 分隔，多条评论之间用 ';;' 分隔，不要输出任何解释。`);
-
-        const res=await callAI([{role:"user",content:"刷新"}], sysPrompt);
-        const all=store.getPosts(); all.twitter=all.twitter||[];
-        
-        res.split('\n').filter(l=>l.includes('|||')).forEach(line=>{
-          const [name,handle,text,likes,commentsStr]=line.split('|||').map(s=>s.trim());
-          if(!name) return;
-          
-          // 解析多条评论
- const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
-const comments = commentsStr ? commentsStr.split(';;').map(c => {
-  // AI 返回格式：评论者名:评论内容（可能混用中英冒号）
-  const idx = c.search(/[:：]/);
-  if (idx === -1) return null;
-  const user = c.slice(0, idx).trim();
-  let content = c.slice(idx + 1).trim();
-  if (!user || !content) return null;
-  // content 里可能有 "外语原文（中文翻译）" 或 "中文原文"
-  // 如果括号外是中文、括号内也是中文 → 去掉括号
-  const m = content.match(/^(.+?)（(.+)）$/);
-  if (m && isChinese(m[1].trim()) && isChinese(m[2].trim())) {
-    content = m[1].trim();
+posts.forEach(post => {
+  // 补 id
+  if (!post.id) {
+    post.id = "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+    needSave = true;
   }
-  return { user, text: content, replies: [] };
-}).filter(x => x && x.user) : [];
-          
-          all.twitter.unshift({name,handle,text,likes:parseInt(likes)||0,comments});
+  // ★ 每次渲染都强制校正 feed（防 AI 误归）
+  const shouldBeFollowing = isContactName(post.name);
+  const correctFeed = shouldBeFollowing ? "following" : "foryou";
+  if (post.feed !== correctFeed) {
+    post.feed = correctFeed;
+    needSave = true;
+  }
+});
+
+if (needSave) {
+  const allTmp = store.getPosts();
+  allTmp.twitter = posts;
+  store.setPosts(allTmp);
+}
+
+const displayPosts = posts.filter(p => p.feed === this.currentTab);
+
+      body.innerHTML = `
+        <div class="tw-wrap">
+          <div class="tw-tabs">
+            <div class="tw-tab ${this.currentTab==='foryou'?'active':''}" data-tab="foryou">为你推荐</div>
+            <div class="tw-tab ${this.currentTab==='following'?'active':''}" data-tab="following">正在关注</div>
+            <div class="tw-tab-spacer"></div>
+            <button class="tw-btn-icon" id="twNewPostBtn" title="发帖">✍️</button>
+            <button class="tw-btn-icon" id="twRefreshBtn" title="刷新">🔄</button>
+          </div>
+          ${displayPosts.length === 0 ? `
+            <div class="tw-empty">
+              ${this.currentTab === 'following'
+                ? '你关注的人还没有发帖。去「为你推荐」看看，或刷新。'
+                : '暂无推文，点击右上角刷新。'}
+            </div>
+          ` : displayPosts.map(p => this.renderTweet(p)).join("")}
+        </div>
+      `;
+
+      body.querySelectorAll(".tw-tab").forEach(el => {
+        el.onclick = () => {
+          this.currentTab = el.dataset.tab;
+          this.render(body);
+        };
+      });
+
+      body.querySelector("#twNewPostBtn").onclick = () => this.newPost();
+      body.querySelector("#twRefreshBtn").onclick = () => this.refresh(body);
+
+      body.querySelectorAll(".tw-tweet").forEach(el => {
+        this.bindTweetEvents(el, body);
+      });
+    },
+
+    renderTweet(p) {
+      const comments = p.comments || [];
+      const avatarChar = (p.name || "?")[0];
+      const isRetweeted = !!p.retweetedBy;
+      const isLiked = !!p.liked;
+      const pid = esc(p.id || "");
+      const previewComments = comments.slice(0, 2);
+      const moreCount = Math.max(0, comments.length - 2);
+
+      return `
+      <div class="tw-tweet" data-id="${pid}">
+        ${isRetweeted ? `<div class="tw-retweet-hint">🔁 ${esc(p.retweetedBy)} 转帖</div>` : ""}
+        <div class="tw-tweet-inner">
+          <div class="tw-avatar">${esc(avatarChar)}</div>
+          <div class="tw-content">
+            <div class="tw-head">
+              <span class="tw-name">${esc(p.name)}</span>
+              <span class="tw-handle">${esc(p.handle || "@user")}</span>
+            </div>
+            <div class="tw-text">${esc(p.text)}</div>
+            ${previewComments.length ? `
+              <div class="tw-comments-preview">
+                ${previewComments.map((c, ci) => `
+                  <div class="tw-comment-line" data-ci="${ci}">
+                    <b>@${esc(c.user)}</b> ${esc(c.text)}
+                  </div>
+                `).join("")}
+                ${moreCount > 0 ? `<div class="tw-more-comments" data-more="1">查看全部 ${comments.length} 条评论 ›</div>` : ""}
+              </div>
+            ` : ""}
+            <div class="tw-actions">
+              <button class="tw-act tw-act-reply" data-act="reply" title="评论">💬 <span>${comments.length}</span></button>
+              <button class="tw-act tw-act-retweet" data-act="retweet" title="转帖">🔁 <span>${p.retweetCount || 0}</span></button>
+              <button class="tw-act tw-act-like ${isLiked?'liked':''}" data-act="like" title="喜欢">♡ <span>${p.likes || 0}</span></button>
+              <button class="tw-act tw-act-dm" data-act="dm" title="私信发送">✉️</button>
+            </div>
+            <div class="tw-comments-full" style="display:none;">
+              ${comments.map((c, ci) => `
+                <div class="tw-comment-item" data-ci="${ci}">
+                  <div class="tw-comment-reply-trigger">
+                    <b>${esc(c.user)}:</b> ${esc(c.text)}
+                  </div>
+                  ${c.replies && c.replies.length ? `
+                    <div class="tw-replies">
+                      ${c.replies.map(r => `<div class="tw-reply-line"><b>${esc(r.user)}:</b> ${esc(r.text)}</div>`).join("")}
+                    </div>
+                  ` : ""}
+                </div>
+              `).join("")}
+              <div class="tw-comment-input-row">
+                <input id="twc_${pid}" class="tw-comment-input" placeholder="发布你的回复">
+                <button class="tw-comment-send" data-send="${pid}">回复</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    },
+
+    bindTweetEvents(el, body) {
+      const pid = el.dataset.id;
+      const all = store.getPosts();
+      const post = (all.twitter || []).find(p => p.id === pid);
+      if (!post) return;
+
+      const more = el.querySelector(".tw-more-comments");
+      if (more) {
+        more.onclick = () => {
+          const full = el.querySelector(".tw-comments-full");
+          if (full) full.style.display = "block";
+          const preview = el.querySelector(".tw-comments-preview");
+          if (preview) preview.style.display = "none";
+        };
+      }
+
+      el.querySelectorAll(".tw-act").forEach(btn => {
+        btn.onclick = async (e) => {
+          e.stopPropagation();
+          const act = btn.dataset.act;
+
+          if (act === "like") {
+            const allNow = store.getPosts();
+            const realIdx = (allNow.twitter || []).findIndex(x => x.id === pid);
+            if (realIdx === -1) return;
+            const realPost = allNow.twitter[realIdx];
+            realPost.liked = !realPost.liked;
+            realPost.likes = (realPost.likes || 0) + (realPost.liked ? 1 : -1);
+            store.setPosts(allNow);
+            this.render(body);
+          }
+          if (act === "retweet") this.retweet(pid, body);
+          if (act === "dm") this.sendDM(pid, body);
+          if (act === "reply") {
+            const full = el.querySelector(".tw-comments-full");
+            if (full) full.style.display = "block";
+            const inp = el.querySelector(`#twc_${pid}`);
+            if (inp) inp.focus();
+          }
+        };
+      });
+
+      el.querySelectorAll(".tw-comment-reply-trigger").forEach(t => {
+        t.onclick = () => {
+          const ci = parseInt(t.parentNode.dataset.ci);
+          const text = prompt("回复这条评论：");
+          if (text) window.addComment("twitter", pid, text, ci);
+        };
+      });
+
+      const sendBtn = el.querySelector(`[data-send="${pid}"]`);
+      const inp = el.querySelector(`#twc_${pid}`);
+      if (sendBtn && inp) {
+        const doSend = () => {
+          const v = inp.value.trim();
+          if (!v) return;
+          window.addComment("twitter", pid, v);
+        };
+        sendBtn.onclick = doSend;
+        inp.addEventListener("keydown", e => {
+          if (e.key === "Enter") { e.preventDefault(); doSend(); }
         });
-        
-        store.setPosts(all); this.render($("#appBody"));
-      } catch(e){toast(e.message);}
+      }
+    },
+
+    retweet(pid, body) {
+      const all = store.getPosts();
+      const post = (all.twitter || []).find(p => p.id === pid);
+      if (!post) return;
+      const contacts = store.getContacts();
+
+      const mask = document.createElement("div");
+      mask.className = "__global_menu_mask";
+      mask.style.cssText = "position:fixed;inset:0;z-index:998;background:rgba(0,0,0,.6);";
+
+      const modal = document.createElement("div");
+      modal.className = "__global_menu";
+      modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:82vw;max-width:360px;max-height:70vh;overflow-y:auto;background:#15151c;border-radius:16px;padding:14px;z-index:999;";
+
+      modal.innerHTML = `
+        <div style="font-weight:bold;color:#fff;font-size:15px;margin-bottom:4px;">🔁 转帖</div>
+        <div style="font-size:12px;color:#888;margin-bottom:12px;">选择转帖方式</div>
+        <button class="btn" id="rt_toFeed" style="margin-bottom:8px;">🔁 转到我的主页</button>
+        <button class="btn ghost" id="rt_toDM" style="margin-bottom:12px;">✉️ 私信发给联系人</button>
+        <div id="rt_contacts" style="display:none;">
+          <div style="font-size:12px;color:#888;margin-bottom:6px;">选择联系人：</div>
+          <div style="max-height:240px;overflow-y:auto;">
+            ${contacts.map(c => `
+              <div class="rt-contact-item" data-name="${esc(c.name)}" style="padding:10px;border-bottom:1px solid #2a2a38;cursor:pointer;color:#fff;font-size:13px;">
+                <div style="font-weight:bold;">${esc(c.name)}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+        <button class="btn ghost" id="rt_cancel" style="margin-top:10px;">取消</button>`;
+
+      document.body.appendChild(mask);
+      document.body.appendChild(modal);
+
+      const close = () => { mask.remove(); modal.remove(); };
+      mask.onclick = close;
+      modal.querySelector("#rt_cancel").onclick = close;
+
+      modal.querySelector("#rt_toFeed").onclick = () => {
+        const me = store.getProfile().name || "Me";
+        const allNow = store.getPosts();
+        allNow.twitter = allNow.twitter || [];
+        allNow.twitter.unshift({
+          id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          name: me,
+          handle: "@me",
+          text: post.text,
+          retweetedBy: me,
+          feed: this.currentTab,
+          comments: [],
+          likes: 0,
+          retweetCount: 0
+        });
+        store.setPosts(allNow);
+        close();
+        toast("已转到主页");
+        this.render(body);
+      };
+
+      modal.querySelector("#rt_toDM").onclick = () => {
+        modal.querySelector("#rt_contacts").style.display = "block";
+      };
+
+      modal.querySelectorAll(".rt-contact-item").forEach(item => {
+        item.onclick = () => {
+          const name = item.dataset.name;
+          const chats = store.getChats();
+          const arr = chats[name] || [];
+          arr.push({
+            role: "me",
+            content: `[转帖] ${post.name}：${post.text.slice(0, 120)}`
+          });
+          chats[name] = arr;
+          store.setChats(chats);
+          close();
+          toast(`已私信给 ${name}`);
+        };
+      });
+    },
+
+    sendDM(pid, body) {
+      const all = store.getPosts();
+      const post = (all.twitter || []).find(p => p.id === pid);
+      if (!post) return;
+      const contacts = store.getContacts();
+
+      const mask = document.createElement("div");
+      mask.className = "__global_menu_mask";
+      mask.style.cssText = "position:fixed;inset:0;z-index:998;background:rgba(0,0,0,.6);";
+
+      const modal = document.createElement("div");
+      modal.className = "__global_menu";
+      modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:82vw;max-width:360px;max-height:70vh;overflow-y:auto;background:#15151c;border-radius:16px;padding:14px;z-index:999;";
+
+      modal.innerHTML = `
+        <div style="font-weight:bold;color:#fff;font-size:15px;margin-bottom:12px;">✉️ 私信分享这条推文</div>
+        <div style="max-height:300px;overflow-y:auto;">
+          ${contacts.map(c => `
+            <div class="dm-contact-item" data-name="${esc(c.name)}" style="padding:10px;border-bottom:1px solid #2a2a38;cursor:pointer;color:#fff;font-size:13px;">
+              ${esc(c.name)}
+            </div>
+          `).join("")}
+        </div>
+        <button class="btn ghost" id="dm_cancel" style="margin-top:10px;">取消</button>`;
+
+      document.body.appendChild(mask);
+      document.body.appendChild(modal);
+
+      const close = () => { mask.remove(); modal.remove(); };
+      mask.onclick = close;
+      modal.querySelector("#dm_cancel").onclick = close;
+
+      modal.querySelectorAll(".dm-contact-item").forEach(item => {
+        item.onclick = () => {
+          const name = item.dataset.name;
+          const chats = store.getChats();
+          const arr = chats[name] || [];
+          arr.push({
+            role: "me",
+            content: `看看这条推文：\n"${post.name}：${post.text.slice(0, 100)}${post.text.length > 100 ? "..." : ""}"`
+          });
+          chats[name] = arr;
+          store.setChats(chats);
+          close();
+          toast(`已分享给 ${name}`);
+        };
+      });
+    },
+
+    async newPost() {
+      const text = prompt("发布推文内容：");
+      if (!text) return;
+      const all = store.getPosts();
+      all.twitter = all.twitter || [];
+
+      let myName = store.getProfile().name || "Me";
+      if (/[\u4e00-\u9fa5]/.test(myName)) myName = "Me";
+
+      const newPost = {
+        id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        name: myName,
+        handle: "@me",
+        text,
+        feed: "foryou",
+        comments: [],
+        likes: Math.floor(Math.random() * 20) + 2,
+        retweetCount: 0
+      };
+      all.twitter.unshift(newPost);
+      store.setPosts(all);
+      this.render($("#appBody"));
+
+      try {
+        const sNow = store.getState();
+        const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有推文、评论必须符合这个时间点。\n\n`;
+        const contactsList = store.getContacts().map(c => c.name).join("、");
+
+        const sysPrompt = buildSystem(`${dateHint}用户发了推特，发帖人名字是："${myName}"，内容是："${text}"。
+【绝对铁律】
+1. 严禁让任何网友使用 "${myName}" 这个名字。
+2. 评论区必须包含以下所有联系人：${contactsList}。
+3. 再额外生成 3-5 条来自世界各地的随机网友评论。
+4. 外语 → 原文（中文翻译）；中文 → 只写中文原文。
+【格式】
+姓名(国家/语言) ||| 评论内容
+每行一条。`);
+
+        const res = await callAI([{ role: "user", content: "生成评论" }], sysPrompt);
+        const all2 = store.getPosts();
+        all2.twitter = all2.twitter.map(p =>
+          (p.text === text && p.name === newPost.name) ? { ...p, comments: this.parseComments(res) } : p
+        );
+        store.setPosts(all2);
+        this.render($("#appBody"));
+      } catch (e) { toast(e.message); }
+    },
+
+   async refresh(body) {
+      const isFollowing = this.currentTab === "following";
+      try {
+        const sNow = store.getState();
+        const phase = WORLD.timeline[sNow.anchor] || WORLD.timeline[0];
+        const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
+        const contactsList = store.getContacts().map(c => c.name).join("、");
+        const myName = store.getProfile().name || "Me";
+
+        let followingPrompt = "";
+        if (isFollowing) {
+          const avengers = this.getTimelineAvengers();
+          const avengersHint = avengers.length
+            ? `\n【可选的复联成员（本时间点可能发帖）】${avengers.join("、")}`
+            : "\n【本时间点无复联成员活跃，不要生成他们】";
+          followingPrompt = `
+【正在关注 · 严格规则】
+1. 发帖人**只能**是以下联系人：${contactsList}
+2. ${avengersHint}
+3. 共生成 5-6 条，每个发帖人最多 2 条。
+4. **绝对不要生成任何随机网友作为发帖人**！
+5. 发帖内容必须符合角色性格和当前时间点。
+6. 发帖人名字**必须与联系人名字完全一致**（保留原样，不要翻译成英文）。
+`;
+        } else {
+          followingPrompt = `
+【为你推荐 · 严格规则】
+1. 发帖人：**必须是纯随机 NPC**（如纽约路人、国外网友、知名大V、无名小号等）。
+2. **绝对禁止**将以下联系人作为发帖人或评论者出现：${contactsList}。
+3. **绝对禁止**把"彼得·帕克"或"Peter Parker"作为发帖人。
+4. **绝对禁止**使用 "${myName}"。
+5. 共生成 6 条，不要编号，直接从第 1 行开始写。
+`;
+        }
+
+        const sysPrompt = buildSystem(`${dateHint}请生成推特动态。
+
+【当前阶段】${phase.name}（${phase.year}年）
+${followingPrompt}
+
+【每条推文必须包含】
+1. **固定 5-8 条评论**（不是 2 条，是 5 到 8 条随机网友的评论）。
+2. 评论者名用"英文网名(国家/语言)"标识。
+3. 评论内容真实、有网感，可以互怼、玩梗、抢热评。
+
+【绝对禁止 · 违反即失败】
+- 禁止任何形式的编号（不要 "1." "2." "3." 等前缀）。
+- 禁止在发帖人名字里加序号、括号、"@xxx:"等无关字符。
+- 发帖人名字必须干净，只写名字本身。
+
+【翻译规则】
+- 外语评论 → 原文（中文翻译）
+- 中文评论 → 只写中文原文，**不要加任何括号翻译**。
+
+【格式 · 严格 · 每行一条】
+发帖人名字 ||| @账号 ||| 正文 ||| 点赞数 ||| 评论者1:评论内容 ;; 评论者2:评论内容 ;; 评论者3:评论内容 ;; 评论者4:评论内容 ;; 评论者5:评论内容
+
+注意：评论之间必须用 " ;;" 分隔，且**至少 5 条评论**。`);
+
+        const res = await callAI([{ role: "user", content: isFollowing ? "刷新正在关注" : "刷新为你推荐" }], sysPrompt);
+
+        const all = store.getPosts();
+        all.twitter = all.twitter || [];
+
+        // ★ 清理 AI 返回的名字：去掉 "1." "2." "- " 等前缀
+        const cleanName = (raw) =>
+          String(raw || "")
+            .replace(/^\s*\d+[\.\、\)、]\s*/, "")   // 去掉开头的 "1." "2." "3、" 等
+            .replace(/^\s*[-•·]\s*/, "")             // 去掉开头的 "- " "• "
+            .trim();
+
+        res.split('\n').filter(l => l.includes('|||')).forEach(line => {
+          const parts = line.split('|||').map(s => s.trim());
+          const [rawName, handle, text, likes, commentsStr] = parts;
+          const name = cleanName(rawName);
+          if (!name || !text) return;
+
+          all.twitter.unshift({
+            id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            name,
+            handle: handle || "@user",
+            text,
+            likes: parseInt(likes) || 0,
+            retweetCount: 0,
+            feed: isFollowing ? "following" : "foryou",
+            comments: this.parseComments(`x ||| ${commentsStr || ""}`)
+          });
+        });
+
+        store.setPosts(all);
+        this.render(body);
+      } catch (e) {
+        toast(e.message);
+      }
+    },
+
+    parseComments(str) {
+  if (!str) return [];
+  const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
+  const clean = (content) => {
+    const m = content.match(/^(.+?)（(.+)）$/);
+    if (m && isChinese(m[1].trim()) && isChinese(m[2].trim())) return m[1].trim();
+    return content;
+  };
+
+  let list = str.split(';;').map(c => {
+    const idx = c.search(/[:：]/);
+    if (idx === -1) return null;
+    const user = c.slice(0, idx).trim();
+    const text = c.slice(idx + 1).trim();
+    if (!user || !text) return null;
+    return { user, text: clean(text), replies: [] };
+  }).filter(Boolean);
+
+  // ★ 兜底：少于 5 条时本地补足
+  if (list.length < 5) {
+    const fillerPool = [
+      { user: "queens_boy(美)", text: "😂这是真的吗？" },
+      { user: "nyc_gossip(美)", text: "纽约人路过，笑死" },
+      { user: "tokyo_ya(日)", text: "🤔これ本当？（这是真的吗？）" },
+      { user: "paris_chic(法)", text: "😏Oh là là（哎呀）" },
+      { user: "london_fog(英)", text: "Typical.（典型。）🍵" },
+      { user: "seoul_night(韩)", text: "대박（厉害）🔥" },
+      { user: "midtown_kid(美)", text: "我同学也这样说 🤣" },
+      { user: "brooklyn_vibes(美)", text: "楼主是懂什么梗的 💯" }
+    ];
+    const need = 5 - list.length;
+    const picked = fillerPool.sort(() => Math.random() - 0.5).slice(0, need);
+    list = list.concat(picked);
+  }
+  return list;
+},
+
+    replyToComment(postIdx, commentIdx) {
+      const text = prompt("回复该评论：");
+      if (text) window.addComment('twitter', postIdx, text, commentIdx);
     }
   },
-replyToComment(postIdx, commentIdx) {
-  const text = prompt("回复该评论：");
-  if (text) window.addComment('twitter', postIdx, text, commentIdx);
-},
 
 worldline: {
   title: "世界线",
@@ -2673,7 +3475,7 @@ if (window._worldlineMode === "main") {
 2. 禁止出现 forbidden 列表中的角色或事件（除非玩家已经推进到下一阶段）。
 3. 彼得与 MJ 的关系必须是朋友/同学，禁止任何恋爱暗示。
 4. 如果玩家选项引入未来角色/事件（如"我们去打灭霸"），必须用剧情内的合理方式拒绝。
-5. MJ 如果出场，只能作为同学/朋友互动。
+5. MJ 如果出场，只能作为同学/朋友和彼得·帕克互动，两人之间只能为友情向。
 ${phase.forcedEvent ? `
 6. 【大事件硬锚】${phase.forcedEvent}
 7. 【可变结局】允许玩家通过选项改变以下内容：
@@ -2681,7 +3483,24 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
    如果玩家在大事件中做出了"改变结局"的选择，请用剧情自然呈现改变后的结果，不要硬性拒绝。
 ` : ""}
 
-【当前好感度】${s.affinity}/200（参考此数值决定彼得说话的语气与距离感：0-50普通、51-100朋友、101+依然只是朋友，禁止越界到暧昧/深爱）
+【当前好感度】${s.affinity}/200
+- 0-50：普通朋友，无主动亲密
+- 51-100：信任好友，可主动靠近、拍肩、并肩而行
+- 101-150：暧昧期，可主动牵手、拥抱、贴耳说话、故意逗弄（彼得可以主动）
+- 151-200：亲密关系，可主动亲吻、搂抱（不涉及露骨内容）
+
+【彼得主动性 · 铁律】
+1. 好感度 ≥ 51 时，彼得**可以主动发起亲密互动**（牵手、拥抱、靠近、逗弄），不必等玩家先动。
+2. 好感度 ≥ 101 时，彼得可以在合适的氛围下**主动亲吻**玩家。
+3. 彼得的亲密反应**不能只有脸红/害羞**这一种。他可以：
+   - 若无其事地继续说话
+   - 先逗玩家，等玩家脸红了自己反而淡定
+   - 用玩笑化解尴尬
+   - 认真直视对方不闪躲
+   - 用行动（把外套披上、把对方拉近）代替语言
+   - 嘴硬但身体诚实
+4. 双方**都可以是主动方**，亲密互动应自然嵌入剧情，而不是每次都等玩家先行动。
+5. 每回合的亲密度表现都要不同，禁止连续多回合都用同一套反应。
 
 【文风要求 · 极其重要】
 1. 参考经典英美青春小说的叙事节奏与对白质感，多用细节、动作、感官描写，少用形容词堆砌。
