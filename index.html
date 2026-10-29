@@ -144,7 +144,7 @@ body{
 .card h3{margin:0 0 12px;font-size:15px;color: var(--card-title-color);}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
 .field label{font-size:12px;color:var(--muted);}
-.field input,.field select,.field textarea{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;width:100%;}
+.field input,.field select,.field textarea{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;width:100%;box-sizing:border-box;max-width:100%;}
 .btn{background:var(--accent-2);border:none;color:#fff;padding:10px 16px;border-radius:12px;font-weight:600;cursor:pointer;width:100%;}
 .btn.ghost{background:var(--panel-2);border:1px solid var(--line);}
 .btn:disabled{opacity:.5;}
@@ -275,6 +275,7 @@ body.theme-light .notch{ background:#1d1d1f; }
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>通讯录</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
+      <button class="app-icon" data-app="Appearance"><span>🎨</span><label>外观</label></button>
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
     </div>
 <div class="desktop-watermark">@nini</div>
@@ -811,6 +812,13 @@ async function generateImage(prompt) {
 function buildSystem(extra) {
   const p = store.getProfile();
   const s = store.getState();
+  const personalityText = p.personality || "（未填写）";
+  const backgroundText = p.background || "（未填写）";
+  const extraFields = [];
+  if (p.identity) extraFields.push("身份：" + p.identity);
+  if (p.appearance) extraFields.push("外貌：" + p.appearance);
+  if (p.likes) extraFields.push("喜好：" + p.likes);
+   if (p.notes) extraFields.push("备注：" + p.notes);
   const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
 const year = s.gameYear || WORLD.startYear;
 const month = s.gameMonth || WORLD.startMonth;
@@ -846,7 +854,12 @@ ${forcedStr}
 ${WORLD.mjPolicy}
 目前彼得与 MJ 的关系：${phase.mjRelation}
 
-【玩家】姓名：${p.name}，身份：${p.identity}。当前进度：第 ${s.turn} 回合，世界线好感度 ${s.affinity}/200。
+【玩家 · 人设】
+姓名：${p.name}
+性格：${personalityText}
+背景：${backgroundText}
+${extraFields.join("\n")}
+当前进度：第 ${s.turn} 回合，世界线好感度 ${s.affinity}/200。
 
 【文风】电影镜头感，严禁 AI 句式。多动作、细节、感官描写。彼得对白用斜体英文原文紧跟中文翻译，格式：*"Hey, you okay?"*（嘿，你还好吗？）。剧情里如果出现具体日期，必须写成 ${timeStr} 附近的日期，不要写成其他年份。
 ${worldbookPrompt}
@@ -1280,7 +1293,247 @@ ${choice}
   }
 };
 
+function applyAppearance() {
+  const cfg = store.get("sv_appearance", {});
+
+  // 1. 壁纸
+  let styleEl = document.getElementById("custom-appearance-style");
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = "custom-appearance-style";
+    document.head.appendChild(styleEl);
+  }
+
+  let cssRules = "";
+
+  if (cfg.wallpaper) {
+    cssRules += `
+      #desktop .wallpaper {
+        background: url('${cfg.wallpaper}') center/cover no-repeat !important;
+      }
+      #desktop .wallpaper::after {
+        display: none !important;
+      }
+    `;
+  }
+
+  // 2. 字体
+  if (cfg.fontData && cfg.fontName) {
+    cssRules += `
+      @font-face {
+        font-family: '${cfg.fontName}';
+        src: url('${cfg.fontData}');
+      }
+      body, .bubble, .story-content, .app-body, input, textarea, select {
+        font-family: '${cfg.fontName}', var(--font-main) !important;
+      }
+    `;
+  }
+
+  // 3. 字号缩放
+  if (cfg.fontSize) {
+    cssRules += `body { zoom: ${cfg.fontSize}%; }`;
+  }
+
+  // 4. 自定义 CSS
+  if (cfg.customCss) {
+    cssRules += `\n/* Custom User CSS */\n${cfg.customCss}\n`;
+  }
+
+  styleEl.innerHTML = cssRules;
+}
+
+// 页面加载时自动应用一次
+setTimeout(applyAppearance, 100);
+
 const apps = {
+Appearance: {
+  title: "外观",
+  render(body) {
+    const cfg = store.get("sv_appearance", {});
+    const contacts = store.getContacts();
+    
+    // 默认生图提示词
+    const defaultPrompts = {
+      peter: "cinematic portrait of Peter Parker, teenage boy, brown hair, warm smile, MCU style, natural lighting",
+      ned: "cinematic portrait of Ned Leeds, teenage boy, asian american, friendly smile, MCU style",
+      mj: "cinematic portrait of Michelle Jones, teenage girl, dark curly hair, serious but soft expression, MCU style",
+      may: "cinematic portrait of Aunt May, middle aged woman, kind eyes, warm smile, MCU style",
+      map: "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels."
+    };
+    const prompts = cfg.prompts || defaultPrompts;
+
+    body.innerHTML = `<div style="padding:14px">
+      <div class="card">
+        <h3>🖼️ 桌面壁纸</h3>
+        <div class="field">
+          <label>上传图片（覆盖默认红色背景）</label>
+          <input type="file" id="ap_wall" accept="image/*" style="font-size:12px">
+        </div>
+        <button class="btn ghost" id="clear_wall" style="font-size:12px;margin-top:4px;">恢复默认壁纸</button>
+      </div>
+
+      <div class="card">
+        <h3>🔤 全局字体与大小</h3>
+        <div class="field">
+          <label>上传字体文件（.ttf / .otf / .woff）</label>
+          <input type="file" id="ap_font" accept=".ttf,.otf,.woff,.woff2" style="font-size:12px">
+        </div>
+        <div class="field">
+          <label>全局字号缩放 (${cfg.fontSize || 100}%)</label>
+          <input type="range" id="ap_fontsize" min="80" max="140" value="${cfg.fontSize || 100}" style="width:100%">
+        </div>
+        <button class="btn ghost" id="clear_font" style="font-size:12px;">恢复默认字体</button>
+      </div>
+
+      <div class="card">
+        <h3>👤 用户头像</h3>
+        <div class="row" style="gap:12px;">
+          <div style="width:50px;height:50px;border-radius:50%;background:var(--panel-2);overflow:hidden;">
+            ${cfg.userAvatar ? `< img src="${cfg.userAvatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
+          </div>
+          <input type="file" id="ap_avatar" accept="image/*" style="flex:1;font-size:12px">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>👥 联系人头像</h3>
+        ${contacts.filter(c => !c.isTheater).map(c => `
+          <div class="row" style="gap:12px;margin-bottom:12px;align-items:center;">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--panel-2);overflow:hidden;flex-shrink:0;">
+              ${c.avatar ? `< img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+            </div>
+            <div style="flex:1;font-size:13px;color:var(--text);">${esc(c.name)}</div>
+            <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
+              上传<input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
+            </label>
+          </div>
+        `).join("")}
+      </div>
+
+      <div class="card">
+        <h3>📝 自定义 CSS 主题</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 8px;">输入 CSS 代码，例如修改主题色：<code>:root { --accent: #ff00ff; }</code></p >
+        <textarea id="ap_css" rows="5" style="font-family:monospace;font-size:12px;width:100%;box-sizing:border-box;" placeholder=":root { --accent: #ff00ff; }">${esc(cfg.customCss || "")}</textarea>
+        <button class="btn" id="save_css" style="margin-top:8px;">应用 CSS</button>
+      </div>
+
+      <div class="card">
+        <h3>🎨 生图提示词 (Prompt)</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">留空则使用默认提示词。生成 IG 帖子或地图时会调用这些词。</p >
+        
+        <div class="field"><label>彼得·帕克</label><textarea id="pr_peter" rows="2" style="font-size:12px;">${esc(prompts.peter || "")}</textarea></div>
+        <div class="field"><label>内德·利兹</label><textarea id="pr_ned" rows="2" style="font-size:12px;">${esc(prompts.ned || "")}</textarea></div>
+        <div class="field"><label>米歇尔·琼斯</label><textarea id="pr_mj" rows="2" style="font-size:12px;">${esc(prompts.mj || "")}</textarea></div>
+        <div class="field"><label>梅婶</label><textarea id="pr_may" rows="2" style="font-size:12px;">${esc(prompts.may || "")}</textarea></div>
+        <div class="field"><label>蜘蛛终端地图</label><textarea id="pr_map" rows="2" style="font-size:12px;">${esc(prompts.map || "")}</textarea></div>
+        <button class="btn" id="save_prompts" style="margin-top:8px;">保存提示词</button>
+      </div>
+    </div>`;
+
+    // 壁纸
+    body.querySelector("#ap_wall").onchange = (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        cfg.wallpaper = ev.target.result;
+        store.set("sv_appearance", cfg);
+        applyAppearance();
+        toast("壁纸已更新");
+      };
+      reader.readAsDataURL(file);
+    };
+    body.querySelector("#clear_wall").onclick = () => {
+      cfg.wallpaper = null;
+      store.set("sv_appearance", cfg);
+      applyAppearance();
+      this.render(body);
+    };
+
+    // 字体
+    body.querySelector("#ap_font").onchange = (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        cfg.fontData = ev.target.result;
+        cfg.fontName = "CustomFont_" + Date.now();
+        store.set("sv_appearance", cfg);
+        applyAppearance();
+        toast("字体已更新");
+      };
+      reader.readAsDataURL(file);
+    };
+    body.querySelector("#clear_font").onclick = () => {
+      cfg.fontData = null;
+      cfg.fontName = null;
+      store.set("sv_appearance", cfg);
+      applyAppearance();
+      this.render(body);
+    };
+    
+    // 字号
+    body.querySelector("#ap_fontsize").oninput = (e) => {
+      cfg.fontSize = e.target.value;
+      store.set("sv_appearance", cfg);
+      applyAppearance();
+    };
+
+    // 用户头像
+    body.querySelector("#ap_avatar").onchange = (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        cfg.userAvatar = ev.target.result;
+        store.set("sv_appearance", cfg);
+        this.render(body);
+        toast("头像已更新");
+      };
+      reader.readAsDataURL(file);
+    };
+
+    // 联系人头像
+    body.querySelectorAll(".c-avatar-input").forEach(input => {
+      input.onchange = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const name = input.dataset.name;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const list = store.getContacts();
+          const c = list.find(x => x.name === name);
+          if (c) {
+            c.avatar = ev.target.result;
+            store.setContacts(list);
+            this.render(body);
+            toast("头像已更新");
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+    });
+
+    // 自定义 CSS
+    body.querySelector("#save_css").onclick = () => {
+      cfg.customCss = body.querySelector("#ap_css").value;
+      store.set("sv_appearance", cfg);
+      applyAppearance();
+      toast("CSS 已应用");
+    };
+
+    // 提示词
+    body.querySelector("#save_prompts").onclick = () => {
+      cfg.prompts = {
+        peter: body.querySelector("#pr_peter").value.trim() || defaultPrompts.peter,
+        ned: body.querySelector("#pr_ned").value.trim() || defaultPrompts.ned,
+        mj: body.querySelector("#pr_mj").value.trim() || defaultPrompts.mj,
+may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
+        map: body.querySelector("#pr_map").value.trim() || defaultPrompts.map,
+      };
+      store.set("sv_appearance", cfg);
+      toast("提示词已保存");
+    };
+  }
+},
+
   settings: {
     title: "设置",
     render(body) {
@@ -1297,10 +1550,33 @@ const apps = {
           </div>
           <button class="btn" id="saveTheme">应用外观</button>
         </div>
-        <div class="card"><h3>我的角色设定</h3>
-          <div class="field"><label>姓名</label><input id="p_name" value="${esc(p.name)}"></div>
-          <div class="field"><label>身份</label><input id="p_identity" value="${esc(p.identity)}"></div>
+       <div class="card"><h3>我的角色设定</h3>
+          <div class="field"><label>姓名（必填）</label>
+            <input id="p_name" value="${esc(p.name)}" placeholder="例如：你">
+          </div>
+          <div class="field"><label>性格（必填）</label>
+            <textarea id="p_personality" rows="2" placeholder="例如：冷静、话少、对朋友很护短">${esc(p.personality || "")}</textarea>
+          </div>
+          <div class="field"><label>背景（必填）</label>
+            <textarea id="p_background" rows="3" placeholder="例如：皇后区长大，中城高中二年级，和彼得是同学">${esc(p.background || "")}</textarea>
+          </div>
+          <div class="field"><label>身份（选填）</label>
+            <input id="p_identity" value="${esc(p.identity || "")}" placeholder="例如：同学 / 邻居">
+          </div>
+          <div class="field"><label>外貌（选填）</label>
+            <textarea id="p_appearance" rows="2" placeholder="例如：黑色短发，戴眼镜">${esc(p.appearance || "")}</textarea>
+          </div>
+          <div class="field"><label>喜好（选填）</label>
+            <textarea id="p_likes" rows="2" placeholder="例如：喜欢科幻、拉面、下雨天">${esc(p.likes || "")}</textarea>
+          </div>
+             <div class="field"><label>其他备注（选填）</label>
+            <textarea id="p_notes" rows="2" placeholder="任何想补充给 AI 的设定">${esc(p.notes || "")}</textarea>
+          </div>
           <button class="btn" id="saveP">保存人设</button>
+          <div class="row" style="gap:8px;margin-top:8px;">
+            <button class="btn ghost" id="profileSaveBtn" style="flex:1;">💾 存档人设</button>
+            <button class="btn ghost" id="profileLoadBtn" style="flex:1;">📂 读档人设</button>
+          </div>
         </div>
         <div class="card"><h3>文本 AI 接入</h3>
           <div class="row" style="justify-content:space-between;margin-bottom:12px"><label>启用</label><label class="switch"><input type="checkbox" id="c_enabled" ${cfg.enabled?'checked':''}><span class="slider"></span></label></div>
@@ -1369,7 +1645,122 @@ const themeSel = body.querySelector("#s_theme");
         } catch(err){toast(err.message);}
         e.target.textContent="拉取";
       };
-      body.querySelector("#saveP").onclick = () => { store.setProfile({name:body.querySelector("#p_name").value,identity:body.querySelector("#p_identity").value}); toast("已保存"); };
+      body.querySelector("#saveP").onclick = () => {
+        const name = body.querySelector("#p_name").value.trim();
+        const personality = body.querySelector("#p_personality").value.trim();
+        const background = body.querySelector("#p_background").value.trim();
+        if (!name) return toast("姓名必填");
+        if (!personality) return toast("性格必填");
+        if (!background) return toast("背景必填");
+        store.setProfile({
+          name: name,
+          personality: personality,
+          background: background,
+          identity: body.querySelector("#p_identity").value.trim(),
+          appearance: body.querySelector("#p_appearance").value.trim(),
+          likes: body.querySelector("#p_likes").value.trim(),
+          notes: body.querySelector("#p_notes").value.trim()
+        });
+        toast("人设已保存");
+      };
+// ===== 人设存档 / 读档（含所有 App 数据）=====
+      const PROFILE_SLOTS_KEY = "sv_profile_slots";
+
+      const ensureSaveCurrentProfile = () => {
+        // 存档前先把输入框里未保存的内容写进 profile
+        const name = body.querySelector("#p_name").value.trim();
+        const personality = body.querySelector("#p_personality").value.trim();
+        const background = body.querySelector("#p_background").value.trim();
+        if (name && personality && background) {
+          store.setProfile({
+            name: name,
+            personality: personality,
+            background: background,
+            identity: body.querySelector("#p_identity").value.trim(),
+            appearance: body.querySelector("#p_appearance").value.trim(),
+            likes: body.querySelector("#p_likes").value.trim(),
+            catchphrase: body.querySelector("#p_catchphrase").value.trim(),
+            notes: body.querySelector("#p_notes").value.trim()
+          });
+        }
+      };
+
+      const collectAllData = () => {
+        const data = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith("sv_")) {
+            data[k] = localStorage.getItem(k);
+          }
+        }
+        return data;
+      };
+
+      body.querySelector("#profileSaveBtn").onclick = () => {
+        ensureSaveCurrentProfile();
+        const label = prompt("为该存档起一个名字（如：主线-第一阶段）：");
+        if (!label) return;
+        const slots = JSON.parse(localStorage.getItem(PROFILE_SLOTS_KEY) || "[]");
+        slots.unshift({
+          label: label,
+          timestamp: Date.now(),
+          profile: store.getProfile(),
+          data: collectAllData()
+        });
+        localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
+        toast("已存档：" + label);
+      };
+
+      body.querySelector("#profileLoadBtn").onclick = () => {
+        const slots = JSON.parse(localStorage.getItem(PROFILE_SLOTS_KEY) || "[]");
+        if (!slots.length) return toast("还没有任何存档");
+
+        const menu = document.createElement("div");
+        menu.className = "__global_menu";
+        menu.style.cssText = "position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);background:#222;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.5);width:82vw;max-width:340px;max-height:60vh;overflow-y:auto;";
+        menu.innerHTML = `<div style="font-size:12px;color:#aaa;padding:4px 8px 8px;">选择要读取的存档（会覆盖当前所有数据）</div>`;
+
+        slots.forEach((s, idx) => {
+          const item = document.createElement("div");
+          item.style.cssText = "padding:10px;border-bottom:1px solid #444;cursor:pointer;color:#fff;font-size:13px;";
+          const when = new Date(s.timestamp).toLocaleString();
+          item.innerHTML = `<div style="font-weight:bold;">${s.label}</div>
+            <div style="font-size:11px;color:#999;margin-top:2px;">${when} · ${s.profile && s.profile.name ? s.profile.name : "未命名"}</div>`;
+          item.onclick = () => {
+            if (!confirm("读档会覆盖当前所有 App 数据，确定继续？")) return;
+            Object.keys(s.data || {}).forEach(k => {
+              if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
+                localStorage.setItem(k, s.data[k]);
+              }
+            });
+            if (s.profile) localStorage.setItem("sv_profile", JSON.stringify(s.profile));
+            mask.remove();
+            menu.remove();
+            toast("已读档：" + s.label);
+            setTimeout(() => location.reload(), 500);
+          };
+          menu.appendChild(item);
+        });
+
+        const delAllBtn = document.createElement("div");
+        delAllBtn.style.cssText = "padding:10px;cursor:pointer;color:#e62429;font-size:12px;text-align:center;border-top:1px solid #444;margin-top:4px;";
+        delAllBtn.textContent = "🗑️ 清空所有存档";
+        delAllBtn.onclick = () => {
+          if (!confirm("确定清空所有存档吗？")) return;
+          localStorage.removeItem(PROFILE_SLOTS_KEY);
+          mask.remove();
+          menu.remove();
+          toast("已清空所有存档");
+        };
+        menu.appendChild(delAllBtn);
+
+        const mask = document.createElement("div");
+        mask.className = "__global_menu_mask";
+        mask.style.cssText = "position:fixed;inset:0;z-index:998;background:rgba(0,0,0,0.55);";
+        document.body.appendChild(mask);
+        document.body.appendChild(menu);
+        mask.onclick = () => { mask.remove(); menu.remove(); };
+      };
      // ===== 数据管理 =====
       body.querySelector("#exportDataBtn").onclick = () => {
         const dump = {};
@@ -1570,10 +1961,16 @@ if (m.content && m.content.startsWith("[语音]")) {
 return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">${quoteHtml}${esc(m.content)}</div>`;
     }).join("");
     chatHtml += `</div>`;
-      chatHtml += `<div style="position:absolute;top:0;left:0;right:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;">
-      <button id="backToListBtn" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;">‹</button>
-      <div style="font-size:13px;color:var(--muted);">当前对话：<b style="color:var(--text);">${esc(self.currentUser)}</b></div>
-    </div>`;
+      const curContact = store.getContacts().find(c => c.name === self.currentUser);
+const avatarHtml = curContact && curContact.avatar 
+  ? `< img src="${curContact.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+  : `<div style="width:28px;height:28px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
+
+chatHtml += `<div style="position:absolute;top:0;left:0;right:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;">
+  <button id="backToListBtn" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;">‹</button>
+  ${avatarHtml}
+  <div style="font-size:13px;color:var(--muted);">当前对话：<b style="color:var(--text);">${esc(self.currentUser)}</b></div>
+</div>`;
     chatHtml += `<div id="quotePreview" style="display:none;padding:8px 14px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12px;color:var(--muted);"><div style="display:flex;justify-content:space-between;align-items:center;"><span id="quoteText"></span><span id="cancelQuote" style="cursor:pointer;color:var(--accent)">✕</span></div></div>`;
     chatHtml += `<div class="composer"><input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}..."><button id="sendBtn">发送</button></div>`;
     
@@ -2087,18 +2484,22 @@ async newPost() {
      try {
         const sNow = store.getState();
         const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有推文、评论必须符合这个时间点，不能出现未来事件。\n\n`;
-        const sysPrompt = buildSystem(`${dateHint}用户刚发了推特："${text}"。
-【要求】
-1. 生成 5 到 8 条来自世界各地网友的评论（包括纽约本地人、其他国家的网友）。
-2. 评论者名字后面可以带 (国家/语言) 标识（如 "Mike(NYC)"）。
-3. 评论可以带点各国网络热梗，**每条评论末尾根据情境随机加 1 个 emoji**（如 😂 🔥 😭 😤 🐶 🌸 等）。
-4. **翻译规则（极重要）**：
-   - 如果评论用**外语**（英文/俄文/日文/法文等），后面紧跟中文翻译，格式：原文（中文翻译）emoji
-   - 如果评论用**中文**，**只输出中文原文，不加括号翻译**。格式：中文原文 emoji
+        const myName = store.getProfile().name || "Me";
+        const contactsList = store.getContacts().map(c => c.name).join("、");
+        
+        const sysPrompt = buildSystem(`${dateHint}用户刚发了推特，发帖人名字是："${myName}"，内容是："${text}"。
+【绝对铁律 · 违反即失败】
+1. 严禁让任何随机网友使用 "${myName}" 这个名字！玩家名字绝对不能出现在评论区。
+2. 评论区**必须**包含以下所有联系人的回复：${contactsList}（他们必须看到这条推文并留言）。
+3. 除了上述联系人，再额外生成 3 到 5 条来自世界各地的随机网友评论（如纽约本地人、其他国家网友）。
+4. 评论者名字后面带 (国家/语言) 标识，符合网友语气，有生活感。
+5. **翻译规则（极重要）**：
+   - 如果评论用**外语**，后面紧跟中文翻译，格式：原文（中文翻译）emoji
+   - 如果评论用**中文**，只输出中文原文，不加括号翻译。格式：中文原文 emoji
    - 严禁 "中文（中文翻译）" 这种中文又翻中文。
 【格式要求】
 姓名(国家/语言) ||| 评论内容
-不要输出任何解释。`);
+每行一条，不要任何解释。`);
         
         const res = await callAI([{role:"user",content:"生成评论"}], sysPrompt);
         
@@ -2126,25 +2527,27 @@ async refresh() {
       try {
 const sNow = store.getState();
 const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
+const myName = store.getProfile().name || "Me";
+const contactsList = store.getContacts().map(c => c.name).join("、");
+
 const sysPrompt = buildSystem(`${dateHint}生成 6 条推特动态。
 【发帖人要求】
-1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等），包含生活帖、情感吐槽、以及关于蜘蛛侠的粉丝讨论帖（如"蜘蛛侠又出现在哪了"、"蜘蛛侠是好宝宝"、"想和蜘蛛侠合照"，但不能照搬上述例子，要适当扩充）。
-2. 发帖人的姓名必须全部为纯英文字符串（如 "Peter Parker", "Flash Thompson", "Daily Bugle", 或网名 "queens_vigilante"），并在字符串后加上"(翻译自XX语)"。
-3. 禁止出现中文名。
+1. 随机包含彼得·帕克（Peter Parker）以及随机生成的6个不同NPC（如同学、路人、反派下属等），或者来自世界各地（如纽约本地人、法国人、日本人等）。
+2. 发帖人的姓名必须全部为纯英文字符串，并加上"(翻译自XX语)"。
+3. **严禁使用 "${myName}" 或任何中文字符串作为发帖人名称！**
 【特定角色发帖主题限定（极重要）】
-- 如果发帖人是 Spiderman：可以是日常吐槽、抓小偷的见闻、或者抱怨，话痨，贴合蜘蛛侠的人设。
-- 如果发帖人是 Peter Parker：可以是日常学业以及生活吐槽、或者隐晦的抱怨，不能主动说自己是蜘蛛侠，要贴合中城高中学生人设。
-- 如果发帖人是 Ned Leeds：发帖内容必须围绕【技术、电子游戏、外星人阴谋论、或者对蜘蛛侠的狂热吹捧】。例如：“刚黑进了一个超酷的系统，感觉自己像个特工！”或者“有人注意到蜘蛛侠今天用的蛛丝发射器有升级吗？”
-- 如果发帖人是 Michelle Jones (MJ)：发帖内容必须围绕【社会观察、哲学思考、冷幽默、独立电影/乐队推荐】。例如：“纽约地铁的早高峰是对资本主义运作方式的最好隐喻。”或者“今晚在布鲁克林的一个地下俱乐部，发现了一个很棒的乐队。”
+- 如果发帖人是 Spiderman：日常吐槽、抓小偷的见闻、抱怨，话痨。
+- 如果发帖人是 Peter Parker：日常学业生活吐槽，隐晦抱怨，不能主动说自己是蜘蛛侠。
+- 如果发帖人是 Ned Leeds：围绕技术、电子游戏、外星人阴谋论、对蜘蛛侠的狂热吹捧。
+- 如果发帖人是 Michelle Jones (MJ)：围绕社会观察、哲学思考、冷幽默、独立电影/乐队推荐。
 【内容与评论要求】
 1. 每条推文必须附带 5 到 15 条网友评论。
-2. 评论者名字也必须全部为纯英文字符串（如 "spidey_fan", "NYC_local"）。
-3. 评论内容要像真实的该地区网友，有生活感、网感，可以互怼或玩梗。
-4. **每条评论末尾根据情境随机加 1 个 emoji**（如 😂 🔥 😭 😤 🐶 🌸 等）。
-5. **翻译规则**：
-   - 外语评论（英文/日文/法文等）→ 原文（中文翻译）emoji
-   - 中文评论 → 中文原文 emoji，不加括号
-   - **严禁 "中文（中文翻译）" 这种中文又翻中文**。
+2. 评论者名字也必须全部为纯英文字符串。
+3. **严禁让任何网友使用 "${myName}" 这个名字！**
+4. **每条推文的评论区，必须包含以下所有联系人的留言：${contactsList}**（如果语言不通可以用外语+翻译，但名字必须是他们）。
+5. 评论内容要像真实的该地区网友，有生活感、网感，可以互怼或玩梗。
+6. **每条评论末尾随机加 1 个 emoji**。
+7. **翻译规则**：外语评论 → 原文（中文翻译）emoji；中文评论 → 中文原文 emoji，严禁中文翻中文。
 【格式要求】
 严格按以下格式输出，每行一条推文，用 ||| 分隔：
 发帖人英文名 ||| @账号（翻译自XX语） ||| 正文 ||| 点赞数 ||| 评论者1:评论内容 ;; 评论者2:评论内容 ;; 评论者3:评论内容
@@ -2434,12 +2837,17 @@ instagram: {
       
       body.innerHTML = `<div class="loader"><div class="spin"></div>生成配图与评论...</div>`;
       try {
-        const sysPrompt = buildSystem(`用户发了 IG 动态，文案："${text}"。
+      const myName = store.getProfile().name || "Me";
+        const contactsList = store.getContacts().map(c => c.name).join("、");
+
+        const sysPrompt = buildSystem(`用户发了 IG 动态，发帖人名字是："${myName}"，文案："${text}"。
 【要求】
 1. 根据文案生成 1 个英文生图 Prompt。
 2. 生成 3-5 条来自世界各地网友的评论。
-3. **翻译规则（极重要）：
-  用（法文/日文/英文等）→ 原文 + （中文翻译）
+3. **评论者中必须包含以下所有联系人：${contactsList}**（他们必须看到这条动态并留言）。
+4. **绝对禁止让任何网友使用 "${myName}" 这个名字！**
+5. **翻译规则（极重要）**：
+   - 外语评论 → 原文 + （中文翻译）
    - 评论用中文 → 直接写中文原文，不加括号翻译
 【格式要求】
 英文生图Prompt ||| 网名1(法文) ||| 评论1原文 ||| 评论1中文翻译 ;; 网名2(日文) ||| 评论2原文 ||| 评论2中文翻译 ;; 网名3(英文) ||| 评论3原文 ||| 评论3中文翻译`);
@@ -2488,15 +2896,31 @@ instagram: {
       try {
         const sNow = store.getState();
         const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有 IG 帖子必须符合这个时间点。\n\n`;
+        const myName = store.getProfile().name || "Me";
+        const contactsList = store.getContacts().map(c => c.name).join("、");
+        const cfgA = store.get("sv_appearance", {});
+        const pPrompts = cfgA.prompts || {};
+        const promptHint = `
+【特定角色生图提示词（必须使用）】
+如果是 Peter Parker，生图Prompt 用：${pPrompts.peter || ""}
+如果是 Ned，生图Prompt 用：${pPrompts.ned || ""}
+如果是 MJ，生图Prompt 用：${pPrompts.mj || ""}
+如果是 Aunt May，生图Prompt 用：${pPrompts.may || ""}
+`;
+
         const sysPrompt = buildSystem(`${dateHint}请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
 【要求】
 1. 每条发帖人都不同：可以是彼得·帕克(Peter Parker)、内德·利兹(Ned Leeds)、MJ(Michelle Jones)、Flash Thompson、随机NPC，名字必须英文。
-2. 每条文案符合 IG 风格，可包含 emoji、话题标签 #xxx。
-3. 每条评论 3-5 条，至少包含 1 条外语评论（英文/日文/韩文/法文/西班牙文等）。
-4. **特定角色发帖限定**：
-    - 内德：配图可以是他的电脑屏幕（代码）、新买的乐高、或者他和朋友的自拍。文案要兴奋。
-    - MJ：配图可以是黑白的街头摄影、一本正在读的书、或者地下俱乐部的模糊抓拍。文案要简短、讽刺、或者带点哲学意味。
-5. **翻译规则（极重要）**：
+2. **严禁使用 "${myName}" 或任何中文字符串作为发帖人名称！**
+3. 每条文案符合 IG 风格，可包含 emoji、话题标签 #xxx。
+4. 每条评论 3-5 条，至少包含 1 条外语评论（英文/日文/韩文/法文/西班牙文等）。
+5. **每条帖子的评论区，必须包含以下所有联系人：${contactsList}**。
+6. **绝对禁止让任何网友使用 "${myName}" 这个名字！**
+【特定角色发帖限定】：
+    - 内德：配图可以是他的电脑屏幕（代码）、新买的乐高、或者他和朋友的自拍等等其他符合人设的内容。文案要兴奋。
+    - MJ：配图可以是黑白的街头摄影、一本正在读的书、或者地下俱乐部的模糊抓拍等等其他符合人设的内容。文案要简短、讽刺、或者带点哲学意味。
+${promptHint}
+【翻译规则（极重要）】：
    - 外语评论 → 原文（中文翻译）
    - 中文评论 → 只写中文原文，**不加括号翻译**，严禁 "中文（中文翻译）"
 【格式要求 · 严格】
@@ -2648,7 +3072,9 @@ Spider_Terminal: {
         try {
           const sNow = store.getState();
           const ctx = sNow.currentStory ? sNow.currentStory.slice(0, 300) : "彼得与玩家的日常起点";
-          const prompt = `Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. Scene: ${ctx}. Year: ${sNow.gameYear}. No text labels.`;
+          const cfgA = store.get("sv_appearance", {});
+          const mapPrompt = (cfgA.prompts && cfgA.prompts.map) ? cfgA.prompts.map : "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels.";
+          const prompt = `${mapPrompt}\nScene: ${ctx}. Year: ${sNow.gameYear}.`;
           const url = await generateImage(prompt);
           const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
           area.innerHTML = `<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
