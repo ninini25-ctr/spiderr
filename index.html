@@ -383,6 +383,320 @@ body.theme-light .toast{
   transition: background 0.3s;
 }
 body.theme-light .notch{ background:#1d1d1f; }
+/* ===== 双人日记 ===== */
+.diary-wrap { padding: 16px; }
+.diary-header { margin-bottom: 16px; }
+.diary-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+.diary-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.diary-meta .dot { margin: 0 6px; opacity: 0.5; }
+
+.diary-tabs {
+  display: flex; gap: 4px;
+  background: var(--panel-2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.diary-tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.diary-tab.active { background: var(--panel); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.diary-tab .count {
+  font-size: 11px; background: var(--line); color: var(--muted);
+  padding: 1px 7px; border-radius: 10px; font-weight: 500;
+}
+.diary-tab.active .count { background: var(--accent-2); color: #fff; }
+
+.diary-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+.diary-action-btn {
+  flex: 1; padding: 12px; border-radius: 12px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all .15s;
+}
+.diary-action-btn.primary { background: var(--accent-2); color: #fff; }
+.diary-action-btn.primary:hover { filter: brightness(1.1); }
+.diary-action-btn.subtle { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+.diary-action-btn.subtle:hover { color: var(--accent); border-color: var(--accent); }
+
+.diary-list { display: flex; flex-direction: column; gap: 10px; }
+.diary-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; padding: 16px; cursor: pointer;
+  transition: all .15s;
+}
+.diary-card:hover { border-color: var(--accent-2); transform: translateY(-1px); }
+.diary-card-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.diary-card-date { font-size: 11px; color: var(--muted); }
+.diary-card-stage { font-size: 11px; color: var(--accent-2); padding: 1px 8px; border-radius: 8px; background: rgba(45,107,255,.1); }
+.diary-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.diary-card-preview { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.diary-card-response {
+  margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line);
+  font-size: 12px; color: var(--accent-2); font-style: italic;
+}
+.diary-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+
+.diary-detail {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 16px; padding: 24px;
+}
+.diary-detail-meta { font-size: 11px; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.5px; }
+.diary-detail-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.diary-detail-content {
+  font-size: 14px; line-height: 1.85; color: var(--text);
+  white-space: pre-wrap; font-family: "SimSun", "宋体", serif;
+}
+.diary-detail-response {
+  margin-top: 20px; padding: 16px;
+  background: var(--panel-2); border-radius: 12px;
+  border-left: 3px solid var(--accent-2);
+}
+.diary-detail-response-label { font-size: 11px; color: var(--accent-2); font-weight: 600; margin-bottom: 8px; }
+.diary-detail-response-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+/* ===== 平行宇宙剧场 ===== */
+.th-wrap { padding: 16px; }
+.th-header { margin-bottom: 20px; }
+.th-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+.th-subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.th-active-banner {
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(135deg, rgba(45,107,255,.15), rgba(230,36,41,.1));
+  border: 1px solid var(--accent-2);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 18px;
+}
+.th-active-label { font-size: 11px; color: var(--accent-2); font-weight: 600; margin-bottom: 4px; }
+.th-active-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.th-active-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.th-active-btn {
+  background: var(--accent-2); color: #fff; border: none;
+  border-radius: 20px; padding: 8px 18px; font-weight: 600;
+  font-size: 13px; cursor: pointer;
+}
+
+.th-section-title {
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  margin: 20px 0 10px; letter-spacing: 0.5px;
+}
+
+.th-universe-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.th-universe-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all .2s;
+}
+.th-universe-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--u-color);
+}
+.th-universe-card:hover {
+  border-color: var(--u-color);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,.2);
+}
+.th-universe-tag {
+  display: inline-block;
+  font-size: 10px; font-weight: 600;
+  color: var(--u-color);
+  background: color-mix(in srgb, var(--u-color) 15%, transparent);
+  padding: 2px 8px; border-radius: 8px;
+  margin-bottom: 8px;
+}
+.th-universe-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.th-universe-year { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.th-universe-desc {
+  font-size: 11px; color: var(--muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.th-universe-arrow {
+  position: absolute; bottom: 10px; right: 12px;
+  color: var(--u-color); font-size: 16px; opacity: 0;
+  transition: all .2s;
+}
+.th-universe-card:hover .th-universe-arrow { opacity: 1; transform: translateX(2px); }
+
+.th-custom-btn {
+  width: 100%;
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: var(--muted); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.th-custom-btn:hover { border-color: var(--accent-2); color: var(--accent-2); }
+.th-custom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.th-custom-icon { font-size: 18px; }
+
+.th-history-list { display: flex; flex-direction: column; gap: 8px; }
+.th-history-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px 14px;
+  cursor: pointer; transition: all .15s;
+}
+.th-history-item:hover { border-color: var(--accent-2); }
+.th-history-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.th-history-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.th-history-del {
+  background: none; border: none; color: var(--muted);
+  font-size: 16px; cursor: pointer; padding: 4px 8px;
+  border-radius: 6px; transition: all .15s;
+}
+.th-history-del:hover { color: var(--accent); background: rgba(230,36,41,.1); }
+.th-empty { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; }
+
+/* 表单 */
+.th-form { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+.th-form-label {
+  display: block; font-size: 12px; color: var(--muted);
+  font-weight: 600; margin-bottom: 6px; margin-top: 14px;
+}
+.th-form-label:first-child { margin-top: 0; }
+.th-form-input, .th-form-textarea {
+  width: 100%; box-sizing: border-box;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px;
+  color: var(--text); font-size: 14px; outline: none;
+  font-family: inherit;
+}
+.th-form-textarea { resize: vertical; line-height: 1.5; }
+.th-form-input:focus, .th-form-textarea:focus { border-color: var(--accent-2); }
+.th-form-actions { display: flex; gap: 8px; margin-top: 18px; }
+
+.th-btn {
+  border: none; border-radius: 12px; padding: 12px 16px;
+  font-weight: 600; font-size: 14px; cursor: pointer;
+  transition: all .15s;
+}
+.th-btn.primary { background: var(--accent-2); color: #fff; flex: 1; }
+.th-btn.primary:hover { filter: brightness(1.1); }
+.th-btn.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); flex: 1; }
+.th-btn.ghost:hover { border-color: var(--accent-2); color: var(--accent-2); }
+.th-btn.small { padding: 8px 14px; font-size: 12px; }
+
+/* 剧情页 */
+.th-quest-header { margin-bottom: 16px; }
+.th-quest-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.th-quest-universe {
+  display: inline-block;
+  font-size: 11px; font-weight: 600;
+  color: var(--u-color);
+  background: color-mix(in srgb, var(--u-color) 15%, transparent);
+  padding: 3px 10px; border-radius: 8px;
+  margin-bottom: 8px;
+}
+.th-quest-meta { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.th-quest-meta .dot { margin: 0 6px; opacity: 0.5; }
+.th-quest-bg { font-size: 11px; color: var(--muted); font-style: italic; line-height: 1.5; }
+
+.th-quest-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+.th-quest-actions .th-btn { flex: 1; }
+
+.th-quest-story {
+  font-size: 14px; line-height: 1.8; color: var(--text);
+  white-space: pre-wrap; margin-bottom: 20px;
+  font-family: "SimSun", "宋体", serif;
+}
+
+.th-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.th-option-btn {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px 16px;
+  color: var(--text); font-size: 13px; line-height: 1.5;
+  text-align: left; cursor: pointer; transition: all .15s;
+  white-space: normal; word-break: break-word;
+}
+.th-option-btn:hover { border-color: var(--accent-2); background: rgba(45,107,255,.05); }
+
+.th-custom-action { display: flex; gap: 8px; }
+.th-custom-action .th-form-input { flex: 1; }
+.th-custom-action .th-btn { flex: none; }
+
+.th-quest-closed {
+  text-align: center; padding: 24px;
+  background: var(--panel); border-radius: 14px;
+  border: 1px dashed var(--line);
+}
+.th-quest-closed-text { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+
+.th-error { padding: 20px; text-align: center; color: var(--accent); font-size: 13px; }
+/* 正在输入动画 */
+.typing-indicator .dot {
+  width: 4px; height: 4px; background: var(--muted); border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+.typing-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+/* 心声动画 */
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-10px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+/* 翻译气泡 */
+.bubble-trans {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.2);
+  font-family: "SimSun", "宋体", serif; /* 用宋体区隔 */
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+body.theme-light .bubble-trans {
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+}
+/* ===== 修复世界线文字和输入框 ===== */
+.story-content {
+  color: var(--text) !important; /* 强制使用正文颜色，白版黑字，黑版白字 */
+}
+.btn.ghost {
+  color: var(--text) !important; /* 确保选项按钮文字清晰 */
+  background: var(--panel-2);
+}
+#customAct {
+  box-sizing: border-box !important; /* 防止输入框超出边界 */
+  width: 100% !important;
+  color: var(--text) !important;
+  background: var(--panel-2) !important;
+  border: 1px solid var(--line) !important;
+}
 </style>
 </head>
 <body>
@@ -399,7 +713,7 @@ body.theme-light .notch{ background:#1d1d1f; }
       <button class="app-icon" data-app="worldline"><span>🌐</span><label>世界线</label></button>
       <button class="app-icon" data-app="Spider_Terminal"><span>🕷️</span><label>蜘蛛终端</label></button>
       <button class="app-icon" data-app="Theater"><span>🎭</span><label>小剧场</label></button>
-      <button class="app-icon" data-app="Diary"><span>📓</span><label>日记</label></button>
+      <button class="app-icon" data-app="Diary"><span>📓</span><label>双人日记</label></button>
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>通讯录</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
@@ -610,7 +924,69 @@ const WORLD = {
       event: "神秘客事件已结束，身份暴露，奇异博士的咒语撕裂了多元宇宙。"
     }
   ],
-
+// ===== 平行宇宙模板 =====
+  parallelUniverses: [
+    {
+      key: "tobey",
+      title: "托比宇宙",
+      year: "2002",
+      tag: "经典",
+      color: "#c8102e",
+      desc: "山姆·雷米版蜘蛛侠，红蓝配色，有机蛛丝。彼得是号角日报兼职摄影师。",
+      background: "2002年纽约。彼得被基因改造蜘蛛咬伤，获得有机蛛丝能力。刚成为蜘蛛侠不久，还在适应。MJ 是暗恋对象，哈利·奥斯本是好友。诺曼·奥斯本还没变成绿魔。",
+      rules: "有机蛛丝（无限）、无斯塔克科技、无复联、报纸时代、没有智能手机"
+    },
+    {
+      key: "andrew",
+      title: "加菲宇宙",
+      year: "2012",
+      tag: "超凡",
+      color: "#0074c8",
+      desc: "马克·韦布版，彼得性格更桀骜、更街头，格温是他的初恋。",
+      background: "2012年纽约。彼得刚被蜘蛛咬伤，用奥斯本的机械发射器。格温·斯黛西是他的同学和初恋。康纳斯博士还没变成蜥蜴人。",
+      rules: "机械发射器（需补充）、无复联、有智能手机但社交不如现代"
+    },
+    {
+      key: "symbiote",
+      title: "黑色战衣宇宙",
+      year: "2007",
+      tag: "暗黑",
+      color: "#1a1a1a",
+      desc: "共生体附身的彼得，性格变得暴躁、傲慢，力量更强但内心正在被侵蚀。",
+      background: "2007年纽约。彼得刚被外星共生体附身，穿上了黑色战衣。力量大幅增强，但性格变得暴躁、自大、报复心强。他正在和内心的黑暗面挣扎。",
+      rules: "共生体战衣（力量+）、情绪不稳定、容易暴怒、对朋友态度变差"
+    },
+    {
+      key: "gwen",
+      title: "蜘蛛格温宇宙",
+      year: "2014",
+      tag: "平行",
+      color: "#e91e63",
+      desc: "格温·斯黛西被蜘蛛咬伤的宇宙。她是这个世界的蜘蛛侠，彼得是她的好友。",
+      background: "2014年纽约，地球-65。格温·斯黛西被蜘蛛咬伤，成为这个世界的蜘蛛女侠。彼得·帕克是她的同学和好友，还没被咬。MJ 是乐队的鼓手。",
+      rules: "格温是主角、彼得是普通人、女权视角、朋克乐队文化"
+    },
+    {
+      key: "2099",
+      title: "蜘蛛侠 2099",
+      year: "2099",
+      tag: "未来",
+      color: "#00bcd4",
+      desc: "米格尔·奥哈拉，未来世界的蜘蛛侠。霓虹赛博朋克，企业统治纽约。",
+      background: "2099年新纽约。米格尔·奥哈拉是炼金术公司的科学家，被基因改造成为蜘蛛侠 2099。世界被巨型企业统治，霓虹灯和飞行汽车是日常。",
+      rules: "赛博朋克、企业统治、飞行汽车、全息投影、无传统复联（有 2099 版）"
+    },
+    {
+      key: "noir",
+      title: "暗影蜘蛛侠",
+      year: "1933",
+      tag: "黑白",
+      color: "#555555",
+      desc: "大萧条时期的黑白纽约，彼得是记者，用枪和暗影行动，世界是黑白的。",
+      background: "1933年纽约，大萧条时期。彼得·帕克是号角日报的记者，被神秘蜘蛛咬伤后成为暗影蜘蛛侠。世界是黑白色的，充满黑帮、腐败和爵士乐。",
+      rules: "黑白世界、大萧条、用枪、爵士乐、无现代科技"
+    }
+  ],
   // MJ 全局关系锁定
   mjPolicy: "MJ (米歇尔·琼斯) 与彼得·帕克是朋友/同学关系。禁止 ML 关系。禁止任何恋爱暗示、暗恋、脸红、保护欲等。可以参考普通高中同学间的相处——互怼、分享八卦、一起做作业，但不能有浪漫线。",
 // ===== 支线剧情存档（独立于主线，无限档位）=====
@@ -658,10 +1034,13 @@ const store = {
   set(k,v){localStorage.setItem(k,JSON.stringify(v));},
   getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3"});},
   setConfig(c){this.set("sv_config",c);},
-  getProfile(){return this.get("sv_profile",{name:"你",identity:"同学"});},
+  getProfile(){
+  const p = this.get("sv_profile", {name:"你", identity:"同学", gender:"female"});
+  if (!p.gender) p.gender = "female";  // 老数据补默认值
+  return p;
+},
   setProfile(p){this.set("sv_profile",p);},
   getState(){
-  // 如果用户选过开局节点，按节点初始化
   const chosen = this.get("sv_start_node", null);
   let init = {
     turn: 1,
@@ -682,46 +1061,65 @@ const store = {
     init.gameMonth = chosen.month ?? WORLD.startMonth;
     init.gameDay = chosen.day ?? WORLD.startDay;
   }
-  return this.get("sv_state", init);
+  const s = this.get("sv_state", init);
+
+  // ★ 关键：每次 getState 都强制用 contacts 里的彼得 affinity 覆盖，
+  // 保证"哪里改了都一致"
+  const peter = (this.get("sv_contacts", []) || []).find(x => x && x.name === "彼得·帕克");
+  if (peter && typeof peter.affinity === "number") {
+    s.affinity = peter.affinity;
+  }
+  return s;
 },
-  setState(s){this.set("sv_state",s);},
+  setState(s){
+  this.set("sv_state", s);
+  // ★ 同步彼得 affinity 到 contacts，保证两处永远一致
+  if (s && typeof s.affinity === "number") {
+    const list = this.get("sv_contacts", []);
+    const idx = list.findIndex(x => x && x.name === "彼得·帕克");
+    if (idx !== -1) {
+      list[idx].affinity = s.affinity;
+      this.set("sv_contacts", list);
+    }
+  }
+},
   getChats(){return this.get("sv_chats",{});},
   setChats(c){this.set("sv_chats",c);},
   getPosts(){return this.get("sv_posts",{twitter:[],instagram:[]});},
 setPosts(p){this.set("sv_posts",p);},
   getContacts(){ 
-    let list = this.get("sv_contacts", []);
-// 清理旧版小剧场遗留的联系人（🎭 标题），只保留主线彼得
-if (list.some(c => c.name && c.name.startsWith("🎭"))) {
-  list = list.filter(c => !(c.name && c.name.startsWith("🎭")));
-  this.set("sv_contacts", list);
-}
-    if(!list || list.length === 0) {
-      list = [
-  { name:"彼得·帕克", desc:"中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" },
-  { name:"内德·利兹", desc:"彼得的好哥们。技术宅，擅长黑客技术、编程和拆解外星科技。话痨，容易激动，对蜘蛛侠的一切充满狂热。", affinity: 0, heart: "暂无" },
-  { name:"米歇尔·琼斯", desc:"彼得的同学（MJ）。外冷内热，观察力极其敏锐，喜欢冷幽默和讽刺。热爱阅读（不仅是文学，还包括哲学和社会学）、关注社会议题、喜欢独立电影和地下乐队。", affinity: 0, heart: "暂无" },
-  { name:"梅婶", desc:"彼得的监护人，坚强独立，非常关心彼得。", affinity: 0, heart: "暂无" }
-];
-    } else {
-      // 兼容旧数据，补齐缺失字段
-      list = list.map(c => {
-        if (typeof c === 'string') return { name: c, desc: "自定义联系人", affinity: 0, heart: "暂无" };
-        return { 
-          name: c.name || "未知", 
-          desc: c.desc || "自定义联系人", 
-          affinity: c.affinity || 0, 
-          heart: c.heart || "暂无" 
-        };
-      });
-    }
+  let list = this.get("sv_contacts", []);
+  if (list.some(c => c.name && c.name.startsWith("🎭"))) {
+    list = list.filter(c => !(c.name && c.name.startsWith("🎭")));
     this.set("sv_contacts", list);
-    return list; 
-  },
+  }
+  if(!list || list.length === 0) {
+    list = [
+      { name:"彼得·帕克", desc:"中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" },
+      { name:"内德·利兹", desc:"彼得的好哥们。技术宅编程和，容易激动，对蜘蛛侠的一切充满狂热。", affinity: 0, heart: "暂无" },
+      { name:"米歇尔·琼斯", desc:"彼得的同学（MJ）。外冷内热，观察力极其敏锐，喜欢冷幽默和讽刺。", affinity: 0, heart: "暂无" },
+      { name:"梅婶", desc:"彼得的监护人，坚强独立，非常关心彼得。", affinity: 0, heart: "暂无" }
+    ];
+    this.set("sv_contacts", list);
+  } else {
+    // 兼容旧数据，补齐缺失字段（千万不要覆盖已存在的 affinity）
+    list = list.map(c => {
+      if (typeof c === 'string') return { name: c, desc: "自定义联系人", affinity: 0, heart: "暂无" };
+      return { 
+        name: c.name || "未知", 
+        desc: c.desc || "自定义联系人", 
+        affinity: (typeof c.affinity === 'number') ? c.affinity : 0, 
+        heart: c.heart || "暂无" 
+      };
+    });
+    this.set("sv_contacts", list);
+  }
+  return list; 
+},
 setContacts(c){ this.set("sv_contacts", c); },
   getPeterBinding(){ return this.get("sv_peter_binding", null); },
   setPeterBinding(b){ this.set("sv_peter_binding", b); },
-  getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10});},  
+  getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10,lang:"zh"});},  
   setChatConfig(c){this.set("sv_chat_cfg",c);}
 };
 const dbHelper = {
@@ -1012,6 +1410,62 @@ async function generateImage(prompt) {
   throw new Error("AI 返回的图片格式无法解析");
 }
 
+// ===== 好感度等级描述（全局复用）=====
+function affinityLevelHint(aff) {
+  const a = Math.max(0, Math.min(200, Number(aff) || 0));
+  if (a >= 151) return `❤️ 亲密关系（${a}/200）：深爱、依赖、愿意为对方付出一切`;
+  if (a >= 101) return `💖 暧昧期（${a}/200）：暗恋、会吃醋、关心过度、容易脸红`;
+  if (a >= 51)  return `💛 信任好友（${a}/200）：会分享心事、互相帮忙、开玩笑`;
+  if (a >= 21)  return `💙 普通朋友（${a}/200）：客气、礼貌、偶尔寒暄`;
+  if (a >= 1)   return `🤍 熟人（${a}/200）：知道对方存在，但不热络`;
+  return `🖤 陌生人（${a}/200）：不认识或刚认识，态度冷淡、公事公办`;
+}
+
+// ===== 生成某角色的"行为准则"段落（喂给所有 App 的 AI）=====
+function buildAffinityBehaviorBlock(name, aff) {
+  const a = Math.max(0, Math.min(200, Number(aff) || 0));
+  let rules = "";
+
+  if (a >= 151) {
+    rules = `- 你会主动帮 ${name}，甚至替 ta 挡下麻烦，语气亲昵、放松。
+- 会主动找 ta、主动靠近、主动关心，不怕麻烦。
+- 对 ${name} 的请求几乎不会拒绝。`;
+  } else if (a >= 101) {
+    rules = `- 你愿意帮 ${name}，但会嘴硬一下、找点小借口，帮完还可能装没事。
+- 会偷偷关注 ta、多问一句、多看一眼。
+- 对 ta 的求助基本会答应，但嘴上不一定会承认。`;
+  } else if (a >= 51) {
+    rules = `- 你会帮 ${name}，但会先问清楚"到底什么事"，确认一下再动手。
+- 语气是朋友之间的随意，可以互怼、可以吐槽。
+- 如果是麻烦事，会抱怨两句但最终还是帮。`;
+  } else if (a >= 21) {
+    rules = `- 你对 ${name} 保持客气，能帮就帮，但不主动多事。
+- 语气礼貌、简短，不会关心得太深。
+- 如果是太麻烦的请求，会委婉推掉。`;
+  } else if (a >= 1) {
+    rules = `- 你和 ${name} 只是点头之交，不会主动帮 ta。
+- 回复简短、客气、有距离感。`;
+  } else {
+    rules = `- 你不认识 ${name}，或者只见过一面。
+- 对 ta 的请求要么无视，要么冷冷地拒绝、反问你"我们认识吗"。
+- 语气冷淡、疏离，甚至有点不耐烦。`;
+  }
+
+  return `【当前你对「${name}」的好感度：${a}/200 · ${affinityLevelHint(a)}】
+${rules}`;
+}
+
+// ===== 快速拿到某个联系人的好感度 =====
+function getAffinityOf(name) {
+  const c = store.getContacts().find(x => x.name === name);
+  if (c && typeof c.affinity === "number") return c.affinity;
+  if (name === "彼得·帕克") {
+    const s = store.getState();
+    if (typeof s.affinity === "number") return s.affinity;
+  }
+  return 0;
+}
+
 function buildSystem(extra) {
   const p = store.getProfile();
   const s = store.getState();
@@ -1059,13 +1513,17 @@ ${WORLD.mjPolicy}
 
 【玩家 · 人设】
 姓名：${p.name}
+性别：${p.gender === "male" ? "男" : "女"}（默认女，用"她"指代）
 性格：${personalityText}
 背景：${backgroundText}
 ${extraFields.join("\n")}
 当前进度：第 ${s.turn} 回合，世界线好感度 ${s.affinity}/200。
 
-【文风】电影镜头感，严禁 AI 句式。多动作、细节、感官描写。彼得对白用斜体英文原文紧跟中文翻译，格式：*"Hey, you okay?"*（嘿，你还好吗？）。剧情里如果出现具体日期，必须写成 ${timeStr} 附近的日期，不要写成其他年份。
+【文风】电影镜头感，严禁 AI 句式。多动作、细节、感官描写。剧情里如果出现具体日期，必须写成 ${timeStr} 附近的日期，不要写成其他年份。
+【语气基调】放松、口语、有生活感。彼得会吐槽、会紧张、会突然认真 —— 别让他像个客服。
 
+【玩家性别】
+玩家是**女性**，请用"她"指代，不要用"他"。
 【亲密互动 · 主动性与多样性 · 铁律】
 1. 好感度 ≥ 51（好朋友及以上）时，彼得**不再是永远被动等待玩家主动的那一方**。他会根据当下的情绪、地点、氛围，**主动**做出亲密举动：牵手、拥抱、靠近耳边说话、故意逗弄、轻轻拍肩、顺手拨头发、贴贴、亲吻（好感度 ≥ 101 且场合允许时）等。
 2. 亲密反应**不能只有脸红、害羞、不知所措**这一套。彼得可以：
@@ -1273,67 +1731,40 @@ function addDays(year, month, day, add) {
   return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
 }
 
-// 根据当前回合和剧情内容判定是否该推进时间 / 切阶段
-function shouldAdvancePhase(s, storyText) {
-  const phase = WORLD.timeline[s.anchor];
-  if (!phase) return false;
-
-  // 1. 记录当前场景内的回合数（每 5 回合自动切场景）
-  s.sceneTurns = (s.sceneTurns || 0) + 1;
-
-  // 2. 检测剧情中是否明确写了时间变化
-  const timeJumpKeywords = /(第二天|次日|隔天|几小时后|第二天早上|第二天晚上|周末|过了几天|几天后|一周后|下周|第二周|一个月后)/;
-  const isTimeJump = timeJumpKeywords.test(storyText);
-
-  // 3. 如果没到 5 回合，且剧情没有时间跳跃，就不推进时间
-  if (s.sceneTurns < 5 && !isTimeJump) {
-    return false;
-  }
-
-  // 4. 触发时间推进（此时可能是 sceneTurns 累计到 5 或剧情明确跳跃）
-  let addDaysCount = 0;
-  if (isTimeJump) {
-    // 剧情明确跳跃，根据关键词判断跳跃幅度
-    if (/一个月|一个月后/.test(storyText)) addDaysCount = 30;
-    else if (/一周后|下周/.test(storyText)) addDaysCount = 7;
-    else if (/几天后|过了几天/.test(storyText)) addDaysCount = 3;
-    else if (/第二天|次日|隔天/.test(storyText)) addDaysCount = 1;
-    else addDaysCount = 1; // 默认 +1 天
-  } else {
-    // 累积 5 回合同场景结束，大跳跃 1-3 天
-    addDaysCount = 1 + Math.floor(Math.random() * 3);
-  }
-
-  const next = addDays(s.gameYear, s.gameMonth, s.gameDay, addDaysCount);
+// ===== 时间推进（只按 AI 显式指令推进，不再自动跳） =====
+function advanceTimeByDays(s, days) {
+  if (!days || days === 0) return false;
+  const next = addDays(s.gameYear, s.gameMonth, s.gameDay, days);
   s.gameYear = next.year;
   s.gameMonth = next.month;
   s.gameDay = next.day;
-  s.sceneTurns = 0; // 重置场景回合数
 
-  // 5. 判断是否超出当前阶段末月（阶段推进）
+  // 检查阶段推进
+  const phase = WORLD.timeline[s.anchor];
   const [m1, m2] = phase.monthRange;
-  if (s.gameYear === phase.year && s.gameMonth > m2) {
-    if (s.anchor < WORLD.timeline.length - 1) {
-      s.anchor += 1;
-      const np = WORLD.timeline[s.anchor];
+  const pastPhase =
+    s.gameYear > phase.year ||
+    (s.gameYear === phase.year && s.gameMonth > m2);
+
+  if (pastPhase && s.anchor < WORLD.timeline.length - 1) {
+    s.anchor += 1;
+    const np = WORLD.timeline[s.anchor];
+    // 阶段推进时，日期对齐到新阶段开始
+    if (s.gameYear < np.year || (s.gameYear === np.year && s.gameMonth < np.monthRange[0])) {
       s.gameYear = np.year;
       s.gameMonth = np.monthRange[0];
       s.gameDay = 1;
-      return true;
     }
-  }
-  // 如果年份已经超过阶段末年份，也进入下一阶段
-  if (s.gameYear > phase.year) {
-    if (s.anchor < WORLD.timeline.length - 1) {
-      s.anchor += 1;
-      const np = WORLD.timeline[s.anchor];
-      s.gameYear = np.year;
-      s.gameMonth = np.monthRange[0];
-      s.gameDay = 1;
-      return true;
-    }
+    return true;
   }
   return false;
+}
+
+// 解析 AI 返回的【时间推进: +N天】指令
+function parseTimeAdvance(res) {
+  const m = res.match(/【时间推进[:：]\s*([+-]?\d+)\s*天?】/);
+  if (!m) return 0;
+  return parseInt(m[1]) || 0;
 }
 
 // ===== 打开/渲染支线剧情 =====
@@ -1496,21 +1927,6 @@ window.selectOption = (optText) => {
   s.history.push({ story: s.currentStory, choice: optText });
   s.currentStory = ""; s.currentOptions = ""; s.turn += 1;
 
- // ===== 剧情时间推进（同场景不跳，场景切换才跳）=====
-// 注意：此时 s.currentStory 已经被 push 到 history，但我们要判断的是玩家刚选完的这段剧情（即 history 最后一条）
-const lastTurnStory = s.history[s.history.length - 1] ? s.history[s.history.length - 1].story : "";
-const advanced = shouldAdvancePhase(s, lastTurnStory);
-
-if (advanced) {
-  const np = WORLD.timeline[s.anchor];
-  toast(`时间推进：进入「${np.name}」（${np.year}年${np.monthRange[0]}月）`);
-} else if (s.sceneTurns === 0) {
-  // 刚刚 sceneTurns 被重置，说明刚触发跳跃
-  toast(`时间推进：${s.gameYear}年${s.gameMonth}月${s.gameDay}日`);
-} else {
-  toast(`场景内推进（不改变时间）: ${s.gameYear}年${s.gameMonth}月${s.gameDay}日`);
-}
-
   store.setState(s);
   openApp('worldline');
 };
@@ -1553,6 +1969,7 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
     const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
     const contextStr = parentCommentIndex !== null ? `某网友的评论："${p.comments[parentCommentIndex].text}"` : `帖子内容："${p.text}"`;
     const sysPrompt = buildSystem(`${dateHint}用户刚在${platform}上评论了${contextStr}，内容是："${text.trim()}"。
+
 【要求】
 1. 生成 1 到 3 条回复。
 2. 其中必须有 1 条是楼主（发帖人：${p.name}）的回复，另外的可以是随机网友。
@@ -2239,40 +2656,116 @@ messages: {
   title: "信息", hasSettings: true, view: "list", currentUser: "", lastUserText: "", quoteData: null,
   renderSettings(body) {
     if (this.view === "chat") {
-      const contacts = store.getContacts();
-const c = contacts.find(x => x.name === this.currentUser) || { name: this.currentUser, desc: "", affinity: 0, heart: "" };
+  const contacts = store.getContacts();
+  const c = contacts.find(x => x.name === this.currentUser) || { name: this.currentUser, desc: "", affinity: 0, heart: "" };
       body.innerHTML = `<div style="padding:14px"><div class="card"><h3>${esc(c.name)} 的设定</h3>
         <div class="field"><label>个人简介</label><textarea id="c_desc" rows="3">${esc(c.desc)}</textarea></div>
-        <div class="field"><label>好感度 (0-200)</label><input id="c_aff" type="number" value="${c.affinity}" readonly style="opacity:0.7"></div>
+        <div class="field">
+  <label>好感度 (0-200) —— 可直接修改</label>
+  <div class="row" style="gap:6px;">
+    <button class="btn ghost" id="aff_minus" style="width:auto;padding:6px 14px;font-size:16px;">−</button>
+    <input id="c_aff" type="number" min="0" max="200" value="${c.affinity}" style="flex:1;text-align:center;font-weight:bold;color:var(--accent-2);">
+    <button class="btn ghost" id="aff_plus" style="width:auto;padding:6px 14px;font-size:16px;">＋</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="aff_level_hint">${affinityLevelHint(c.affinity)}</div>
+</div>
         <div class="field"><label>心声 (AI 生成)</label><textarea id="c_heart" rows="3" readonly style="opacity:0.7">${esc(c.heart || "暂无")}</textarea></div>
         <button class="btn" id="save">保存简介</button>
         <button class="btn ghost" id="back" style="margin-top:10px">返回聊天</button>
       </div></div>`;
-      body.querySelector("#save").onclick = () => {
-        c.desc = body.querySelector("#c_desc").value;
-        store.setContacts(contacts);
-        toast("已保存");
-      };
-      body.querySelector("#back").onclick = () => openApp('messages');
-      return;
+// ===== 好感度手动修改 =====
+const affInput = body.querySelector("#c_aff");
+const affHint = body.querySelector("#aff_level_hint");
+const syncAffHint = () => {
+  const v = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
+  affHint.textContent = affinityLevelHint(v);
+};
+affInput.addEventListener("input", syncAffHint);
+body.querySelector("#aff_minus").onclick = () => {
+  affInput.value = Math.max(0, (parseInt(affInput.value) || 0) - 5);
+  syncAffHint();
+};
+body.querySelector("#aff_plus").onclick = () => {
+  affInput.value = Math.min(200, (parseInt(affInput.value) || 0) + 5);
+  syncAffHint();
+};
+
+// ★ 只绑一次：同时保存简介 + 好感度
+body.querySelector("#save").onclick = () => {
+  const newAff = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
+  const list = store.getContacts();
+  const target = list.find(x => x.name === this.currentUser);
+  if (target) {
+    target.desc = body.querySelector("#c_desc").value;
+    target.affinity = newAff;
+    store.setContacts(list); // 写入 localStorage
+
+    // 如果改的是彼得，同步世界线好感度
+    if (this.currentUser === "彼得·帕克") {
+      const s = store.getState();
+      s.affinity = newAff;
+      store.setState(s);
+    }
+  }
+  toast(`已保存 · 好感度 ${newAff} · ${affinityLevelHint(newAff)}`);
+};
+
+body.querySelector("#back").onclick = () => openApp('messages');
+return;
     }
 
     const cfg = store.getChatConfig();
-    body.innerHTML = `<div style="padding:14px"><div class="card"><h3>聊天设置</h3><div class="field"><label>背景图 URL</label><input id="c_bg" value="${esc(cfg.bg)}"></div><div class="field"><label>上下文条数</label><input id="c_ctx" type="number" value="${cfg.maxContext}"></div><button class="btn" id="save">保存</button><button class="btn ghost" id="back" style="margin-top:10px">返回</button></div></div>`;
-    body.querySelector("#save").onclick = () => { store.setChatConfig({bg:body.querySelector("#c_bg").value, maxContext:parseInt(body.querySelector("#c_ctx").value)||10}); openApp('messages'); };
+    body.innerHTML = `<div style="padding:14px"><div class="card"><h3>聊天设置</h3>
+      <div class="field"><label>背景图 URL</label><input id="c_bg" value="${esc(cfg.bg || "")}"></div>
+      <div class="field"><label>上下文条数</label><input id="c_ctx" type="number" value="${cfg.maxContext || 10}"></div>
+      <div class="field"><label>AI 回复语言</label>
+        <select id="c_lang">
+          <option value="zh" ${cfg.lang !== 'en' ? 'selected' : ''}>中文 (默认)</option>
+          <option value="en" ${cfg.lang === 'en' ? 'selected' : ''}>英文 (English)</option>
+        </select>
+      </div>
+      <button class="btn" id="save">保存</button>
+      <button class="btn ghost" id="back" style="margin-top:10px">返回</button>
+    </div></div>`;
+    body.querySelector("#save").onclick = () => { 
+      store.setChatConfig({
+        bg: body.querySelector("#c_bg").value, 
+        maxContext: parseInt(body.querySelector("#c_ctx").value) || 10,
+        lang: body.querySelector("#c_lang").value
+      }); 
+      openApp('messages'); 
+    };
+
     body.querySelector("#back").onclick = () => openApp('messages');
   },
   async render(body) {
     body.innerHTML = "";
     const self = this;
     const sb = $("#appSettingsBtn");
-    sb.style.display = "flex";
-    sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
-    sb.querySelector("#setBtn").onclick = () => self.renderSettings(body);
-    sb.querySelector("#retryBtn").onclick = () => {
-      if (self.view === "chat" && self.lastUserText) self.sendMessage(body, self.lastUserText, true);
-      else toast("请先发送消息后再重试");
-    };
+   sb.style.display = "flex";
+   sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+
+   // 设置按钮：进入设置面板
+sb.querySelector("#setBtn").onclick = () => self.renderSettings(body);
+
+// 🔄 重试按钮：只重发最后一条，不跳设置
+sb.querySelector("#retryBtn").onclick = () => {
+  if (!self.lastUserText) {
+    return toast("还没有可以重试的消息");
+  }
+  // 只删除最后一条 AI 回复，然后重发
+  const chatsNow = store.getChats();
+  const arr = chatsNow[self.currentUser] || [];
+  const lastThemIdx = arr.map(m => m.role).lastIndexOf("them");
+  if (lastThemIdx !== -1) {
+    arr.splice(lastThemIdx, 1);
+    chatsNow[self.currentUser] = arr;
+    store.setChats(chatsNow);
+  }
+  self.render(body);
+  // 延迟一点点，让 render 完成后再发
+  setTimeout(() => self.sendMessage(body, self.lastUserText, true), 100);
+};
     
     if (self.view === "list") {
       const contacts = store.getContacts();
@@ -2363,7 +2856,12 @@ if (m.content && m.content.startsWith("[语音]")) {
   </div>`;
 }
 
-return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">${quoteHtml}${esc(m.content)}</div>`;
+// ===== 普通文字气泡 =====
+const isEn = store.getChatConfig().lang === "en";
+const transHtml = (isEn && m.role === "them" && m.translation) 
+  ? `<div class="bubble-trans">${esc(m.translation)}</div>` 
+  : "";
+return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">${quoteHtml}${esc(m.content)}${transHtml}</div>`;
     }).join("");
     chatHtml += `</div>`;
       const curContact = store.getContacts().find(c => c.name === self.currentUser);
@@ -2420,6 +2918,44 @@ chatHtml += `<div style="position:absolute;top:0;left:0;right:0;padding:8px 14px
     toast("已复制");
     menu.remove();
   };
+
+// 🌐 翻译（仅限为英文模式）
+  const isEn = store.getChatConfig().lang === "en";
+  if (msg.role === "them" && isEn) {
+    const transItem = document.createElement("div");
+    transItem.style.cssText = "padding:8px;cursor:pointer;border-bottom:1px solid #444";
+    transItem.textContent = msg.translation ? "🔄 重新翻译" : "🌐 翻译为中文";
+    transItem.onclick = async () => {
+      menu.remove(); 
+      mask.remove();
+      
+      if (msg.translation) {
+        // 如果已经有翻译，点击则取消翻译
+        delete msg.translation;
+        const chats = store.getChats();
+        chats[self.currentUser][idx] = msg;
+        store.setChats(chats);
+        self.render(body);
+        return;
+      }
+
+      toast("翻译中...");
+      try {
+        const sysPrompt = `你是翻译助手。请将以下英文句子翻译成自然的中文。不要任何解释，不要带引号，直接输出中文：\n\n${msg.content}`;
+        const res = await callAI([{role:"user",content:"翻译"}], sysPrompt);
+        
+        // 保存翻译结果
+        msg.translation = res.trim();
+        const chats = store.getChats();
+        chats[self.currentUser][idx] = msg;
+        store.setChats(chats);
+        self.render(body);
+      } catch(e) { 
+        toast("翻译失败：" + e.message); 
+      }
+    };
+    menu.appendChild(transItem);
+  }
 
   // 引用
   const quoteItem = document.createElement("div");
@@ -2537,35 +3073,43 @@ body.querySelector("#backToListBtn").onclick = () => {
     }
     
     const currentThread = body.querySelector("#chatThread");
-    currentThread.innerHTML += `<div class="bubble them" id="loading" style="color:#999">...</div>`;
+    
+    // 1. 增加正在输入标识
+    currentThread.innerHTML += `<div class="bubble them typing-indicator" id="loading" style="color:var(--muted);font-style:italic;font-size:12px;display:flex;align-items:center;gap:4px;">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span> 正在输入...
+    </div>`;
     currentThread.scrollTop = currentThread.scrollHeight;
     
     try {
       const contacts = store.getContacts();
       let contact = contacts.find(x=>x.name === self.currentUser) || { affinity: 0 };
       
-      let attitude = "普通朋友";
-      if (self.currentUser === "彼得·帕克") {
-        if (contact.affinity >= 151) attitude = "深爱、恋人，充满保护欲和深情";
-        else if (contact.affinity >= 101) attitude = "暧昧、暗恋、会脸红、关心过度";
-        else if (contact.affinity >= 51) attitude = "信任的好友，会分享日常和心事";
-      } else {
-        if (contact.affinity >= 101) attitude = "非常亲密的家人/闺蜜/死党，无话不谈";
-        else if (contact.affinity >= 51) attitude = "好朋友，互相帮助";
-      }
+      // ★ 好感度 → 行为准则（统一用全局函数）
+      const contactAff = getAffinityOf(self.currentUser);
+      const attitude = affinityLevelHint(contactAff);
+      const genderPronoun = (store.getProfile().gender === "male") ? "他" : "她";
+const affBehavior = buildAffinityBehaviorBlock(genderPronoun, contactAff);
 
-      const recent = arr.slice(-store.getChatConfig().maxContext * 2);
+      const recent = arr.slice(-store.getChatConfig().maxContext * 2)
+        .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
+        .filter(m => m.content && m.content.trim() !== "");
+        
+      // ★ 强制每次从 localStorage 读取最新配置，防止缓存/作用域问题
+const liveCfg = JSON.parse(localStorage.getItem("sv_chat_cfg") || '{"lang":"zh"}');
+const isEn = liveCfg.lang === "en";
+console.log("[LANG CHECK]", liveCfg.lang, "→ isEn =", isEn);
+      const langBrief = isEn
+        ? "ENGLISH ONLY】You are an English-speaking character. Reply in English only. No Chinese.\n\n"
+        : "【只用中文】你是中文角色，必须用中文回复，不要出现英文句子。\n\n";
+
       let quoteInstruction = "";
-      if (quoteContent) quoteInstruction = `\n【特别注意】玩家引用了你之前发的消息："${quoteContent}"，请在回复中自然地回应这句引用。`;
+      if (quoteContent) quoteInstruction = `\n【特别注意你之前发的消息："${quoteContent}"，请在回复中自然地回应这句引用。`;
       
-   const sSnap = store.getState();
+      const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
-// 1. 先定义角色专属特征
-let characterVibe = "";
+      let characterVibe = "";
 
-     // ===== 小剧场专属：优先判断 =====
       const contactInfo = store.getContacts().find(c => c.name === self.currentUser);
-     // ===== 彼得绑定小剧场时，走小剧场人设 =====
       const peterBinding = store.getPeterBinding();
       let theaterTheme = null;
       if (self.currentUser === "彼得·帕克" && peterBinding && peterBinding.theaterId) {
@@ -2575,134 +3119,239 @@ let characterVibe = "";
       }
 
       if (theaterTheme) {
-        const tq = theaterTheme;
-        characterVibe = `【小剧场模式 · ${tq.title}】
-你现在既扮演彼得·帕克，也扮演这个剧场世界里的所有 NPC。以下是剧场背景：
-
-【背景设定】
-${tq.background}
-
-【玩家身份】${tq.identity}
-【氛围倾向】${tq.tone}
-【叙事人称】${tq.pov === "first" ? "第一人称（我=玩家）" : tq.pov === "second" ? "第二人称（你=玩家）" : "第三人称（" + (tq.userName || "玩家") + "=玩家）"}
-【玩家名字】${tq.pov === "third" ? (tq.userName || "玩家") : "（按人称代词称呼）"}
-【当前剧情进展】
-${tq.story.slice(0, 800)}
-
-【你的扮演要求】
-- 严格贴合剧场背景，不要说破"这是小剧场"。
-- 你永远不是玩家。玩家是${tq.pov === "first" ? "「我」" : tq.pov === "second" ? "「你」" : "「" + (tq.userName || "玩家") + "」"}。
-- 情绪、语言风格符合【氛围倾向】${tq.tone}。
-- 不涉及主线时间线、不涉及 MCU 大事件（除非背景里明确设置了）。
-- 短信形式简短、口语化，符合角色说话风格。`;
+  const tq = theaterTheme;
+  characterVibe = `【小剧场模式 · ${tq.title}】\n【背景设定】${tq.background}\n【玩家身份】${tq.identity}\n【氛围倾向】${tq.tone}\n【当前剧情进展】${tq.story.slice(0, 800)}\n【要求】严格贴合剧场背景，短信形式简短、口语化。\n【语言要求】${isEn ? "必须全部用英文回复。" : "必须全部用中文回复。"}`;
       } else if (self.currentUser === "内德·利兹") {
-        characterVibe = `【内德的话痨与技术宅属性】
-- 聊天经常跑题，喜欢突然聊起：最近的漫威电影（比如吐槽雷神）、新出的电子游戏、他刚写的代码、或者是他在网上看到的外星人阴谋论。
-- 极度崇拜蜘蛛侠，经常想当彼得的“后台技术支持”（“兄弟，你需要我帮你黑进那个系统吗？”）。
-- 偶尔会提到他的女朋友（贝蒂），或者他为了追女孩做的蠢事。
-- 容易激动，经常用感叹号和连发多条消息。`;
+        characterVibe = `【内德的话痨与技术宅属性】\n- 聊天经常跑题，喜欢突然聊起：最近的漫威电影、新出的电子游戏、他刚写的代码、或者是他在网上看到的外星人阴谋论。\n- 极度崇拜蜘蛛侠，经常想当彼得的“后台技术支持”。\n- 容易激动，经常用感叹号和连发多条消息。`;
       } else if (self.currentUser === "米歇尔·琼斯") {
-        characterVibe = `【MJ 的冷幽默与社会观察】
-- 说话直接、一针见血，经常带点讽刺和冷幽默（比如吐槽学校的制度、或者是美国的社会现状）。
-- 聊天话题非常广泛：最近读的哲学书（如加缪、萨特）、独立电影、地下乐队、或者是对某个社会现象的犀利点评。
-- 不喜欢无意义的寒暄，但如果聊到她感兴趣的深层话题，会变得非常专注。
-- 偶尔会调侃彼得“总是神神秘秘的”或者“又去哪打工了”，但不会直接拆穿。`;
+        characterVibe = `【MJ 的冷幽默与社会观察】\n- 说话直接、一针见血，经常带点讽刺和冷幽默。\n- 聊天话题非常广泛：最近读的哲学书、独立电影、地下乐队、或者是对某个社会现象的犀利点评。\n- 不喜欢无意义的寒暄，偶尔会调侃彼得。`;
       } else if (self.currentUser === "梅婶") {
-        characterVibe = `【梅婶的关心与生活气息】
-- 聊天内容多围绕日常生活：今晚吃什么、房租、彼得的学业、或者是她在社区做志愿者的见闻。
-- 偶尔会提起自己年轻时的经历（带点叛逆和浪漫色彩）。
-- 说话温暖但带着大人的威严，经常叮嘱彼得注意安全。`;
+        characterVibe = `【梅婶的关心与生活气息】\n- 聊天内容多围绕日常生活：今晚吃什么、房租、彼得的学业、或者是她在社区做志愿者的见闻。\n- 说话温暖但带着大人的威严，经常叮嘱彼得注意安全。`;
       }
 
-// 只在彼得聊天时启用主动亲密提示
-      const peterInitiativeHint = (self.currentUser === "彼得·帕克" && contact.affinity >= 51)
-        ? `
-【彼得主动性 · 铁律】
-1. 好感度 ≥ 51 时，彼得会**主动**在聊天里表现出亲密和靠近，不只是被动回复。
-2. 他可以用这些方式主动：
-   - 突然问"你现在在哪？"然后真的跑过来
-   - 主动发"想见你"但不解释原因
-   - 发语音、发照片（比如刚打完一场、手上有伤还硬说没事）
-   - 用玩笑或吐槽掩盖关心
-   - 忽然安静一段时间然后冒出来一句真诚的话
-3. 彼得的亲密**风格多样**，不要每回合都"害羞/脸红/心跳"三件套。他可以：
-   - 若无其事地说撩人的话，然后自己反而先转移话题
-   - 直接说"我想你了"，然后紧接着发一条"别回太肉麻"
-   - 用调侃代替肉麻，但只要玩家一撒娇他就顶不住
-   - 装酷失败后自嘲
-4. 聊天里可以**主动邀约**（"晚上有空吗？"）、**主动关心**（"你今天吃了吗，别骗我"）、**主动示好**（"那个……你喜欢的东西我记着了"）。
-`
+      const peterInitiativeHint = (self.currentUser === "彼得·帕克" && contactAff >= 51)
+        ? `\n【彼得主动性 · 铁律】\n1. 好感度 ≥ 51 时，彼得会主动在聊天里表现出亲密和靠近，不只是被动回复。\n2. 他可以用这些方式主动：突然问"你现在在哪？"、主动发"想见你"、用玩笑或吐槽掩盖关心、忽然安静一段时间然后冒出来一句真诚的话。\n3. 彼得的亲密风格多样，不要每回合都"害羞/脸红/心跳"。`
         : "";
 
-      const sysPrompt = buildSystem(`你正在扮演「${self.currentUser}」和玩家发短信。
-【当前游戏内日期】${nowStr}（所有回复必须符合这个时间点的情境，不要出现未来事物）
-【当前关系】${attitude}（好感度：${contact.affinity}/200）。严禁逾越当前关系（如非彼得，禁止恋爱向）。
-【MJ 铁律】${self.currentUser === "米歇尔·琼斯" ? "只能以朋友身份和彼得·帕克互动，禁止任何暧昧/恋爱语气。" : "正常。"}
+      const langRule = isEn ? `
+【绝对强制 · 语言铁律】
+- 你现在只能用**英文**回复。
+- 可以夹杂纽约高中生的俚语（如 WTF, Gotta, Swear to God）。
+- 严禁出现任何中文字符。` : `
+【绝对强制 · 语言铁律】
+- 所有回复必须是纯中文。
+- 可以夹杂少量英文口语（如 okay, wow）。
+- 严禁出现大段的英文原句。`;
+
+const heartLangRule = `
+【心声语言 · 铁律 · 违反即失败】
+1. HEART 字段必须用**纯中文**书写，即使玩家发的是英文。
+2. 严禁在 HEART 里出现任何完整的英文句子。
+3. 允许保留少量英文单词（如 "okay"、"wow"）作为口语点缀，但不得超过 3 个词。
+4. 心声是彼得的内心独白，不是心理分析报告，要口语、自然、有点碎碎念。
+`;
+
+     // ★ 不再用 buildSystem（它是世界线 DM 提示词，会污染短信语言）
+      const playerName = store.getProfile().name || "玩家";
+const playerGender = store.getProfile().gender === "male" ? "男" : "女";
+const playerPronoun = playerGender === "男" ? "他" : "她";
+const sysPrompt = `${langBrief}你在扮演「${self.currentUser}」，正在和「${playerName}」（${playerGender}，用「${playerPronoun}」指代）用手机发短信。
+
+【当前日期】${nowStr}
+【当前关系】${attitude}
+【好感度】${contactAff}/200
+${affBehavior}
 ${peterInitiativeHint}
 ${characterVibe}
 
-【语言铁律 · 绝对优先】
-- 所有 replies 必须是纯中文。
-- 严禁出现英文原句，严禁出现 "英文原句（中文翻译）" 这种格式。
-- 严禁出现 "原文（翻译）"、"Chinese (English)"之类的中英混写。
-- 特殊情况：如果角色想骂人、爆粗、或者一时情绪激动，可以用中文脏话/拟声词直接写中文，不要切换成英文。
-- 即使对方角色设定是外国人（梅婶也住纽约），聊天也只用中文沟通，理由不重要，铁律是中文。
-- 只有一种例外：玩家在消息里主动用英文写，你才可以混合少量英文，但翻译仍不显示。
+${isEn ? `
+【语言铁律 · 违反即失败】
+- 你必须用**英文**回复。
+- 严禁出现任何中文字符。
+- 即使对方发中文，你也用英文回。
+` : `
+【语言铁律 · 违反即失败】
+- 你必须用**中文**回复。
+- 严禁出现英文句子（可以夹 okay / wow 这种口语词，不超过 3 个）。
+`}
 
-【要求】
-1. 像真人一样口语化，结合上下文情绪。
-2. 情绪激动、紧张或想补充时，拆分成多条短消息发送。
-3. 严格输出 JSON 格式，不要任何其他文字：{"replies": ["第一条", "第二条"], "heart": "看到回复时你此时内心的真实想法，50-300字"}
-${quoteInstruction}`);
-      
-      const replyRaw = await callAI(recent.map(m=>({role:m.role==="me"?"user":"assistant",content:m.content})), sysPrompt);
-      
-let replyList = [];
-let heartText = "";
-try {
-  let cleanRaw = replyRaw.replace(/```json/g, '').replace(/```/g, '').trim();
-  const startIdx = cleanRaw.indexOf('{');
-  const endIdx = cleanRaw.lastIndexOf('}');
-  if (startIdx !== -1 && endIdx !== -1) {
-    const jsonStr = cleanRaw.substring(startIdx, endIdx + 1);
-    const data = JSON.parse(jsonStr);
-    replyList = data.replies || [replyRaw];
-    heartText = data.heart || ""; 
-  } else {
-    replyList = replyRaw.split('\n').filter(Boolean);
+【短信格式 · 违反即失败】
+1. 这是**手机短信**，不是小说。
+2. 严禁任何动作描写、神态描写、心理描写。
+3. 严禁用括号 () （） 或星号 ** 包裹内容。
+4. 严禁写成 *"..."* 这种台词格式。
+
+【输出格式 · 必须严格两行】
+REPLIES: 第一条短信 || 第二条短信 || 第三条短信
+HEART: 你此刻真实的内心独白（第一人称，40-100 字，纯中文）
+
+【REPLIES 要求】
+- 2 到 4 条，用 || 分隔。
+- 像真人发微信：可以一句短、一句长、连发。
+- 示例：
+REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
+
+【HEART 要求】
+- 必须输出，必须有内容。
+- 第一人称，纯中文（即使回复是英文，心声也用中文）。
+- 口语化、碎碎念、真实，不是心理分析报告。
+- 缺了 HEART 字段，这次回复作废。
+`;
+
+      /// ★★★ 真正调用 AI ★★★
+      const replyRaw = await callAI(recent, sysPrompt);
+
+// ============================================
+// ★ 统一解析器（REPLIES:/HEART: 文本格式优先，JSON 兜底静默）
+// ============================================
+function parseReplyRaw(raw, isEnMode) {
+  let text = String(raw || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").trim();
+  let replies = [];
+  let heart = "";
+
+  // 1) 正则强行抓取 REPLIES 和 HEART
+  const rMatch = text.match(/REPLIES\s*[:：]\s*([\s\S]*?)(?=\nHEART|HEART\s*[:：]|$)/i);
+  const hMatch = text.match(/HEART\s*[:：]\s*([\s\S]+)/i);
+
+  if (rMatch) {
+    replies = rMatch[1].replace(/\r/g, "").split(/\|\||\n/).map(s => s.trim()).filter(Boolean);
   }
-} catch (err) {
-  replyList = replyRaw.split('\n').filter(Boolean);
-}
-if (!heartText) {
-  const heartMatch = replyRaw.match(/"heart"\s*:\s*"([^"]+)"/);
-  if (heartMatch) heartText = heartMatch[1];
-}
-if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
+  if (hMatch) {
+    heart = hMatch[1].trim();
+  }
 
-      if (heartText) {
-        const contactsNow = store.getContacts();
-        const idx = contactsNow.findIndex(x=>x.name===self.currentUser);
-        if (idx !== -1) {
-          contactsNow[idx].heart = heartText;
-          store.setContacts(contactsNow);
-        }
+  // 2) JSON 兜底
+  if (replies.length === 0 || !heart) {
+    try {
+      const startIdx = text.indexOf("{"), endIdx = text.lastIndexOf("}");
+      if (startIdx !== -1 && endIdx > startIdx) {
+        const obj = JSON.parse(text.substring(startIdx, endIdx + 1));
+        if (!replies.length && Array.isArray(obj.replies)) replies = obj.replies;
+        if (!heart && typeof obj.heart === "string") heart = obj.heart;
       }
+    } catch (_) {}
+  }
 
-      const load = body.querySelector("#loading"); if(load) load.remove();
-      for (let i = 0; i < replyList.length; i++) {
+  // 3) 极端兜底：没按格式来，整段当一条
+  if (replies.length === 0) {
+    replies = [text.replace(/REPLIES\s*[:：]/i, "").trim()];
+  }
+
+  // 4) 清洗气泡
+  const cleanBubble = (s) => {
+    if (!s) return "";
+    let c = String(s);
+    c = c.replace(/\*[^*]*\*/g, "");
+    c = c.replace(/[\(（\[【][^\)）\]】]*[\)）\]】]/g, "");
+    c = c.replace(/\s+/g, " ").trim();
+
+    if (!isEnMode) {
+      // ★ 中文模式：只有英文占绝对多数才清洗，避免误杀"okay"之类
+      const enCount = (c.match(/[a-zA-Z]/g) || []).length;
+      const cnCount = (c.match(/[\u4e00-\u9fa5]/g) || []).length;
+      if (enCount > cnCount * 2 && enCount > 5) {
+        const stripped = c.replace(/[a-zA-Z]+/g, "").trim();
+        if (stripped.length >= 2) c = stripped;
+      }
+    }
+    // 英文模式：什么都不删
+
+    return c;
+  };
+  replies = replies.map(cleanBubble).filter(t => t && t !== "..." && t !== "…");
+
+  if (replies.length === 0) replies = isEnMode ? ["Uh..."] : ["嗯……"];
+
+  // 5) 心声兜底（随机）
+  if (!heart || !heart.trim()) {
+    const defaultHearts = [
+      "（盯着屏幕看了两秒，琢磨着该怎么回）",
+      "（嘴角抽了一下，感觉有点好笑）",
+      "（手指悬在键盘上，犹豫了一下）",
+      "（看完之后，深吸了一口气）"
+    ];
+    heart = defaultHearts[Math.floor(Math.random() * defaultHearts.length)];
+  }
+
+  return { replies, heart };
+}
+
+let { replies: replyList, heart: heartText } = parseReplyRaw(replyRaw, isEn);
+console.log("[RAW AI]", replyRaw); 
+console.log("[HEART FINAL]", heartText);
+
+// ★ 如果心声是兜底文案（说明 AI 没输出 HEART），强制补一次
+const isFallbackHeart = [
+  "（盯着屏幕看了两秒，琢磨着该怎么回）",
+  "（嘴角抽了一下，感觉有点好笑）",
+  "（手指悬在键盘上，犹豫了一下）",
+  "（看完之后，深吸了一口气）"
+].includes(heartText);
+
+if (isFallbackHeart) {
+  console.warn("[HEART] AI 未输出有效心声，触发补生成...");
+  try {
+    const heartPrompt = `你是「${self.currentUser}」。刚才玩家发了这条消息："${text}"。
+你（${self.currentUser}）心里的真实想法是什么？
+要求：
+1. 第一人称，40-80字。
+2. 纯中文，口语化，碎碎念。
+3. 只输出想法本身，不要任何前缀、括号、引号。
+4. 例如："他这么问肯定有事，但又不好意思直说……算了先问清楚吧。"`;
+    const heartRes = await callAI([{ role: "user", content: "写内心想法" }], heartPrompt);
+    if (heartRes && heartRes.trim().length > 5) {
+      heartText = heartRes.trim();
+      console.log("[HEART] 补生成成功:", heartText);
+    }
+  } catch (e) {
+    console.warn("[HEART] 补生成失败，保留兜底:", e.message);
+  }
+}
+
+// ============================================
+// ★ 心声处理 · 保存 + 弹窗
+// ============================================
+try {
+  const contactsNow = store.getContacts();
+  const idx = contactsNow.findIndex(x => x.name === self.currentUser);
+  if (idx !== -1) {
+    contactsNow[idx].heart = heartText.trim();
+    store.setContacts(contactsNow);
+  }
+} catch (e) {
+  console.error("[HEART] 保存失败:", e);
+}
+
+try {
+  const heartBox = document.createElement("div");
+  heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
+  heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(heartText.trim());
+  document.body.appendChild(heartBox);
+  setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
+} catch (e) {
+  console.error("[HEART] ❌ 弹窗崩溃:", e);
+}
+
+const load = body.querySelector("#loading"); 
+if (load) load.remove();
+
+for (let i = 0; i < replyList.length; i++) {
         const msgText = replyList[i].trim();
         if (!msgText) continue;
-        arr.push({role:"them", content:msgText});
-        chatsNow[self.currentUser] = arr; store.setChats(chatsNow);
-        currentThread.innerHTML += `<div class="bubble them">${esc(msgText)}</div>`;
+        arr.push({ role: "them", content: msgText });
+        chatsNow[self.currentUser] = arr;
+        store.setChats(chatsNow);
+        currentThread.innerHTML += '<div class="bubble them">' + esc(msgText) + '</div>';
         currentThread.scrollTop = currentThread.scrollHeight;
         if (i < replyList.length - 1) {
           await new Promise(r => setTimeout(r, 800));
-          currentThread.innerHTML += `<div class="bubble them typing" id="typing" style="color:#999">正在输入...</div>`;
+          currentThread.innerHTML += '<div class="bubble them typing-indicator" id="typing" style="color:var(--muted);font-style:italic;font-size:12px;display:flex;align-items:center;gap:4px;">' +
+            '<span class="dot"></span><span class="dot"></span><span class="dot"></span> 正在输入...' +
+            '</div>';
           currentThread.scrollTop = currentThread.scrollHeight;
           await new Promise(r => setTimeout(r, 500));
-          const t = body.querySelector("#typing"); if(t) t.remove();
+          const t = body.querySelector("#typing");
+          if (t) t.remove();
         }
       }
     } catch(e) {
@@ -2735,7 +3384,12 @@ if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
     const thread = body.querySelector("#chatThread");
     if (!thread) return;
 
-    thread.innerHTML += `<div class="bubble them" id="loading" style="color:#999">...</div>`;
+    const loadingEl = document.createElement("div");
+loadingEl.className = "bubble them";
+loadingEl.id = "loading";
+loadingEl.style.color = "#999";
+loadingEl.textContent = "...";
+thread.appendChild(loadingEl);
     thread.scrollTop = thread.scrollHeight;
 
     try {
@@ -2751,7 +3405,7 @@ if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
         voiceContext = "你刚刚发了一条语音，内容是你在哼唱以前那首关于蜘蛛侠的经典主题曲（Baby Spider）。";
       }
 
-      // 注意：这里没有使用 buildSystem，而是完全重写，防止被全局的小说文风污染
+      // 使用与主聊天一致的纯文本格式，避免 JSON 解析失败
       const sysPrompt = `你正在扮演漫威的「彼得·帕克」，现在你正在用手机和玩家发短信。
 【当前日期】${nowStr}
 【当前关系】好感度：${contact.affinity}/200
@@ -2759,62 +3413,109 @@ if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
 
 【绝对铁律 · 违反即失败】
 1. 这是纯粹的手机短信聊天！你只能输出你打出来的文字。
-2. 严禁任何动作描写、神态描写、心理描写（比如“清了清嗓子”、“深吸一口气”、“他大概在楼顶”）。
+2. 严禁任何动作描写、神态描写、心理描写（比如"清了清嗓子"、"深吸一口气"）。
 3. 严禁使用任何括号 () （） 来包裹动作或说明。
 4. 严禁使用星号 * * 来包裹文字。
-5. 严禁使用“英文原句（中文翻译）”的格式！必须全部是纯中文对话。
-6. 如果你不知道回什么，就直接回“哈？”或者“什么？”。
+5. 严禁使用"英文原句（中文翻译）"的格式！必须全部是纯中文对话。
 
-【要求】
-1. 像真人发微信一样，口语化，可以有点尴尬、调侃、或者顺着玩家的话接梗。
-2. 情绪激动时可拆成多条短消息。
-3. 严格输出 JSON 格式：{"replies": ["第一条", "第二条"]}`;
+【输出格式 · 必须遵守】
+严格输出两行：
+REPLIES: 第一条 || 第二条 || 第三条
+HEART: 你此刻真实的内心独白（第一人称，40-100字纯中文）
+
+【关于 REPLIES · 必须遵守】
+1. 请一次生成 **2 到 4 条**短消息。
+2. 用 `||` 分隔，不要用换行符分隔。
+3. 应该像真人发微信一样，一句短、一句长，或者连续发多条。
+4. 严格示例：
+REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
+
+【关于 HEART】
+- 必须输出，必须纯中文，用第一人称写你听到这条语音时的真实反应。
+`;
 
       const recent = arr.slice(-store.getChatConfig().maxContext * 2)
-        .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }));
+        .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
+        .filter(m => m.content && m.content.trim() !== "");
+
+      const isEn = store.getChatConfig().lang === "en";
 
       const replyRaw = await callAI(recent, sysPrompt);
 
-      let replyList = [];
-      try {
-        const cleanRaw = replyRaw.replace(/```json/gi, "").replace(/```/g, "").trim();
-        const startIdx = cleanRaw.indexOf('{');
-        const endIdx = cleanRaw.lastIndexOf('}');
-        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-          const data = JSON.parse(cleanRaw.substring(startIdx, endIdx + 1));
-          if (data && Array.isArray(data.replies)) replyList = data.replies;
+      // ===== 复用同一套解析器 =====
+      const parsedVoice = (function parseVoice(raw) {
+        let text = String(raw || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").trim();
+        let replies = [], heart = "";
+
+        const rMatch = text.match(/REPLIES\s*[:：]\s*([\s\S]*?)(?=\bHEART\s*[:：]|$)/i);
+        const hMatch = text.match(/HEART\s*[:：]\s*([\s\S]+)/i);
+
+        if (rMatch) {
+          replies = rMatch[1].replace(/\r/g, "").split(/\|\||\n/).map(s => s.trim()).filter(Boolean);
         }
-      } catch (err) {
-        console.warn("JSON 解析失败，降级为按行分割文本", err);
-      }
+        if (hMatch) heart = hMatch[1].trim();
 
-      if (!replyList || replyList.length === 0) {
-        replyList = replyRaw.split('\n').filter(t => t.trim().length > 0);
-      }
+        // JSON 静默兜底
+        if (replies.length === 0 || !heart) {
+          try {
+            const s = text.indexOf("{"), e = text.lastIndexOf("}");
+            if (s !== -1 && e > s) {
+              const obj = JSON.parse(text.substring(s, e + 1));
+              if (!replies.length && Array.isArray(obj.replies)) replies = obj.replies;
+              if (!heart && typeof obj.heart === "string") heart = obj.heart;
+            }
+          } catch (_) {}
+        }
 
-      // ===== 暴力清洗：强行删掉所有动作、括号、星号和英文 =====
-      replyList = replyList.map(text => {
-        if (!text) return "";
-        let clean = String(text);
-        // 1. 删掉所有中文括号和英文括号及里面的内容
-        clean = clean.replace(/[\(（\[【].*?[\)）\]】]/g, "");
-        // 2. 删掉所有星号及里面的内容
-        clean = clean.replace(/\*.*?\*/g, "");
-        // 3. 删掉任何包含英文的行，或者把中英混排里的英文删掉
-        clean = clean.replace(/[a-zA-Z]+/g, "");
-        // 4. 删掉可能残留的引号
-        clean = clean.replace(/[“”"']/g, "");
-        return clean.trim();
-      }).filter(t => t.length > 0 && t !== "..." && t !== "…");
+        if (replies.length === 0) {
+          replies = text.split("\n")
+            .map(s => s.replace(/^[\s\-•·\d\.\、\)]+/, "").trim())
+            .filter(s => s && !/^(REPLIES|HEART)\s*[:：]/i.test(s) && !s.startsWith("{") && !s.startsWith("}"));
+        }
 
-      if (!replyList || replyList.length === 0) {
-        replyList = ["什么？"];
-      }
+        const cleanBubble = (s) => {
+          if (!s) return "";
+          let c = String(s);
+          c = c.replace(/\*[^*]*\*/g, "");
+          c = c.replace(/[\(（\[【][^\)）\]】]*[\)）\]】]/g, "");
+          c = c.replace(/\s+/g, " ").trim();
+          if (!isEn) {
+            const stripped = c.replace(/[“”"']/g, "").replace(/[a-zA-Z]+/g, "").trim();
+            if (stripped.length >= 2) c = stripped;
+          }
+          return c;
+        };
+
+        replies = replies.map(cleanBubble).filter(t => t && t !== "..." && t !== "…");
+        if (replies.length === 0) replies = ["什么？"];
+        if (!heart || !heart.trim()) heart = "（听到这条语音愣了一下，嘴角有点想笑又忍住）";
+        return { replies, heart };
+      })(replyRaw);
+
+      const voiceReplies = parsedVoice.replies;
+      const voiceHeart = parsedVoice.heart;
+
+      // 保存心声 + 弹窗
+      try {
+        const contactsNow = store.getContacts();
+        const idx2 = contactsNow.findIndex(x => x.name === self.currentUser);
+        if (idx2 !== -1) {
+          contactsNow[idx2].heart = voiceHeart.trim();
+          store.setContacts(contactsNow);
+        }
+      } catch (_) {}
+
+      try {
+        const heartBox = document.createElement("div");
+        heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
+        heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(voiceHeart.trim());
+        document.body.appendChild(heartBox);
+        setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
+      } catch (_) {}
 
       const load = body.querySelector("#loading");
       if (load) load.remove();
 
-      // 1. 插入彼得的语音气泡
       arr.push({ 
         role: "them", 
         type: "voice", 
@@ -2827,15 +3528,14 @@ if (!Array.isArray(replyList) || replyList.length === 0) replyList = ["..."];
       self.render(body);
       setTimeout(() => self.playVoice(voiceKey), 150);
 
-      // 2. 插入彼得的文字回复
-      for (let i = 0; i < replyList.length; i++) {
-        const msgText = replyList[i];
+      for (let i = 0; i < voiceReplies.length; i++) {
+        const msgText = voiceReplies[i];
         if (!msgText) continue;
         arr.push({ role: "them", content: msgText });
         chatsNow[self.currentUser] = arr;
         store.setChats(chatsNow);
         self.render(body);
-        if (i < replyList.length - 1) {
+        if (i < voiceReplies.length - 1) {
           await new Promise(r => setTimeout(r, 600));
         }
       }
@@ -3500,7 +4200,11 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
 【文风要求 · 极其重要】
 1. 参考经典英美青春小说的叙事节奏与对白质感，多用细节、动作、感官描写，少用形容词堆砌。
 2. 严禁 AI 腔：禁止"他感到…"、"心中涌起…"、"不是…而是…"、"眼神中透露…"、"揉进骨血"、"不是他...不是她...真的是你"等书面化表达。
-3. 彼得对话用斜体英文原文，紧跟中文翻译，例如：*"Hey, you okay?"*（嘿，你还好吗？）
+3. 彼得对话**必须**严格用这个格式：*"英文原文"*（中文翻译）
+   - 必须有星号 * 和半角双引号 "
+   - 英文原文和中文翻译之间必须有中文圆括号
+   - 示例：*"Hey, you okay?"*（嘿，你还好吗？）
+   - **严禁**用：纯引号"Hey"、纯星号*Hey*、全角星号＊、markdown 加粗**Hey**
 4. 场景描写要贴近纽约皇后区的真实生活——地铁、老旧公寓、便利店、学校走廊。
 5. 剧情必须严格承接上一轮的结尾与玩家的选择。
 6. 生成不少于 1000 字的高质量剧情。
@@ -3509,20 +4213,44 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
 9. **如果本回合玩家选项导致某个可变结局发生变化，还必须在末尾追加一行**：
    【结局更新: 变量名=新值】
    例如：【结局更新: snapVictims=MJ,Ned】【结局更新: auntMayAlive=true】
+10. **【时间推进 · 极重要】**
+   - 如果本回合剧情里**明确发生了时间跳跃**（比如"第二天"、"一周后"、"放学后"、"过了几天"），必须在剧情末尾追加一行：
+     【时间推进: +N天】
+     其中 N 是实际经过的天数（同一天内 = 0，不提就默认 0）。
+   - **如果只是场景切换但仍是同一天（比如从学校走到彼得家），不要写时间推进**。
+   - 如果剧情里写"一个月后"就 +30，"一周后"就 +7，"第二天"就 +1。
+   - 如果不确定，宁可写 0，也不要瞎跳。
 ${contextStr}`);
 
         const res = await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
         const parts = res.split('【选项】');
-// ===== 解析【结局更新: xxx】=====
-const outcomeMatches = [...res.matchAll(/【结局更新:\s*(.+?)】/g)];
-if (outcomeMatches.length) {
-  s.outcomes = s.outcomes || {};
-  for (const m of outcomeMatches) {
-    const [k, v] = m[1].split("=").map(x => x.trim());
-    if (k && v !== undefined) s.outcomes[k] = v;
-  }
-}
-        s.currentStory = (parts[0]||"").replace('【剧情】','').trim();
+
+        // 解析【结局更新】
+        const outcomeMatches = [...res.matchAll(/【结局更新:\s*(.+?)】/g)];
+        if (outcomeMatches.length) {
+          s.outcomes = s.outcomes || {};
+          for (const m of outcomeMatches) {
+            const [k, v] = m[1].split("=").map(x => x.trim());
+            if (k && v !== undefined) s.outcomes[k] = v;
+          }
+        }
+
+        // ★ 解析【时间推进】
+        const timeAdvance = parseTimeAdvance(res);
+        if (timeAdvance !== 0) {
+          const advanced = advanceTimeByDays(s, timeAdvance);
+          if (advanced) {
+            const np = WORLD.timeline[s.anchor];
+            toast(`⏱️ 时间推进 → ${s.gameYear}年${s.gameMonth}月${s.gameDay}日（${np.name}）`);
+          } else {
+            toast(`⏱️ 时间推进 → ${s.gameYear}年${s.gameMonth}月${s.gameDay}日`);
+          }
+        }
+
+        s.currentStory = (parts[0]||"")
+          .replace('【剧情】','')
+          .replace(/【时间推进[:：][^】]*】/g, '')
+          .trim();
         s.currentOptions = parts[1] || "";
 
         const affMatch = res.match(/【好感度变动:\s*([+-]\d+)】/);
@@ -3558,10 +4286,13 @@ if (outcomeMatches.length) {
 const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
 const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
   body.innerHTML = `<div style="padding:14px">
-<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #2d6bff;">
-  <div style="font-size:11px;color:#8a8a99;margin-bottom:4px;">📍 当前游戏内日期</div>
- <div style="font-weight:bold;color: var(--text);font-size:14px;">${liveTimeStr}</div>
-<div style="font-size:11px;color: var(--muted);margin-top:4px;">${phase.name} · ${phase.summary.slice(0, 40)}...</div>
+<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #2d6bff;display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <div style="font-size:11px;color:#8a8a99;margin-bottom:4px;">📍 当前游戏内日期</div>
+    <div style="font-weight:bold;color:var(--text);font-size:14px;">${liveTimeStr}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">${phase.name} · ${phase.summary.slice(0, 40)}...</div>
+  </div>
+  <button id="twTimeBtn" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">⏱️ 时间</button>
 </div>
   <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
     <div>
@@ -3582,6 +4313,41 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
         <button class="btn" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
       </div>
     </div>`;
+// ⏱️ 手动变更时间
+    body.querySelector("#twTimeBtn").onclick = () => {
+      const st = store.getState();
+      const div = document.createElement("div");
+      div.style.cssText = "position:absolute;inset:0;background:#000d;z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;";
+      div.innerHTML = `
+        <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;max-width:340px;width:100%;">
+          <h3 style="margin:0 0 12px;color:var(--text);font-size:16px;">⏱️ 手动调整时间</h3>
+          <div style="display:flex;gap:6px;margin-bottom:12px;">
+            <input id="mt_year" type="number" value="${st.gameYear}" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+            <input id="mt_month" type="number" min="1" max="12" value="${st.gameMonth}" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+            <input id="mt_day" type="number" min="1" max="31" value="${st.gameDay}" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">⚠️ 手动修改日期不会自动切换阶段，请确保日期与当前阶段匹配。</div>
+          <div style="display:flex;gap:8px;">
+            <button id="mt_cancel" class="btn ghost" style="flex:1;">取消</button>
+            <button id="mt_ok" class="btn" style="flex:1;">确定</button>
+          </div>
+        </div>`;
+      document.querySelector(".device").appendChild(div);
+      const close = () => div.remove();
+      div.querySelector("#mt_cancel").onclick = close;
+      div.querySelector("#mt_ok").onclick = () => {
+        const y = parseInt(div.querySelector("#mt_year").value);
+        const m = parseInt(div.querySelector("#mt_month").value);
+        const d = parseInt(div.querySelector("#mt_day").value);
+        if (!y || !m || !d) return toast("请输入完整日期");
+        st.gameYear = y; st.gameMonth = m; st.gameDay = d;
+        store.setState(st);
+        close();
+        toast(`已调整：${y}年${m}月${d}日`);
+        openApp("worldline");
+      };
+    };
+
     const ci = body.querySelector("#customAct");
     ci.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); window.selectOption(ci.value); } });
   },
@@ -3974,517 +4740,831 @@ WORLD.addSideQuest(q);
   },
 
 Theater: {
-    title: "小剧场",
-    async render(body) {
-      const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-      const active = list.find(x => !x.closed);
-// 同步 binding：如果当前有一个未完结的剧场，就把彼得绑定到它
-const binding = store.getPeterBinding();
-if (active && (!binding || binding.theaterId !== active.id)) {
-  store.setPeterBinding({ theaterId: active.id });
-}
-if (!active && binding) {
-  store.setPeterBinding(null);
-}
+  title: "小剧场",
 
-      body.innerHTML = `<div style="padding:14px">
-        <div class="card">
-          <h3>🎭 小剧场</h3>
-          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">
-            自由设定背景，独立于主线和支线。开始后可以在 <b>信息</b> App 里继续聊，暂时跟小剧场剧情走。
-          </p >
-          <button class="btn" id="startTheaterBtn" ${active ? "disabled" : ""}>
-            ${active ? "▶ 正在进行中：" + esc(active.title) : "✨ 开始新小剧场"}
-          </button>
-          ${active ? `<button class="btn ghost" id="openActiveBtn" style="margin-top:8px;">打开当前剧情</button>` : ""}
-        </div>
-        <div class="card">
-          <h3>📜 历史小剧场（${list.length}）</h3>
-          ${list.length ? list.map(q => `
-  <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:6px;">
-    <div style="flex:1;min-width:0;">
-      <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:13px;">${esc(q.title)}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px;">${q.closed ? "✅ 完结" : "▶ 进行中"} · ${esc(q.date)}</div>
-    </div>
-    <button class="btn ghost" data-open="${esc(q.id)}" style="width:auto;padding:4px 10px;font-size:12px;">查看</button>
-    <button class="btn ghost" data-del="${esc(q.id)}" style="width:auto;padding:4px 10px;font-size:12px;color:#e62429;border-color:#e62429;">删除</button>
-  </div>
-`).join("") : '<p style="color:var(--muted);font-size:13px;">暂无小剧场</p >'}
-        </div>
-      </div>`;
-
-      const sb = $("#appSettingsBtn");
-      sb.style.display = "none";
-
-      body.querySelectorAll("[data-open]").forEach(el => {
-        el.onclick = () => this.openQuest(el.dataset.open);
-      });
-
-      if (active) {
-        body.querySelector("#openActiveBtn").onclick = () => this.openQuest(active.id);
-      }
-
-      body.querySelector("#startTheaterBtn").onclick = () => {
-        if (active) return;
-        this.showSetup(body);
-      };
-
-body.querySelectorAll("[data-del]").forEach(el => {
-  el.onclick = () => {
-    const id = el.dataset.del;
+  async render(body) {
     const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-    const q = list.find(x => x.id === id);
-    if (!q) return toast("小剧场不存在");
-    if (!confirm("确定删除小剧场「" + q.title + "」吗？此操作不可恢复。")) return;
+    const active = list.find(x => !x.closed);
 
-    const newList = list.filter(x => x.id !== id);
-    localStorage.setItem("sv_theaters", JSON.stringify(newList));
-
+    // 同步彼得绑定
     const binding = store.getPeterBinding();
-    if (binding && binding.theaterId === id) {
+    if (active && (!binding || binding.theaterId !== active.id)) {
+      store.setPeterBinding({ theaterId: active.id });
+    }
+    if (!active && binding) {
       store.setPeterBinding(null);
     }
 
-    toast("已删除小剧场：" + q.title);
-    this.render(body);
-  };
-});
- },
+    const universes = WORLD.parallelUniverses || [];
 
-    showSetup(body) {
-      body.innerHTML = `<div style="padding:14px;box-sizing:border-box;overflow-x:hidden;width:100%;">
-        <div class="card" style="box-sizing:border-box;overflow:hidden;">
-          <h3>🎬 小剧场设置</h3>
-          <div class="field"><label>背景设定（最重要）</label>
-            <textarea id="th_bg" rows="4" style="box-sizing:border-box;width:100%;" placeholder="例如：平行宇宙，彼得和玩家都是中城高中二年级学生，学校组织去欧洲游学，在威尼斯遇到神秘客……"></textarea>
+    body.innerHTML = `
+      <div class="th-wrap">
+        <div class="th-header">
+          <div class="th-title">🎭 平行宇宙剧场</div>
+          <div class="th-subtitle">选择宇宙，开启一段独立剧情</div>
+        </div>
+
+        ${active ? `
+          <div class="th-active-banner">
+            <div class="th-active-info">
+              <div class="th-active-label">▶ 正在进行</div>
+              <div class="th-active-title">${esc(active.title)}</div>
+              <div class="th-active-meta">${esc(active.date)} · ${active.closed ? "已完结" : "进行中"}</div>
+            </div>
+            <button class="th-active-btn" id="openActiveBtn">继续</button>
           </div>
-          <div class="field"><label>你的身份</label>
-            <input id="th_identity" style="box-sizing:border-box;width:100%;" value="${esc(store.getProfile().identity || "同学")}">
-          </div>
-          <div class="field"><label>叙事人称</label>
-            <select id="th_pov" style="box-sizing:border-box;width:100%;">
-              <option value="first">第一人称（"我"）</option>
-              <option value="second" selected>第二人称（"你"）</option>
-              <option value="third">第三人称（"某某"）</option>
-            </select>
-          </div>
-          <div class="field" id="th_nameField" style="display:none;"><label>第三人称下你的名字</label>
-            <input id="th_name" style="box-sizing:border-box;width:100%;" value="${esc(store.getProfile().name || "玩家")}">
-          </div>
-          <div class="field"><label>氛围倾向</label>
-            <select id="th_tone" style="box-sizing:border-box;width:100%;">
-              <option value="日常">日常轻喜剧</option>
-              <option value="悬疑">悬疑紧张</option>
-              <option value="情感">情感细腻</option>
-              <option value="战斗">战斗动作</option>
-              <option value="自由">自由发挥</option>
-            </select>
-          </div>
-          <button class="btn" id="th_gen">生成开场</button>
-          <button class="btn ghost" id="th_cancel" style="margin-top:8px;">取消</button>
+        ` : ""}
+
+        <div class="th-section-title">🌌 官方宇宙</div>
+        <div class="th-universe-grid">
+          ${universes.map(u => `
+            <div class="th-universe-card" data-key="${u.key}" style="--u-color:${u.color};">
+              <div class="th-universe-tag">${esc(u.tag)}</div>
+              <div class="th-universe-title">${esc(u.title)}</div>
+              <div class="th-universe-year">${esc(u.year)}</div>
+              <div class="th-universe-desc">${esc(u.desc)}</div>
+              <div class="th-universe-arrow">→</div>
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="th-section-title">✏️ 自定义宇宙</div>
+        <button class="th-custom-btn" id="startCustomBtn" ${active ? "disabled" : ""}>
+          <span class="th-custom-icon">+</span>
+          <span>创建自定义小剧场</span>
+        </button>
+
+        <div class="th-section-title">📜 历史剧场（${list.length}）</div>
+        <div class="th-history-list">
+          ${list.length ? list.map(q => `
+            <div class="th-history-item" data-id="${esc(q.id)}">
+              <div class="th-history-info">
+                <div class="th-history-title">${esc(q.title)}</div>
+                <div class="th-history-meta">${q.closed ? "✅ 已完结" : "▶ 进行中"} · ${esc(q.date)}</div>
+              </div>
+              <button class="th-history-del" data-del="${esc(q.id)}">✕</button>
+            </div>
+          `).join("") : `<div class="th-empty">还没有历史剧场</div>`}
         </div>
       </div>`;
 
-      body.querySelector("#th_cancel").onclick = () => this.render(body);
+    $("#appSettingsBtn").style.display = "none";
 
-      const povSel = body.querySelector("#th_pov");
-      const nameField = body.querySelector("#th_nameField");
-      povSel.onchange = () => {
-        nameField.style.display = povSel.value === "third" ? "flex" : "none";
+    // 打开进行中
+    if (active) {
+      body.querySelector("#openActiveBtn").onclick = () => this.openQuest(active.id);
+    }
+
+    // 点宇宙卡片 → 生成开场
+    body.querySelectorAll(".th-universe-card").forEach(el => {
+      el.onclick = () => {
+        if (active) return toast("请先完成当前剧场");
+        const key = el.dataset.key;
+        const u = universes.find(x => x.key === key);
+        if (u) this.startUniverse(body, u);
+      };
+    });
+
+    // 自定义
+    body.querySelector("#startCustomBtn").onclick = () => {
+      if (active) return;
+      this.showSetup(body);
+    };
+
+    // 历史项
+    body.querySelectorAll(".th-history-item").forEach(el => {
+      el.onclick = (e) => {
+        if (e.target.closest(".th-history-del")) return;
+        this.openQuest(el.dataset.id);
+      };
+    });
+
+    // 删除
+    body.querySelectorAll(".th-history-del").forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        const id = el.dataset.del;
+        if (!confirm("确定删除这个小剧场吗？")) return;
+        const newList = list.filter(x => x.id !== id);
+        localStorage.setItem("sv_theaters", JSON.stringify(newList));
+        const b = store.getPeterBinding();
+        if (b && b.theaterId === id) store.setPeterBinding(null);
+        toast("已删除");
+        this.render(body);
+      };
+    });
+  },
+
+  // ===== 从平行宇宙模板直接开始 =====
+  async startUniverse(body, u) {
+    // 询问玩家身份（简单选择）
+    const identity = prompt(`【${u.title}】\n\n你的身份是？（比如：同学、邻居、记者、路人）`, "同学") || "同学";
+    const pov = prompt("叙事人称？1=第一人称「我」 2=第二人称「你」 3=第三人称", "2") || "2";
+    const povMap = { "1": "first", "2": "second", "3": "third" };
+    const povKey = povMap[pov] || "second";
+
+    body.innerHTML = `<div class="loader"><div class="spin"></div>正在开启「${esc(u.title)}」...</div>`;
+
+    try {
+      const sNow = store.getState();
+      const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+
+      const povRule = povKey === "first"
+        ? "【叙事人称 · 第一人称】全程用「我」称呼玩家。玩家=我。"
+        : povKey === "second"
+        ? "【叙事人称 · 第二人称】全程用「你」称呼玩家。玩家=你。"
+        : "【叙事人称 · 第三人称】全程用「玩家」称呼玩家。";
+
+      const sysPrompt = `你是一个剧情 DM，正在开启一个**平行宇宙小剧场**。
+
+【宇宙名称】${u.title}（${u.year}年）
+【宇宙背景】${u.background}
+【宇宙规则】${u.rules}
+【玩家身份】${identity}
+【当前游戏内日期】${date}
+
+${povRule}
+
+【绝对铁律】
+1. 严格贴合这个宇宙的设定和规则，不要混入其他宇宙。
+2. 玩家 = 视角中心。禁止跳到彼得视角。
+3. 彼得是 NPC，只能写他外在的表情、动作、台词。
+4. 不替玩家做决定，不替玩家说话。
+5. 剧情只写到"玩家面临选择"的位置。
+
+【要求】
+1. 写一段开场剧情，600~900 字。
+2. 剧情要体现这个宇宙的独特性（时代、氛围、视觉）。
+3. 结尾用【选项】列出 A. B. C. D. 四个行动方向。
+4. 最后一行：【小剧场标题: 不超过8个字】
+
+【文风】电影镜头感，严禁 AI 腔。英文对白用 *"..."*（中文翻译）格式。`;
+
+      const res = await callAI([{ role: "user", content: "开始" }], sysPrompt);
+
+      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+      const optionsIdx = res.indexOf("【选项】");
+      const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+        .replace("【剧情】", "")
+        .replace(/【小剧场标题[:：].*?】/g, "")
+        .trim();
+      const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+      const title = titleMatch ? titleMatch[1].trim() : u.title;
+
+      const q = {
+        id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        title: `${u.title} · ${title}`,
+        background: u.background,
+        universe: u.key,
+        identity,
+        tone: "自由",
+        pov: povKey,
+        userName: "玩家",
+        date,
+        story: storyText,
+        options: optionsText,
+        history: [],
+        closed: false,
+        createdAt: Date.now(),
+        openingStory: storyText,
+        openingOptions: optionsText
       };
 
-      body.querySelector("#th_gen").onclick = async () => {
-        const bg = body.querySelector("#th_bg").value.trim();
-        const identity = body.querySelector("#th_identity").value.trim() || "同学";
-        const tone = body.querySelector("#th_tone").value;
-        const pov = povSel.value;
-        const userName = body.querySelector("#th_name").value.trim() || "玩家";
-        if (!bg) return toast("请填写背景设定");
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      all.unshift(q);
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
 
-        body.innerHTML = `<div class="loader"><div class="spin"></div>生成开场中...</div>`;
+      this.bindChat(q);
+      toast("剧场已开启：" + q.title);
+      this.openQuest(q.id);
+    } catch (e) {
+      body.innerHTML = `<div class="th-wrap"><div class="th-error">生成失败：${esc(e.message)}</div></div>`;
+    }
+  },
 
-        try {
-const sNow = store.getState();
-          const date = sNow.gameYear + "年" + sNow.gameMonth + "月" + sNow.gameDay + "日";
+  // ===== 自定义小剧场设置 =====
+  showSetup(body) {
+    body.innerHTML = `
+      <div class="th-wrap">
+        <div class="th-header">
+          <div class="th-title">✏️ 自定义小剧场</div>
+          <div class="th-subtitle">自由设定背景，AI 会按你的设定生成开场</div>
+        </div>
 
-          const povRule = pov === "first"
-            ? "【叙事人称 · 第一人称】全程用「我」称呼玩家。玩家=我。彼得等其他角色永远不是你，是被描述的外部人物。"
-            : pov === "second"
-            ? "【叙事人称 · 第二人称】全程用「你」称呼玩家。玩家=你。彼得等其他角色永远不是你，是被描述的外部人物。"
-            : "【叙事人称 · 第三人称】全程用「" + userName + "」称呼玩家。玩家=" + userName + "。彼得等其他角色永远不是" + userName + "，" + userName + "只指玩家本人。";
+        <div class="th-form">
+          <label class="th-form-label">背景设定（最重要）</label>
+          <textarea id="th_bg" class="th-form-textarea" rows="5" placeholder="例如：平行宇宙，彼得和玩家都是中城高中二年级学生，学校组织去欧洲游学，在威尼斯遇到神秘客……"></textarea>
 
-          const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
+          <label class="th-form-label">你的身份</label>
+          <input id="th_identity" class="th-form-input" value="${esc(store.getProfile().identity || "同学")}">
+
+          <label class="th-form-label">叙事人称</label>
+          <select id="th_pov" class="th-form-input">
+            <option value="first">第一人称（"我"）</option>
+            <option value="second" selected>第二人称（"你"）</option>
+            <option value="third">第三人称（"某某"）</option>
+          </select>
+
+          <div id="th_nameField" style="display:none;">
+            <label class="th-form-label">第三人称下你的名字</label>
+            <input id="th_name" class="th-form-input" value="${esc(store.getProfile().name || "玩家")}">
+          </div>
+
+          <label class="th-form-label">氛围倾向</label>
+          <select id="th_tone" class="th-form-input">
+            <option value="日常">日常轻喜剧</option>
+            <option value="悬疑">悬疑紧张</option>
+            <option value="情感">情感细腻</option>
+            <option value="战斗">战斗动作</option>
+            <option value="自由">自由发挥</option>
+          </select>
+
+          <div class="th-form-actions">
+            <button class="th-btn ghost" id="th_cancel">取消</button>
+            <button class="th-btn primary" id="th_gen">生成开场</button>
+          </div>
+        </div>
+      </div>`;
+
+    body.querySelector("#th_cancel").onclick = () => this.render(body);
+
+    const povSel = body.querySelector("#th_pov");
+    const nameField = body.querySelector("#th_nameField");
+    povSel.onchange = () => {
+      nameField.style.display = povSel.value === "third" ? "block" : "none";
+    };
+
+    body.querySelector("#th_gen").onclick = async () => {
+      const bg = body.querySelector("#th_bg").value.trim();
+      const identity = body.querySelector("#th_identity").value.trim() || "同学";
+      const tone = body.querySelector("#th_tone").value;
+      const pov = povSel.value;
+      const userName = body.querySelector("#th_name").value.trim() || "玩家";
+      if (!bg) return toast("请填写背景设定");
+
+      body.innerHTML = `<div class="loader"><div class="spin"></div>生成开场中...</div>`;
+
+      try {
+        const sNow = store.getState();
+        const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+
+        const povRule = pov === "first"
+          ? "【第一人称】全程用「我」称呼玩家。"
+          : pov === "second"
+          ? "【第二人称】全程用「你」称呼玩家。"
+          : `【第三人称】全程用「${userName}」称呼玩家。`;
+
+        const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
 
 【用户自定义背景】
 ${bg}
 
 【玩家身份】${identity}
 【氛围倾向】${tone}
-【当前游戏内日期】${date}（如果背景暗示其他时间，可以合理调整）
+【当前日期】${date}
 
 ${povRule}
 
-【绝对铁律 · 主角归属】
-1. 玩家 = 视角中心。整篇剧情必须以玩家的感官/行动/位置为基准展开。
-2. 禁止跳到彼得·帕克视角。彼得是场景里的另一个角色（NPC），不是主角。只能写彼得的表情、动作、台词（从玩家能观察到的外部视角），不能写"彼得心想…""彼得感到…"。
-3. 玩家的行动要留白：剧情只写到"你/我/${userName}面临选择"的位置，然后交给选项，不要替玩家决定下一步。
-4. 禁止代替玩家说话或做决定。不能写"我说…""你走过去…"这种预先执行玩家行动的句子，只能写"对面的人看着你/我/${userName}，等你回应"。
+【绝对铁律】
+1. 玩家 = 视角中心。
+2. 禁止跳到彼得视角。
+3. 玩家的行动要留白，不替玩家决定。
+4. 不替玩家说话。
 
 【要求】
-1. 先写一段围绕玩家视角的开场剧情，500~900 字。
-2. 结尾用【选项】列出 A. B. C. D. 四个行动方向（不是"你怎么想"，而是"你可以做什么"）。
-3. 最后一行单独标：【小剧场标题: 不超过8个字】
+1. 写一段围绕玩家视角的开场剧情，500~900 字。
+2. 结尾用【选项】列出 A. B. C. D.。
+3. 最后一行：【小剧场标题: 不超过8个字】
 
-【文风】
-电影镜头感，多动作、细节、感官描写，严禁 AI 腔。
-英文对白用 *"..."*（中文翻译）格式。`;
+【文风】电影镜头感，严禁 AI 腔。英文对白用 *"..."*（中文翻译）格式。`;
 
-          const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
+        const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
 
-          const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
-const optionsIdx = res.indexOf("【选项】");
-const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
-  .replace("【剧情】", "")
-  .replace(/【小剧场标题[:：].*?】/g, "")
-  .trim();
-const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
-const title = titleMatch ? titleMatch[1].trim() : ("小剧场 " + new Date().toLocaleTimeString());
+        const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+        const optionsIdx = res.indexOf("【选项】");
+        const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+          .replace("【剧情】", "")
+          .replace(/【小剧场标题[:：].*?】/g, "")
+          .trim();
+        const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+        const title = titleMatch ? titleMatch[1].trim() : "小剧场";
 
-          const q = {
-            id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-            title: title,
-            background: bg,
-            identity: identity,
-            tone: tone,
-            pov: pov,
-            userName: userName,
-            date: date,
-            story: storyText,
-            options: optionsText,
-            history: [],
-            closed: false,
-            createdAt: Date.now()
-          };
-q.openingStory = storyText;
-q.openingOptions = optionsText;
-          const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-          all.unshift(q);
-          localStorage.setItem("sv_theaters", JSON.stringify(all));
+        const q = {
+          id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          title,
+          background: bg,
+          identity, tone, pov, userName,
+          date,
+          story: storyText,
+          options: optionsText,
+          history: [],
+          closed: false,
+          createdAt: Date.now(),
+          openingStory: storyText,
+          openingOptions: optionsText
+        };
 
-          this.bindChat(q);
-          toast("小剧场开场已生成：" + title);
-          this.openQuest(q.id);
-        } catch (e) {
-          body.innerHTML = `<div style="padding:14px"><div class="card">生成失败: ${esc(e.message)}</div></div>`;
-        }
-      };
-    },
+        const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+        all.unshift(q);
+        localStorage.setItem("sv_theaters", JSON.stringify(all));
 
-    bindChat(q) {
-  // 不新建联系人，改为把"彼得·帕克"绑定到当前剧场
-  const contacts = store.getContacts();
-  let peter = contacts.find(c => c.name === "彼得·帕克");
-  if (!peter) {
-    // 极端情况下彼得联系人被删了，补回来
-    peter = { name: "彼得·帕克", desc: "中城高中学生，有些笨拙但非常善良，总是带着一点焦虑。", affinity: 0, heart: "暂无" };
-    contacts.push(peter);
-    store.setContacts(contacts);
-  }
-  store.setPeterBinding({ theaterId: q.id });
-},
+        this.bindChat(q);
+        toast("开场已生成：" + title);
+        this.openQuest(q.id);
+      } catch (e) {
+        body.innerHTML = `<div class="th-wrap"><div class="th-error">生成失败：${esc(e.message)}</div></div>`;
+      }
+    };
+  },
 
-    openQuest(id) {
-      const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-      const q = list.find(x => x.id === id);
-      if (!q) return toast("小剧场不存在");
+  bindChat(q) {
+    const contacts = store.getContacts();
+    let peter = contacts.find(c => c.name === "彼得·帕克");
+    if (!peter) {
+      peter = { name: "彼得·帕克", desc: "中城高中学生，善良但焦虑。", affinity: 0, heart: "暂无" };
+      contacts.push(peter);
+      store.setContacts(contacts);
+    }
+    store.setPeterBinding({ theaterId: q.id });
+  },
 
-      currentApp = "theater";
-      $("#desktop").classList.remove("active");
-      $("#appView").classList.add("active");
-      $("#appTitle").textContent = "小剧场 · " + q.title;
-      const sb = $("#appSettingsBtn");
-      sb.style.display = "block";
-      sb.textContent = "‹ 返回列表";
-     sb.onclick = () => {
-  currentApp = "Theater";
-  $("#appTitle").textContent = "小剧场";
-  sb.style.display = "none";
-  sb.onclick = null;
-  apps.Theater.render($("#appBody"));
-};
-      this.renderQuest($("#appBody"), q);
-    },
+  openQuest(id) {
+    const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+    const q = list.find(x => x.id === id);
+    if (!q) return toast("小剧场不存在");
 
-    renderQuest(body, q) {
-      const isClosed = q.closed;
-      body.innerHTML = `<div style="padding:14px">
-        <div class="card" style="border-left:3px solid #e62429;padding:12px;margin-bottom:8px;">
-          <div style="font-size:11px;color:#8a8a99;">🎭 小剧场 · ${esc(q.date)}</div>
-          <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:15px;margin-top:4px;">${esc(q.title)}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px;">背景：${esc(q.background.slice(0, 80))}...</div>
-<div style="font-size:11px;color:var(--muted);margin-top:2px;">
-  人称：${q.pov === "first" ? "第一人称（我）" : q.pov === "second" ? "第二人称（你）" : "第三人称（" + esc(q.userName || "玩家") + "）"} · 氛围：${esc(q.tone)}
-</div>
+    currentApp = "theater";
+    $("#desktop").classList.remove("active");
+    $("#appView").classList.add("active");
+    $("#appTitle").textContent = q.title;
+    const sb = $("#appSettingsBtn");
+    sb.style.display = "block";
+    sb.textContent = "‹ 返回列表";
+    sb.onclick = () => {
+      currentApp = "Theater";
+      $("#appTitle").textContent = "小剧场";
+      sb.style.display = "none";
+      sb.onclick = null;
+      apps.Theater.render($("#appBody"));
+    };
+    this.renderQuest($("#appBody"), q);
+  },
+
+  renderQuest(body, q) {
+    const isClosed = q.closed;
+    const universe = WORLD.parallelUniverses?.find(u => u.key === q.universe);
+    const universeBadge = universe
+      ? `<div class="th-quest-universe" style="--u-color:${universe.color};">${esc(universe.title)} · ${esc(universe.year)}</div>`
+      : "";
+
+    body.innerHTML = `
+      <div class="th-wrap">
+        <div class="th-quest-header">
+          <div class="th-quest-title">${esc(q.title)}</div>
+          ${universeBadge}
+          <div class="th-quest-meta">
+            <span>${esc(q.date)}</span>
+            <span class="dot">·</span>
+            <span>${q.pov === "first" ? "第一人称" : q.pov === "second" ? "第二人称" : "第三人称（" + esc(q.userName || "玩家") + "）"}</span>
+            <span class="dot">·</span>
+            <span>${esc(q.tone)}</span>
+          </div>
+          <div class="th-quest-bg">${esc((q.background || "").slice(0, 100))}...</div>
         </div>
-        <div class="card" style="padding:10px;margin-bottom:10px;">
-  <div class="row" style="gap:8px;">
-    <button class="btn ghost" id="gotoChatBtn" style="font-size:12px;flex:1;">💬 去「信息」App 继续聊</button>
-    <button class="btn ghost" id="refreshQuestBtn" style="font-size:12px;flex:1;">🔄 刷新（重置当前）</button>
-  </div>
-</div>
-        <div class="story-content" style="word-break:break-word;">${formatDialogue(q.story)}</div>
+
+        <div class="th-quest-actions">
+          <button class="th-btn ghost small" id="gotoChatBtn">💬 去信息继续聊</button>
+          <button class="th-btn ghost small" id="refreshQuestBtn">🔄 重置</button>
+        </div>
+
+        <div class="th-quest-story">${formatDialogue(q.story)}</div>
+
         ${!isClosed ? `
-          <div id="thOptions"></div>
-          <div class="card">
-            <input id="thCustomAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
-            <button class="btn" id="thSendBtn">发送</button>
+          <div id="thOptions" class="th-options"></div>
+          <div class="th-custom-action">
+            <input id="thCustomAct" class="th-form-input" placeholder="自定义行动... (回车发送)">
+            <button class="th-btn primary" id="thSendBtn">发送</button>
           </div>
         ` : `
-          <div class="card" style="text-align:center;">
-            <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">这个小剧场已经完结。</div>
-            <button class="btn ghost" onclick="openApp('Theater')">返回列表</button>
+          <div class="th-quest-closed">
+            <div class="th-quest-closed-text">这个小剧场已经完结。</div>
+            <button class="th-btn ghost" onclick="openApp('Theater')">返回列表</button>
           </div>
         `}
       </div>`;
 
     body.querySelector("#gotoChatBtn").onclick = () => {
-  // 先把彼得绑定到当前剧场（防止中途丢了）
-  store.setPeterBinding({ theaterId: q.id });
-  apps.messages.currentUser = "彼得·帕克";
-  apps.messages.view = "chat";
-  currentApp = "messages";
-  $("#appView").classList.add("active");
-  $("#desktop").classList.remove("active");
-  $("#appTitle").textContent = "信息";
-  const sb = $("#appSettingsBtn");
-  sb.style.display = "flex";
-  sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
-  apps.messages.render($("#appBody"));
-};
+      store.setPeterBinding({ theaterId: q.id });
+      apps.messages.currentUser = "彼得·帕克";
+      apps.messages.view = "chat";
+      currentApp = "messages";
 
-body.querySelector("#refreshQuestBtn").onclick = async () => {
-  if (!confirm("刷新会重置当前小剧场剧情，回到这一集的开场（文字所有进度清空），确认？")) return;
+      $("#appView").classList.add("active");
+      $("#desktop").classList.remove("active");
+      $("#appTitle").textContent = "信息";
 
-  const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-  const idx = list.findIndex(x => x.id === q.id);
-  if (idx === -1) return toast("小剧场不存在");
+      const sb = $("#appSettingsBtn");
+      sb.style.display = "flex";
+      sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+      sb.querySelector("#setBtn").onclick = () => apps.messages.renderSettings($("#appBody"));
+      sb.querySelector("#retryBtn").onclick = () => {
+        if (apps.messages.lastUserText) apps.messages.sendMessage($("#appBody"), apps.messages.lastUserText, true);
+        else toast("请先发送消息后再重试");
+      };
 
-  // 用第一次生成的结果重置（存在 q.openingStory / q.openingOptions 里）
-  const openingStory = list[idx].openingStory || list[idx].story;
-  const openingOptions = list[idx].openingOptions || list[idx].options;
+      apps.messages.render($("#appBody"));
+    };
 
-  list[idx].story = openingStory;
-  list[idx].options = openingOptions;
-  list[idx].history = [];
-  list[idx].closed = false;
-  localStorage.setItem("sv_theaters", JSON.stringify(list));
+    body.querySelector("#refreshQuestBtn").onclick = () => {
+      if (!confirm("重置会回到这个剧场的开场，确认？")) return;
+      const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      const idx = list.findIndex(x => x.id === q.id);
+      if (idx === -1) return;
+      list[idx].story = list[idx].openingStory || list[idx].story;
+      list[idx].options = list[idx].openingOptions || list[idx].options;
+      list[idx].history = [];
+      list[idx].closed = false;
+      localStorage.setItem("sv_theaters", JSON.stringify(list));
+      toast("已重置");
+      this.openQuest(q.id);
+    };
 
-  toast("已重置当前小剧场");
-  this.openQuest(q.id);
-};
+    if (!isClosed) {
+      const optsEl = body.querySelector("#thOptions");
+      const opts = (q.options || "").split('\n').filter(l => /^[A-D][\.\、]/.test(l.trim()));
+      optsEl.innerHTML = opts.map(o => `
+        <button class="th-option-btn" onclick="window.advanceTheater('${q.id}', '${esc(o).replace(/'/g, "\\'")}')">${esc(o)}</button>
+      `).join("");
 
-      if (!isClosed) {
-        const optsEl = body.querySelector("#thOptions");
-        const opts = (q.options || "").split('\n').filter(l => /^[A-D][\.\、]/.test(l.trim()));
-        optsEl.innerHTML = opts.map(o =>
-          `<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.advanceTheater('${q.id}', '${esc(o).replace(/'/g, "\\'")}')">${esc(o)}</button>`
-        ).join("");
+      const input = body.querySelector("#thCustomAct");
+      const send = () => {
+        const v = input.value.trim();
+        if (!v) return toast("请输入行动");
+        window.advanceTheater(q.id, v);
+      };
+      body.querySelector("#thSendBtn").onclick = send;
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); send(); }
+      });
+    }
+  }
+},
 
-        const input = body.querySelector("#thCustomAct");
-        const send = () => {
-          const v = input.value.trim();
-          if (!v) return toast("请输入行动");
-          window.advanceTheater(q.id, v);
-        };
-        body.querySelector("#thSendBtn").onclick = send;
-        input.addEventListener("keydown", e => {
-          if (e.key === "Enter") { e.preventDefault(); send(); }
-        });
-      }
+Diary: {
+  title: "双人日记",
+  currentTab: "peter",   // peter | mine
+
+  async render(body) {
+    const peterDiary = JSON.parse(localStorage.getItem("sv_diary") || "[]");
+    const myDiary = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
+    const s = store.getState();
+    const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+
+    body.innerHTML = `
+      <div class="diary-wrap">
+        <div class="diary-header">
+          <div class="diary-title">📖 双人日记</div>
+          <div class="diary-meta">
+            <span>${s.gameYear}年${s.gameMonth}月${s.gameDay}日</span>
+            <span class="dot">·</span>
+            <span>${esc(phase.name)}</span>
+          </div>
+        </div>
+
+        <div class="diary-tabs">
+          <div class="diary-tab ${this.currentTab==='peter'?'active':''}" data-tab="peter">
+            <span>🕷️ 彼得</span>
+            <span class="count">${peterDiary.length}</span>
+          </div>
+          <div class="diary-tab ${this.currentTab==='mine'?'active':''}" data-tab="mine">
+            <span>✍️ 我的</span>
+            <span class="count">${myDiary.length}</span>
+          </div>
+        </div>
+
+        <div class="diary-actions">
+          ${this.currentTab === 'peter'
+            ? `<button class="diary-action-btn primary" id="genPeterBtn">✨ 让彼得写一篇</button>
+               <button class="diary-action-btn subtle" id="resetPeterBtn">🗑️ 删除最新</button>`
+            : `<button class="diary-action-btn primary" id="genMineBtn">✍️ 写一篇日记</button>
+               <button class="diary-action-btn subtle" id="resetMineBtn">🗑️ 删除最新</button>`}
+        </div>
+
+        <div class="diary-list" id="diaryList"></div>
+      </div>`;
+
+    const listEl = body.querySelector("#diaryList");
+    const list = this.currentTab === "peter" ? peterDiary : myDiary;
+
+    if (!list.length) {
+      listEl.innerHTML = `<div class="diary-empty">${this.currentTab === 'peter' ? '彼得还没有写过日记。' : '你还没有写过日记。'}</div>`;
+    } else {
+      listEl.innerHTML = list.slice().reverse().map((d, i) => {
+        const realIdx = list.length - 1 - i;
+        const preview = (d.content || "").slice(0, 60).replace(/\n/g, " ");
+        return `
+          <div class="diary-card" data-idx="${realIdx}">
+            <div class="diary-card-meta">
+              <span class="diary-card-date">${esc(d.date)}</span>
+              ${d.stage ? `<span class="diary-card-stage">${esc(d.stage)}</span>` : ""}
+            </div>
+            <div class="diary-card-title">${esc(d.title)}</div>
+            <div class="diary-card-preview">${esc(preview)}...</div>
+            ${d.response ? `<div class="diary-card-response">💬 ${esc((d.response || "").slice(0, 40))}...</div>` : ""}
+          </div>`;
+      }).join("");
+    }
+
+    // 事件绑定
+    body.querySelectorAll(".diary-tab").forEach(el => {
+      el.onclick = () => {
+        this.currentTab = el.dataset.tab;
+        this.render(body);
+      };
+    });
+
+    body.querySelectorAll(".diary-card").forEach(el => {
+      el.onclick = () => {
+        const idx = parseInt(el.dataset.idx);
+        const d = list[idx];
+        if (d) this.showDiary(d, this.currentTab);
+      };
+    });
+
+    if (this.currentTab === "peter") {
+      body.querySelector("#genPeterBtn").onclick = () => this.generatePeter(body);
+      body.querySelector("#resetPeterBtn").onclick = () => {
+        if (!peterDiary.length) return toast("没有可删除的日记");
+        if (!confirm("确定删除彼得最新一篇日记？")) return;
+        peterDiary.pop();
+        localStorage.setItem("sv_diary", JSON.stringify(peterDiary));
+        this.render(body);
+      };
+    } else {
+      body.querySelector("#genMineBtn").onclick = () => this.writeMine(body);
+      body.querySelector("#resetMineBtn").onclick = () => {
+        if (!myDiary.length) return toast("没有可删除的日记");
+        if (!confirm("确定删除你最新一篇日记？")) return;
+        myDiary.pop();
+        localStorage.setItem("sv_diary_me", JSON.stringify(myDiary));
+        this.render(body);
+      };
     }
   },
 
-Diary: {
-    title: "彼得的日记",
-    async render(body) {
-      const diary = JSON.parse(localStorage.getItem("sv_diary") || "[]");
+  async generatePeter(body) {
+    body.querySelector("#diaryList").innerHTML = `<div class="loader"><div class="spin"></div>彼得正在写日记...</div>`;
+    try {
       const s = store.getState();
       const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const diaries = JSON.parse(localStorage.getItem("sv_diary") || "[]");
+      const myDiaries = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
 
-     body.innerHTML = `<div style="padding:14px">
-        <div class="card" style="border-left:3px solid #2d6bff;padding:12px;margin-bottom:12px;">
-          <div style="font-size:11px;color:#8a8a99;margin-bottom:4px;">📓 彼得的日记本</div>
-          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
-            当前日期：<b style="color:var(--text);">${s.gameYear}年${s.gameMonth}月${s.gameDay}日</b><br>
-            所处阶段：${phase.name}<br>
-            共 ${diary.length} 篇日记
-          </div>
-        </div>
+      const history = s.history || [];
+      const recentMain = history.slice(-3).map(h => h.story).join("\n\n———\n\n").slice(0, 1500);
 
-        <div class="card">
-          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">
-            日记由彼得·帕克根据最近的主线剧情、与玩家的聊天、日常状态撰写。生成一篇新日记会保留旧日记；重置只会删除最新那一篇。
-          </p >
-          <div class="row" style="gap:8px;">
-            <button class="btn" id="diaryGenBtn" style="flex:1;">✍️ 生成新日记</button>
-            <button class="btn ghost" id="diaryResetBtn" style="flex:1;color:#e62429;border-color:#e62429;">🗑️ 重置最新一篇</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>📖 日记本（${diary.length} 篇）</h3>
-          <div id="diaryList">
-            ${diary.length ? diary.slice().reverse().map((d, i) => {
-              const realIdx = diary.length - 1 - i;
-              return `<div data-idx="${realIdx}" style="padding:10px;border-bottom:1px solid var(--line);cursor:pointer;">
-                <div style="font-size:11px;color:#8a8a99;">${esc(d.date)} · ${esc(d.stage || "")}</div>
-                <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:14px;margin-top:4px;">${esc(d.title)}</div>
-              </div>`;
-            }).join("") : '<p style="color:var(--muted);font-size:13px;">还没有日记。点上方「生成新日记」开始。</p >'}
-          </div>
-        </div>
-      </div>`;
-
-      const sb = $("#appSettingsBtn");
-      sb.style.display = "none";
-
-      body.querySelectorAll("#diaryList [data-idx]").forEach(el => {
-        el.onclick = () => {
-          const idx = parseInt(el.dataset.idx);
-          const d = diary[idx];
-          if (!d) return;
-          this.showDiary(d);
-        };
-      });
-
-      body.querySelector("#diaryGenBtn").onclick = () => {
-        this.generate(body);
-      };
-
-      body.querySelector("#diaryResetBtn").onclick = () => {
-        if (!diary.length) return toast("还没有日记可重置");
-        if (!confirm("确定要删除最新一篇日记吗？（此操作不可恢复）")) return;
-        diary.pop();
-        localStorage.setItem("sv_diary", JSON.stringify(diary));
-        toast("已删除最新一篇日记");
-        this.render(body);
-      };
-    },
-
-   async generate(body) {
-      body.innerHTML = `<div class="loader"><div class="spin"></div>彼得正在写日记...</div>`;
-
-      try {
-const s = store.getState();
-        const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
-        const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
-        const diaries = JSON.parse(localStorage.getItem("sv_diary") || "[]");
-
-        const history = s.history || [];
-        const recentMain = history.slice(-3).map(h => h.story).join("\n\n———\n\n").slice(0, 1500);
-
-        let recentChats = "";
-        const chats = store.getChats();
-        for (const name of ["彼得·帕克", "内德·利兹", "米歇尔·琼斯", "梅婶"]) {
-          const arr = chats[name] || [];
-          const last = arr.slice(-3).filter(m => m.content && !m.content.startsWith("[语音]"));
-          if (last.length) {
-            recentChats += `【与${name}最近的短信】\n` + last.map(m =>
-              (m.role === "me" ? "我：" : name + "：") + m.content.replace(/[“”"']/g, "")
-            ).join("\n") + "\n\n";
-          }
+      let recentChats = "";
+      const chats = store.getChats();
+      for (const name of ["彼得·帕克", "内德·利兹", "米歇尔·琼斯", "梅婶"]) {
+        const arr = chats[name] || [];
+        const last = arr.slice(-3).filter(m => m.content && !m.content.startsWith("[语音]"));
+        if (last.length) {
+          recentChats += `【与${name}】\n` + last.map(m =>
+            (m.role === "me" ? "我：" : name + "：") + m.content.replace(/[“”"']/g, "")
+          ).join("\n") + "\n\n";
         }
+      }
 
-        const lastDiary = diaries.length ? diaries[diaries.length - 1] : null;
-        const lastDiaryHint = lastDiary
-          ? `\n【上一篇日记（${lastDiary.date}）标题】${lastDiary.title}\n【上一篇日记大约结尾】${lastDiary.content.slice(-200)}\n（新日记要衔接、体现成长或变化，但不要重复上一篇。）`
-          : "";
+      // 玩家最近的日记（彼得可能"偷偷看过"）
+      const myRecent = myDiaries.slice(-2).map(d => `【${d.date}】${d.title}\n${d.content.slice(0, 300)}`).join("\n\n");
 
-        const sysPrompt = `你现在是漫威的「彼得·帕克」，正在写你自己的私人日记。
+            const lastDiary = diaries.length ? diaries[diaries.length - 1] : null;
+      const lastDiaryHint = lastDiary
+        ? `\n【上一篇日记（${lastDiary.date}）标题】${lastDiary.title}\n【上一篇日记大约结尾】${lastDiary.content.slice(-200)}\n（新日记要衔接、体现成长或变化，但不要重复上一篇。）`
+        : "";
+
+      // ★ 判断玩家是否真的写过日记
+      const hasPlayerDiary = myRecent && myRecent.trim().length > 0;
+
+      // ★ 根据是否写过日记，给 AI 完全不同的指令
+      const playerDiarySection = hasPlayerDiary
+        ? `
+【玩家最近的日记（你可能偷偷看过，可以隐晦提到）】
+${myRecent}
+
+【关于玩家日记的规则】
+- 你可以**隐晦地**提到"我好像看到了ta的日记"或"ta最近心情不错"。
+- 不要复述日记内容，只是一笔带过。
+- 如果日记里提到了你，你可以有点不好意思地回应。
+`
+        : `
+【玩家最近的日记】
+玩家**还没有写过任何日记**。
+
+【绝对禁止 · 违反即失败】
+- **禁止**提到"我看到了ta的日记"、"ta写的日记"、"你写的那些"等任何暗示玩家写过日记的话。
+- **禁止**编造玩家日记的内容。
+- **禁止**假装自己"偷看"过什么。
+- 如果实在想提到玩家，只能根据【最近聊天】和【最近主线剧情】里真实发生的事来写。
+`;
+
+      const sysPrompt = `你现在是漫威的「彼得·帕克」，正在写**自己的私人日记**。
 
 【当前日期】${date}
 【当前阶段】${phase.name}
 【阶段概述】${phase.summary}
-【当前彼得好感度（与你关系最近的人）】${s.affinity}/200
+【好感度】${s.affinity}/200
 
-【最近发生的主线剧情（供参考）】
-${recentMain || "（暂无主线记录）"}
+【最近主线剧情】
+${recentMain || "（暂无）"}
 
-【最近和朋友的短信（供参考）】
+【最近聊天】
 ${recentChats || "（暂无）"}
+${playerDiarySection}
 ${lastDiaryHint}
 
+【彼得的说话风格 · 极其重要 · 必须模仿】
+彼得的文风是：**话痨 + 自嘲 + 焦虑 + 真诚 + 偶尔跑题 + 突然认真**。
+他写日记的样子就像在自言自语吐槽，不是文学小说，而是一个高中生偷偷写下的内心独白。
+
+具体表现：
+1. **话痨感**：一句话能拖很长，中间不停补充"其实……"、"我是说……"、"好吧其实也不是……"
+2. **自嘲**：经常吐槽自己很蠢、搞砸了、被内德笑话、被梅婶念叨
+3. **焦虑感**：担心成绩、担心钱、担心梅婶、担心自己做得不够好
+4. **突然认真**：吐槽到一半突然说一句很真诚的话，然后又赶紧岔开
+5. **跑题**：写着写着突然想起别的事，插一句进去
+6. **口语化**：多用"真的"、"老实说"、"怎么说呢"、"反正"、"总之"、"天哪"
+7. ** emoji**：这是关键！彼得会用一些简单的 emoji 来表达情绪，比如：
+   - 尴尬：😅 🤦‍♂️
+   - 焦虑：😰 😬
+   - 开心：😄 ✨
+   - 累：😩 😪
+   - 无奈：🤷‍♂️
+   - 认真：💭
+   - 蜘蛛侠相关：🕷️ 🕸️
+   **注意：不要每句都加，一段里加 1-3 个就够，自然一点。**
+
 【绝对铁律 · 违反即失败】
-1. 这是一篇**私人日记**！就像高中生偷偷写在笔记本里的那种。
-2. 视角是彼得·帕克本人，用"我"来写。
-3. 严禁使用"他/她"来指代自己。
-4. 严禁出现小说化描写（如"深吸一口气""阳光洒进窗户"这类英文小说翻译腔）。
-5. 严禁出现任何括号 () （） 或星号 * * 来标注动作、情绪、场景。
-6. 严禁使用"英文原句（中文翻译）"格式！全部用中文日记口吻写。
-7. 严禁出现 MCU 主线之外的内容（不提前出现秃鹫、灭霸、神秘客等）。
-8. 不要标注好感度、不要括号说明、不要结尾提问。
+1. 私人日记！用"我"来写。
+2. **严禁小说化描写**（"深吸一口气"、"阳光洒进窗户"、"心中涌起"等英文小说翻译腔）。
+3. **严禁括号或星号标注动作**（不要写"（叹气）"、"*揉了揉眼睛*"）。
+4. 严禁"英文原句（中文翻译）"格式。
+5. 严禁 MCU 主线之外的内容。
+6. 严禁像 AI 一样写总结句、升华句、哲理句。
+7. 严禁用"他/她"指代自己。
+8. **只能根据上面提供的真实信息写，不能编造任何未提供的事件。**
 
 【内容要求】
 1. 长度 300~600 字。
-2. 内容可以包含：今天发生的事、学校/打工/梅婶/内德/MJ 的日常、蜘蛛侠相关的烦恼或小确幸、自己内心的自嘲和吐槽。
-3. 语气要贴近彼得：有点话痨、有点自嘲、有点焦虑、但又很真诚。
-4. 贴合当前阶段：${phase.name}（${phase.summary}）
-5. 时间、地点、人物、事件必须与当前日期 ${date} 和阶段自洽，不能跳跃未来。
+2. 内容可以写：今天发生的事、学校/打工/梅婶/内德/MJ 的日常、蜘蛛侠的烦恼、内心的自嘲。
+3. 语气贴近彼得：话痨、自嘲、焦虑、真诚、偶尔跑题。
 
-【格式要求 · 严格】
-第一行：【标题: 6个字以内的短标题】
+【示例风格 · 参考这个语气】
+"今天真的累死了😩 化学课老师讲了一整节有机分子结构，我脑子里想的全是蛛丝配方能不能再优化一下，结果被点名回答问题，站起来愣了三秒。内德在旁边憋笑，我发誓我真的听见了。
+放学后去皇后区转了一圈，抓了两个偷车贼，帮助别人的感觉...还不错🕸️
+梅婶今天做了意面，说是"犒劳一下辛苦的高中生"。总之，明天还要早起，希望别再迟到了（虽然大概率还是会迟到🙄）"
+
+【格式】
+第一行：【标题: 6个字以内】
 第二行空一行
-第三行开始写正文（纯中文，不要小标题，不要分段标记，正常分段即可）
-
-不要输出任何解释性文字，只输出日记本身。`;
+第三行开始正文。`;
 
       const res = await callAI([{ role: "user", content: "写今天的日记" }], sysPrompt);
 
-  const lines = res.replace(/```/g, "").trim().split("\n");
-  let title = "无题";
-  let startIdx = 0;
-
-  if (lines[0] && lines[0].includes("标题")) {
-    title = lines[0].replace(/【.*?标题[:：]\s*/, "").replace(/】/g, "").trim().slice(0, 12) || "无题";
-    startIdx = 1;
-    while (startIdx < lines.length && !lines[startIdx].trim()) startIdx++;
-  }
-
-  const content = lines.slice(startIdx).join("\n").trim();
-  if (!content) throw new Error("日记内容为空，请重试");
-
-  diaries.push({
-    date: date,
-    title: title,
-    content: content,
-    stage: phase.name,
-    createdAt: Date.now()
-  });
-  localStorage.setItem("sv_diary", JSON.stringify(diaries));
-
-  toast("日记已生成：" + title);
-  this.render(body);
-} catch (e) {
-        body.innerHTML = `<div style="padding:14px"><div class="card">生成失败: ${esc(e.message)}</div></div>`;
+      const lines = res.replace(/```/g, "").trim().split("\n");
+      let title = "无题";
+      let startIdx = 0;
+      if (lines[0] && lines[0].includes("标题")) {
+        title = lines[0].replace(/【.*?标题[:：]\s*/, "").replace(/】/g, "").trim().slice(0, 12) || "无题";
+        startIdx = 1;
+        while (startIdx < lines.length && !lines[startIdx].trim()) startIdx++;
       }
-    },
+      const content = lines.slice(startIdx).join("\n").trim();
+      if (!content) throw new Error("日记内容为空");
 
-    showDiary(d) {
-      const div = document.createElement("div");
-      div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:300;padding:20px;overflow-y:auto;color:#ddd;font-size:14px;line-height:1.8;";
-      div.innerHTML = `
-        <div style="max-width:520px;margin:0 auto;">
-          <div style="background:#14141c;padding:20px;border-radius:12px;border-left:3px solid #2d6bff;margin-bottom:16px;">
-            <div style="font-size:11px;color:#8a8a99;margin-bottom:6px;">${esc(d.date)} · ${esc(d.stage || "")}</div>
-            <div style="font-size:16px;font-weight:bold;color:var(--sidebar-title-color);margin-bottom:12px;">${esc(d.title)}</div>
-            <div style="white-space:pre-wrap;color:var(--sidebar-text-color);font-family:'SimSun','宋体',serif;">${esc(d.content)}</div>
-          </div>
-          <button class="btn" onclick="this.parentNode.parentNode.remove()">关闭</button>
-        </div>
-      `;
-      document.querySelector(".device").appendChild(div);
+      diaries.push({
+        date, title, content,
+        stage: phase.name,
+        createdAt: Date.now()
+      });
+      localStorage.setItem("sv_diary", JSON.stringify(diaries));
+      toast("彼得写了一篇日记：" + title);
+      this.render(body);
+    } catch (e) {
+      body.querySelector("#diaryList").innerHTML = `<div class="diary-empty">生成失败：${esc(e.message)}</div>`;
     }
   },
+
+  async writeMine(body) {
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:#000d;z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;";
+    div.innerHTML = `
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;display:flex;flex-direction:column;">
+        <h3 style="margin:0 0 12px;color:var(--text);font-size:16px;">✍️ 写一篇日记</h3>
+        <input id="md_title" placeholder="标题（6字以内）" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;">
+        <textarea id="md_content" placeholder="今天发生了什么..." style="width:100%;flex:1;min-height:200px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;line-height:1.6;resize:none;box-sizing:border-box;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button id="md_cancel" class="btn ghost" style="flex:1;">取消</button>
+          <button id="md_ok" class="btn" style="flex:1;">保存并让彼得回应</button>
+        </div>
+      </div>`;
+    document.querySelector(".device").appendChild(div);
+
+    div.querySelector("#md_cancel").onclick = () => div.remove();
+    div.querySelector("#md_ok").onclick = async () => {
+      const title = div.querySelector("#md_title").value.trim() || "无题";
+      const content = div.querySelector("#md_content").value.trim();
+      if (!content) return toast("请写点内容");
+
+      const s = store.getState();
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+      const entry = {
+        date, title: title.slice(0, 12), content,
+        stage: phase.name,
+        createdAt: Date.now(),
+        response: ""
+      };
+      myDiaries.push(entry);
+      localStorage.setItem("sv_diary_me", JSON.stringify(myDiaries));
+      div.remove();
+      toast("日记已保存，正在让彼得回应...");
+
+      // 让彼得回应
+      try {
+        const sysPrompt = `你是漫威的彼得·帕克。玩家刚写了一篇日记，你"无意中"看到了（或者玩家主动给你看）。
+
+【当前日期】${date}
+【玩家日记标题】${title}
+【玩家日记内容】
+${content}
+
+【你的任务】
+写一段彼得的**读后感 / 回应**（100-250 字），用第一人称"我"。
+
+【彼得的语气 · 极其重要】
+1. 话痨 + 自嘲 + 偶尔跑题 + 真诚。
+2. 不要写得像 AI 一样工整，要像真人发消息一样碎碎念。
+3. 可以用"老实说"、"怎么说呢"、"反正"、"其实吧"、"天哪"等口语。
+4. **可以加少量 emoji 和颜文字**表达情绪：
+   - 尴尬：😅 🤦‍♂️
+   - 开心：😄 ✨
+   - 担心：😰
+   - 无奈：🤷‍♂️
+   - 认真：💭
+   一段里加 1-2 个就够，不要堆砌。
+5. 不要复述日记内容，要**回应它**——比如：
+   - 玩家写了心事 → 彼得会认真安慰，但可能用自嘲的方式
+   - 玩家写了开心的事 → 彼得会跟着高兴，可能说"我也开心了"
+   - 玩家提到彼得自己 → 彼得会有点不好意思，可能岔开话题
+6. 严禁括号、星号标注动作（不要写"（挠头）"、"*笑了*"）。
+7. 严禁"英文原句（中文翻译）"格式。
+8. 全部中文。
+
+直接输出回应本身，不要任何格式标记。`;
+
+        const res = await callAI([{ role: "user", content: "回应" }], sysPrompt);
+        entry.response = res.trim();
+        myDiaries[myDiaries.length - 1] = entry;
+        localStorage.setItem("sv_diary_me", JSON.stringify(myDiaries));
+        toast("彼得回应了你的日记");
+      } catch (e) {
+        toast("彼得回应失败：" + e.message);
+      }
+
+      this.render(body);
+    };
+  },
+
+  showDiary(d, who) {
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+    const isPeter = who === "peter";
+    div.innerHTML = `
+      <div style="max-width:520px;margin:20px auto;">
+        <div class="diary-detail">
+          <div class="diary-detail-meta">${esc(d.date)} · ${esc(d.stage || "")} · ${isPeter ? "🕷️ 彼得" : "✍️ 我"}</div>
+          <div class="diary-detail-title">${esc(d.title)}</div>
+          <div class="diary-detail-content">${esc(d.content)}</div>
+          ${d.response ? `
+            <div class="diary-detail-response">
+              <div class="diary-detail-response-label">💬 彼得的回应</div>
+              <div class="diary-detail-response-text">${esc(d.response)}</div>
+            </div>
+          ` : ""}
+        </div>
+        <button class="btn" id="diaryCloseBtn" style="margin-top:12px;">关闭</button>
+      </div>
+    `;
+    document.querySelector(".device").appendChild(div);
+
+    // ★ 正确绑定关闭：只删自己这一层遮罩
+    div.querySelector("#diaryCloseBtn").onclick = () => div.remove();
+    // 点遮罩空白处也能关
+    div.onclick = (e) => { if (e.target === div) div.remove(); };
+  }
+},
 
   contacts: {
     title: "通讯录",
@@ -4951,13 +6031,58 @@ window.showMsgBanner = (sender, preview) => {
 // 自动识别剧情中的英语或中文对话，并应用仿宋斜体
 function formatDialogue(text) {
   if (!text) return "";
-  let safeText = esc(text);
-  // 匹配 *"..."* 格式或 “...” 格式
-  // 捕获组 1 为 *"..."*，捕获组 2 为 “...”
-  safeText = safeText.replace(/(\*".*?"\*)|(“[^”]*”)/g, (match) => {
-    return `<span class="dialogue-text">${match}</span>`;
+  let s = esc(text);
+
+  // ✂️ 第一步：把各种"对话包裹格式"统一识别并包 span
+  // 顺序很重要：先匹配最长的、最具体的，避免被短的正则抢先吃掉
+  const patterns = [
+    // 1) *"..."*  —— 星号 + 半角引号（最标准）
+    /\*"[^"\n]*"\*/g,
+    // 2) *“...”*  —— 星号 + 中文弯引号
+    /\*“[^”\n]*”\*/g,
+    // 3) "..."  —— 纯半角引号（无星号）
+    /"[^"\n]*"/g,
+    // 4) “...”  —— 纯中文弯引号
+    /“[^”\n]*”/g,
+    // 5) *...*  —— 纯星号包裹（无引号），放最后，避免吃掉 markdown 加粗
+    /\*[^*\n]{2,}\*/g,
+  ];
+
+  // 用一个 Set 记录已被包裹的位置，避免重复包裹
+  const spans = [];
+
+  // 收集所有匹配
+  patterns.forEach((re) => {
+    let m;
+    while ((m = re.exec(s)) !== null) {
+      spans.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
+    }
   });
-  return safeText;
+
+  // 按起点排序，去重（重叠的保留最长的那段）
+  spans.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+
+  const merged = [];
+  for (const sp of spans) {
+    const last = merged[merged.length - 1];
+    if (last && sp.start < last.end) {
+      // 有重叠：如果新的更长，替换
+      if (sp.end - sp.start > last.end - last.start) {
+        merged[merged.length - 1] = sp;
+      }
+    } else {
+      merged.push(sp);
+    }
+  }
+
+  // 从后往前替换，避免索引错位
+  for (let i = merged.length - 1; i >= 0; i--) {
+    const sp = merged[i];
+    const wrapped = `<span class="dialogue-text">${sp.text}</span>`;
+    s = s.slice(0, sp.start) + wrapped + s.slice(sp.end);
+  }
+
+  return s;
 }
 // 初始化主题
 (function(){
