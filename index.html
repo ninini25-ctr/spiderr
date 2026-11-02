@@ -1357,22 +1357,61 @@ const globalMusic = {
 };
 globalMusic.init();
 async function callAI(messages, systemPrompt) {
-  // 过滤掉空 content，避免 400
   messages = (messages || []).filter(m => m && typeof m.content === "string" && m.content.trim() !== "");
   const cfg = store.getConfig();
   if (!cfg.enabled) throw new Error("AI 未启用");
   if (!cfg.apiKey) throw new Error("请先填入 API Key");
-  const url = (cfg.baseUrl||"https://api.openai.com/v1").replace(/\/+$/,"") + "/chat/completions";
-  const res = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.apiKey},body:JSON.stringify({model:cfg.model,messages:[{role:"system",content:systemPrompt},...messages],temperature:0.85})});
-  if (!res.ok) {
-  let detail = "";
+  const url = (cfg.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions";
+
+  const body = JSON.stringify({
+    model: cfg.model,
+    messages: [{ role: "system", content: systemPrompt }, ...messages],
+    temperature: 0.85
+  });
+
+  // ★ 关键 1：60 秒超时（世界线长剧情需要）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+
   try {
-    const errBody = await res.text();
-    detail = " | " + errBody.slice(0, 300);
-  } catch (_) {}
-  throw new Error("API 报错: " + res.status + detail);
-}
-  return (await res.json()).choices[0].message.content.trim();
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + cfg.apiKey
+      },
+      body,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const errBody = await res.text();
+        detail = " | " + errBody.slice(0, 300);
+      } catch (_) {}
+      throw new Error("API 报错: " + res.status + detail);
+    }
+    const data = await res.json();
+    return (data.choices?.[0]?.message?.content || "").trim();
+  } catch (e) {
+    clearTimeout(timeoutId);
+    // ★ 关键 2：把 iOS 的 "Load failed" 翻译成人话
+    if (e.name === "AbortError") {
+      throw new Error("请求超时（60秒）—— 世界线生成太长，请重试或换更快的模型");
+    }
+    if (/load failed|failed to fetch|networkerror/i.test(e.message || "")) {
+      throw new Error(
+        "网络请求被中断（iOS 常见）。可能原因：\n" +
+        "1. API 域名不在 HTTPS 白名单\n" +
+        "2. 请求超过 30 秒被 Safari 中断\n" +
+        "3. CORS 预检失败\n" +
+        "建议：换用 https 的、支持 CORS 的 API 域名；或换设备（电脑 Chrome）试。"
+      );
+    }
+    throw e;
+  }
 }
 
 async function fetchModels(baseUrl, apiKey) {
@@ -2190,7 +2229,7 @@ Appearance: {
         <h3>👤 用户头像</h3>
         <div class="row" style="gap:12px;">
           <div style="width:50px;height:50px;border-radius:50%;background:var(--panel-2);overflow:hidden;">
-            ${cfg.userAvatar ? `< img src="${cfg.userAvatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
+            ${cfg.userAvatar ? `<img src="${cfg.userAvatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
           </div>
           <input type="file" id="ap_avatar" accept="image/*" style="flex:1;font-size:12px">
         </div>
@@ -2201,7 +2240,7 @@ Appearance: {
         ${contacts.filter(c => !c.isTheater).map(c => `
           <div class="row" style="gap:12px;margin-bottom:12px;align-items:center;">
             <div style="width:40px;height:40px;border-radius:50%;background:var(--panel-2);overflow:hidden;flex-shrink:0;">
-              ${c.avatar ? `< img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+              ${c.avatar ? `<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
             </div>
             <div style="flex:1;font-size:13px;color:var(--text);">${esc(c.name)}</div>
             <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
@@ -2866,7 +2905,7 @@ return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">$
     chatHtml += `</div>`;
       const curContact = store.getContacts().find(c => c.name === self.currentUser);
 const avatarHtml = curContact && curContact.avatar 
-  ? `< img src="${curContact.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+  ? `<img src="${curContact.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
   : `<div style="width:28px;height:28px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
 
 chatHtml += `<div style="position:absolute;top:0;left:0;right:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;">
@@ -2984,29 +3023,72 @@ chatHtml += `<div style="position:absolute;top:0;left:0;right:0;padding:8px 14px
   };
 
   menu.appendChild(copyItem);
-  menu.appendChild(quoteItem);
-  menu.appendChild(delItem);
-  document.body.appendChild(menu);
+menu.appendChild(quoteItem);
+menu.appendChild(delItem);
+document.body.appendChild(menu);
 
-  // 用一层遮罩，点击遮罩就关菜单
-  const mask = document.createElement("div");
-  mask.className = "__global_menu_mask";
-  mask.style.cssText = "position:fixed;inset:0;z-index:998;background:transparent;";
-  document.body.appendChild(mask);
+// 用一层遮罩，点击遮罩就关菜单
+const mask = document.createElement("div");
+mask.className = "__global_menu_mask";
+mask.style.cssText = "position:fixed;inset:0;z-index:998;background:transparent;";
+document.body.appendChild(mask);
 
-  const closeMenu = () => {
-    menu.remove();
-    mask.remove();
-    document.removeEventListener("click", closeMenu);
-  };
-  mask.onclick = closeMenu;
-  document.addEventListener("touchstart", closeMenu, {passive:true});
+let closed = false;
+const closeMenu = () => {
+  if (closed) return;
+  closed = true;
+  menu.remove();
+  mask.remove();
+  document.removeEventListener("click", closeMenu);
+  document.removeEventListener("touchstart", onTouchStart);
 };
 
-      el.addEventListener("touchstart", (e) => { pressTimer = setTimeout(() => showMenu(e), 600); }, {passive: true});
-      el.addEventListener("touchend", () => clearTimeout(pressTimer));
-      el.addEventListener("touchmove", () => clearTimeout(pressTimer));
-      el.addEventListener("contextmenu", showMenu);
+// ★ 关键：延迟 350ms 再绑定全局 touchstart，
+// 避开"长按→菜单出现→手指还没抬"的那次 touchstart
+const onTouchStart = (e) => {
+  // 如果点的是菜单本身，不关
+  if (menu.contains(e.target)) return;
+  closeMenu();
+};
+
+// 遮罩点击 = 关闭
+mask.onclick = closeMenu;
+
+// 菜单项内部点击 = 关闭（但先让菜单项的 onclick 执行）
+menu.addEventListener("click", (e) => {
+  // 让菜单项的 onclick 自然执行，执行完再关
+  setTimeout(closeMenu, 50);
+});
+
+// 延迟绑定全局关闭监听
+setTimeout(() => {
+  if (closed) return;
+  document.addEventListener("touchstart", onTouchStart, { passive: true });
+  document.addEventListener("click", (e) => {
+    if (menu.contains(e.target)) return;
+    closeMenu();
+  }, { once: true });
+}, 350);
+};
+
+      // ★ 双击打开菜单（不再长按）
+let _lastTap = 0;
+el.addEventListener("touchend", (e) => {
+  const now = Date.now();
+  if (now - _lastTap < 320) {
+    e.preventDefault();
+    showMenu(e);
+    _lastTap = 0;
+  } else {
+    _lastTap = now;
+  }
+}, { passive: false });
+
+// 双击打开菜单（鼠标/桌面端）
+el.addEventListener("dblclick", (e) => {
+  e.preventDefault();
+  showMenu(e);
+});
     });
     
 body.querySelector("#backToListBtn").onclick = () => {
@@ -4207,7 +4289,7 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
    - **严禁**用：纯引号"Hey"、纯星号*Hey*、全角星号＊、markdown 加粗**Hey**
 4. 场景描写要贴近纽约皇后区的真实生活——地铁、老旧公寓、便利店、学校走廊。
 5. 剧情必须严格承接上一轮的结尾与玩家的选择。
-6. 生成不少于 1000 字的高质量剧情。
+6. 生成 600-800 字的高质量剧情。
 7. 在剧情末尾，用【选项】列出 A. B. C. D. 四个不同方向选项。
 8. 在剧情末尾标注【好感度变动: +X】或【好感度变动: -X】，X 绝对值 ≤5。
 9. **如果本回合玩家选项导致某个可变结局发生变化，还必须在末尾追加一行**：
@@ -4379,10 +4461,11 @@ instagram: {
         <button class="btn ghost" id="igRefreshBtn" style="flex:1">🔄 刷新</button>
       </div>
       ${posts && posts.length > 0 ? posts.map((p,i)=>`
-      <div class="tweet">
-        <div class="head">
+      <div class="tweet" data-post-idx="${i}">
+        <div class="head" style="position:relative;">
           <div style="width:36px;height:36px;border-radius:50%;background:#3a3a4d;display:flex;align-items:center;justify-content:center;font-weight:700">${esc((p.name||"?")[0])}</div>
-          <div><div class="name" style="color:var(--text)">${esc(p.name)}</div><div class="handle">${esc(p.handle || '@user')}</div></div>
+          <div style="flex:1;min-width:0;"><div class="name" style="color:var(--text)">${esc(p.name)}</div><div class="handle">${esc(p.handle || '@user')}</div></div>
+          ${p.img && p.img !== "ERROR" ? `<button class="ig-more-btn" data-idx="${i}" style="background:none;border:none;color:var(--muted);font-size:22px;font-weight:700;cursor:pointer;padding:0 8px;line-height:1;">…</button>` : ""}
         </div>
        ${p.img === "ERROR" 
           ? `<div style="width:100%; aspect-ratio:1; background:#222; display:flex; align-items:center; justify-content:center; border-radius:12px; margin-bottom:8px; color:#888;">[图片生成失败]<br>${esc(p.text)}</div>` 
@@ -4559,63 +4642,116 @@ ${promptHint}
       }
     };
 
-   // ===== 长按图片弹出刷新菜单 =====
-body.querySelectorAll(".ig-image").forEach(imgEl => {
-  let pressTimer;
-  
-  const handleLongPress = (e) => {
-    e.preventDefault();
-    const idx = parseInt(imgEl.dataset.idx);
-    const all = store.getPosts();
-    const post = all.instagram[idx];
-    if (!post || !post.imgPrompt) return toast("该图片没有原始提示词，无法重绘");
+   // ===== 「…」按钮 → 打开菜单 =====
+    body.querySelectorAll(".ig-more-btn").forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-    const menu = document.createElement("div");
-    menu.className = "__global_menu";
-    menu.style.cssText = "position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);background:#222;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:150px;text-align:center;";
-    
-    const mask = document.createElement("div");
-    mask.className = "__global_menu_mask";
-    mask.style.cssText = "position:fixed;inset:0;z-index:998;background:transparent;";
+        const idx = parseInt(btn.dataset.idx);
+        const all = store.getPosts();
+        const post = all.instagram[idx];
+        if (!post) return;
 
-const redrawItem = document.createElement("div");
-redrawItem.style.cssText = "padding:8px;cursor:pointer;color:#fff;";
-redrawItem.textContent = "🔄 重新生成此图";
-redrawItem.onclick = async () => {
-  menu.remove();
-  mask.remove();
-  body.innerHTML = `<div class="loader"><div class="spin"></div>重新绘制中...</div>`;
-  try {
-    const newImgUrl = await generateImage(post.imgPrompt);
-    const latestAll = store.getPosts();
-    latestAll.instagram[idx].img = newImgUrl;
-    store.setPosts(latestAll);
-    apps.instagram.render(body);
-    toast("图片已更新");
-  } catch (err) {
-    toast("生成失败: " + err.message);
-    apps.instagram.render(body);
-  }
-};
+        // ==== 创建菜单 ====
+        const menu = document.createElement("div");
+        menu.className = "__global_menu";
+        menu.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#222;border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.6);min-width:200px;overflow:hidden;";
 
-menu.appendChild(redrawItem);
-document.body.appendChild(menu);
-document.body.appendChild(mask);
-    
-    const closeMenu = () => {
-      menu.remove();
-      mask.remove();
-      document.removeEventListener("click", closeMenu);
-      document.removeEventListener("touchstart", closeMenu);
-    };
-    mask.onclick = closeMenu;
-    document.addEventListener("touchstart", closeMenu, {passive: true});
-  };
+        // 重新生成图片
+        if (post.imgPrompt) {
+          const redrawItem = document.createElement("div");
+          redrawItem.style.cssText = "padding:14px 18px;cursor:pointer;color:#fff;font-size:14px;border-radius:10px;transition:background .15s;";
+          redrawItem.textContent = "🔄 重新生成图片";
+          redrawItem.onmouseenter = () => redrawItem.style.background = "rgba(45,107,255,0.15)";
+          redrawItem.onmouseleave = () => redrawItem.style.background = "transparent";
+          redrawItem.onclick = async () => {
+            closeMenu();
+            body.innerHTML = `<div class="loader"><div class="spin"></div>重新绘制中...</div>`;
+            try {
+              const newImgUrl = await generateImage(post.imgPrompt);
+              const latestAll = store.getPosts();
+              latestAll.instagram[idx].img = newImgUrl;
+              store.setPosts(latestAll);
+              apps.instagram.render(body);
+              toast("图片已更新");
+            } catch (err) {
+              toast("生成失败: " + err.message);
+              apps.instagram.render(body);
+            }
+          };
+          menu.appendChild(redrawItem);
+        } else {
+          const disabledItem = document.createElement("div");
+          disabledItem.style.cssText = "padding:14px 18px;color:#666;font-size:14px;";
+          disabledItem.textContent = "🔄 重新生成图片（无原始提示词）";
+          menu.appendChild(disabledItem);
+        }
 
- imgEl.addEventListener("touchstart", (e) => { pressTimer = setTimeout(() => handleLongPress(e), 600); }, {passive: true});
-      imgEl.addEventListener("touchend", () => clearTimeout(pressTimer));
-      imgEl.addEventListener("touchmove", () => clearTimeout(pressTimer));
-      imgEl.addEventListener("contextmenu", (e) => { e.preventDefault(); handleLongPress(e); });
+        // 保存图片
+        const saveItem = document.createElement("div");
+        saveItem.style.cssText = "padding:14px 18px;cursor:pointer;color:#fff;font-size:14px;border-radius:10px;transition:background .15s;";
+        saveItem.textContent = "💾 保存图片";
+        saveItem.onmouseenter = () => saveItem.style.background = "rgba(45,107,255,0.15)";
+        saveItem.onmouseleave = () => saveItem.style.background = "transparent";
+        saveItem.onclick = async () => {
+          closeMenu();
+          try {
+            // 用 fetch 拿到 blob 再下载，避免跨域直接 a[download] 失效
+            const resp = await fetch(post.img, { mode: "cors" });
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            // 文件名：name_text前10字.png
+            const safeName = String(post.name || "image").replace(/[\\/:*?"<>|]/g, "_");
+            a.download = `${safeName}_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 3000);
+            toast("图片已保存");
+          } catch (err) {
+            // 兜底：如果 fetch 跨域失败，直接打开原图让用户手动长按保存
+            window.open(post.img, "_blank");
+            toast("已在新标签打开，请手动长按保存");
+          }
+        };
+        menu.appendChild(saveItem);
+
+        // 取消
+        const cancelItem = document.createElement("div");
+        cancelItem.style.cssText = "padding:12px 18px;cursor:pointer;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid #333;margin-top:4px;";
+        cancelItem.textContent = "取消";
+        cancelItem.onclick = () => closeMenu();
+        menu.appendChild(cancelItem);
+
+        // ==== 遮罩 ====
+        const mask = document.createElement("div");
+        mask.className = "__global_menu_mask";
+        mask.style.cssText = "position:fixed;inset:0;z-index:998;background:rgba(0,0,0,0.55);";
+        document.body.appendChild(mask);
+        document.body.appendChild(menu);
+
+        let closed = false;
+        const closeMenu = () => {
+          if (closed) return;
+          closed = true;
+          menu.remove();
+          mask.remove();
+          document.removeEventListener("touchstart", onTouchStart);
+        };
+        const onTouchStart = (e) => {
+          if (menu.contains(e.target)) return;
+          closeMenu();
+        };
+        mask.onclick = closeMenu;
+        // 延迟绑定全局 touchstart，避免刚打开的点击事件立刻关闭菜单
+        setTimeout(() => {
+          if (closed) return;
+          document.addEventListener("touchstart", onTouchStart, { passive: true });
+        }, 350);
+      };
     });
   }
 }, 
