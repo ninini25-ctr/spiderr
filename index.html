@@ -151,7 +151,7 @@ body{
   font-size:17px;margin:0;flex:1;text-align:center;font-weight:600;
   color: var(--header-title-color);
 }
-.app-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;position:relative;padding-bottom:env(safe-area-inset-bottom, 0px);}
+.app-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;position:relative;padding-bottom:env(safe-area-inset-bottom, 0px);min-height:0;}
 .app-body::-webkit-scrollbar{width:0;}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;}
 .card h3{margin:0 0 12px;font-size:15px;color: var(--card-title-color);}
@@ -162,7 +162,17 @@ body{
 .btn.ghost{background:var(--panel-2);border:1px solid var(--line);}
 .btn:disabled{opacity:.5;}
 .row{display:flex;gap:8px;align-items:center;}
-#chatThread{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;padding-bottom:calc(90px + env(safe-area-inset-bottom, 0px));background-size:cover;background-position:center;}
+#chatThread{
+  flex:1;
+  overflow-y:auto;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-bottom:14px;
+  background-size:cover;
+  background-position:center;
+}
 .bubble{max-width:80%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
 .bubble.me{
   align-self:flex-end;background:var(--bubble-me-bg);
@@ -184,7 +194,7 @@ body{
 .bubble.voice-bubble:active {
   opacity: 0.85;
 }
-.composer{display:flex;gap:8px;padding:10px 14px;background:var(--panel);border-top:1px solid var(--line);position:absolute;bottom:0;left:0;right:0;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));z-index:20;}
+.composer{display:flex;gap:8px;padding:10px 14px;background:var(--panel);border-top:1px solid var(--line);padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));z-index:20;}
 .composer input{flex:1;background:var(--panel-2);border:none;border-radius:20px;padding:10px 14px;color:var(--text);outline:none;font-size:14px;}
 .composer button{background:var(--accent-2);border:none;color:var(--text);border-radius:20px;padding:0 16px;font-weight:600;cursor:pointer;}
 .tweet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;}
@@ -1116,7 +1126,18 @@ setPosts(p){this.set("sv_posts",p);},
   }
   return list; 
 },
-setContacts(c){ this.set("sv_contacts", c); },
+setContacts(c){
+  // 铁律：除彼得·帕克外，所有联系人的好感度上限为 100（友情/亲情天花板）
+  if (Array.isArray(c)) {
+    c = c.map(item => {
+      if (item && item.name && item.name !== "彼得·帕克" && typeof item.affinity === "number") {
+        item.affinity = Math.max(0, Math.min(100, item.affinity));
+      }
+      return item;
+    });
+  }
+  this.set("sv_contacts", c);
+},
   getPeterBinding(){ return this.get("sv_peter_binding", null); },
   setPeterBinding(b){ this.set("sv_peter_binding", b); },
   getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10,lang:"zh"});},  
@@ -1453,41 +1474,72 @@ async function generateImage(prompt) {
 function affinityLevelHint(aff) {
   const a = Math.max(0, Math.min(200, Number(aff) || 0));
   if (a >= 151) return `❤️ 亲密关系（${a}/200）：深爱、依赖、愿意为对方付出一切`;
-  if (a >= 101) return `💖 暧昧期（${a}/200）：暗恋、会吃醋、关心过度、容易脸红`;
-  if (a >= 51)  return `💛 信任好友（${a}/200）：会分享心事、互相帮忙、开玩笑`;
+  if (a >= 101) return `💖 暧昧期（${a}/200）：有轻微的好感、会关心、偶尔不自在`;
+  if (a >= 51)  return `💛 信任好友（${a}/200）：会分享心事、互相帮忙、开玩笑，**纯友谊，无恋爱倾向**`;
   if (a >= 21)  return `💙 普通朋友（${a}/200）：客气、礼貌、偶尔寒暄`;
   if (a >= 1)   return `🤍 熟人（${a}/200）：知道对方存在，但不热络`;
   return `🖤 陌生人（${a}/200）：不认识或刚认识，态度冷淡、公事公办`;
 }
-
 // ===== 生成某角色的"行为准则"段落（喂给所有 App 的 AI）=====
+// 铁律：除彼得·帕克之外的所有联系人，永远只能停留在友情/亲情，禁止恋爱倾向。
 function buildAffinityBehaviorBlock(name, aff) {
   const a = Math.max(0, Math.min(200, Number(aff) || 0));
-  let rules = "";
+  const isPeter = (name === "彼得·帕克");
 
+  // 非彼得联系人：把好感度映射压到「熟人 / 普通朋友 / 信任好友 / 亲人」四档
+  if (!isPeter) {
+    let rules = "";
+    if (a >= 101) {
+      rules = `- 你和玩家是非常亲近的朋友/家人，可以主动关心、开玩笑、分享心事，**但这是纯友情/亲情，不是恋爱**。
+- 会主动帮忙、主动唠嗑，语气放松随意。
+- 严禁任何恋爱暗示：不许吃醋、不许脸红、不许心跳加速、不许占有欲、不许说"喜欢你""想你"这类话。`;
+    } else if (a >= 51) {
+      rules = `- 你和玩家是信任的朋友/家人，可以互相帮忙、互怼、闲聊。
+- 语气随意，但保持距离感，不主动过度关心。
+- **绝对禁止任何恋爱倾向**：严禁吃醋、脸红、心跳、占有欲、暧昧。`;
+    } else if (a >= 21) {
+      rules = `- 你对玩家保持客气，能帮就帮，但不主动多事。
+- 语气礼貌、简短，不会关心得太深。`;
+    } else {
+      rules = `- 你和玩家只是点头之交，或刚认识。
+- 回复简短客气，有距离感。`;
+    }
+    return `【当前你对「${name}」的好感度：${a}/200 · 友情/亲情关系】
+${rules}
+【铁律】你与玩家之间只能是友情或亲情关系，永远不可能是恋爱关系。这条高于一切。`;
+  }
+
+  // 彼得·帕克：保留原有四档（好友→暧昧→亲密）
+  let rules = "";
   if (a >= 151) {
-    rules = `- 你会主动帮 ${name}，甚至替 ta 挡下麻烦，语气亲昵、放松。
+    rules = `- 你会主动帮玩家，甚至替 ta 挡下麻烦，语气亲昵、放松。
 - 会主动找 ta、主动靠近、主动关心，不怕麻烦。
-- 对 ${name} 的请求几乎不会拒绝。`;
+- 对玩家的请求几乎不会拒绝。
+- 会主动发起亲密互动（牵手、拥抱、贴耳说话、在合适氛围下亲吻），不必等玩家先动。
+- 亲密反应不能只有"脸红/害羞"一种：可以若无其事地继续说话、可以反客为主、可以用玩笑化解、可以认真直视、可以用行动代替语言。每回合都要有新意。`;
   } else if (a >= 101) {
-    rules = `- 你愿意帮 ${name}，但会嘴硬一下、找点小借口，帮完还可能装没事。
+    rules = `- 你愿意帮玩家，但会嘴硬一下、找点小借口，帮完还可能装没事。
 - 会偷偷关注 ta、多问一句、多看一眼。
-- 对 ta 的求助基本会答应，但嘴上不一定会承认。`;
+- 对 ta 的求助基本会答应，但嘴上不一定会承认。
+- 可以主动靠近、牵手、拥抱、贴耳说话、故意逗弄（自然嵌进场景）。
+- 亲密反应要多样：若无其事 / 反客为主 / 嘴硬身体诚实 / 突然沉默只用动作回应，不要每回合都脸红。`;
   } else if (a >= 51) {
-    rules = `- 你会帮 ${name}，但会先问清楚"到底什么事"，确认一下再动手。
+    rules = `- 你会帮玩家，但会先问清楚"到底什么事"，确认一下再动手。
 - 语气是朋友之间的随意，可以互怼、可以吐槽。
-- 如果是麻烦事，会抱怨两句但最终还是帮。`;
+- 如果是麻烦事，会抱怨两句但最终还是帮。
+- 可以主动拍肩、击掌、并肩走、开玩笑式地戳一下。
+- **注意：这个阶段只是"信任好友"，严禁吃醋、占有欲、心跳加速、暧昧暗示。**`;
   } else if (a >= 21) {
-    rules = `- 你对 ${name} 保持客气，能帮就帮，但不主动多事。
+    rules = `- 你对玩家保持客气，能帮就帮，但不主动多事。
 - 语气礼貌、简短，不会关心得太深。
 - 如果是太麻烦的请求，会委婉推掉。`;
   } else if (a >= 1) {
-    rules = `- 你和 ${name} 只是点头之交，不会主动帮 ta。
+    rules = `- 你和玩家只是点头之交，不会主动帮忙。
 - 回复简短、客气、有距离感。`;
   } else {
-    rules = `- 你不认识 ${name}，或者只见过一面。
-- 对 ta 的请求要么无视，要么冷冷地拒绝、反问你"我们认识吗"。
-- 语气冷淡、疏离，甚至有点不耐烦。`;
+    rules = `- 你不认识玩家，或者只见过一面。
+- 对 ta 的请求要么无视，要么冷冷拒绝、反问"我们认识吗"。
+- 语气冷淡、疏离，有点不耐烦。`;
   }
 
   return `【当前你对「${name}」的好感度：${a}/200 · ${affinityLevelHint(a)}】
@@ -1497,7 +1549,11 @@ ${rules}`;
 // ===== 快速拿到某个联系人的好感度 =====
 function getAffinityOf(name) {
   const c = store.getContacts().find(x => x.name === name);
-  if (c && typeof c.affinity === "number") return c.affinity;
+  if (c && typeof c.affinity === "number") {
+    // 非彼得联系人：上限 100
+    if (name !== "彼得·帕克") return Math.max(0, Math.min(100, c.affinity));
+    return c.affinity;
+  }
   if (name === "彼得·帕克") {
     const s = store.getState();
     if (typeof s.affinity === "number") return s.affinity;
@@ -1534,8 +1590,19 @@ const timeStr = `${year}年${month}月${day}日`;
     ? `\n【本阶段必然发生的大事件 · 不可改变】\n${phase.forcedEvent}\n【可改变的结局变量】\n- ${(phase.mutableOutcomes || []).join("\n- ")}\n⚠️ 注意：大事件本身必然发生，但"谁来承担后果""谁受伤谁活着""如何善后"可以被玩家的选择改变。`
     : "";
 
-  return `你是蜘蛛侠世界模拟器的 DM。
+// ★ 新增：全局语言强制
+  const globalLang = store.getChatConfig().lang || "zh";
+  const globalLangRule = globalLang === "en"
+    ? `\n\n【GLOBAL LANGUAGE RULE · OVERRIDES EVERYTHING】
+ALL dialogue, ALL replies, ALL messages MUST be in ENGLISH.
+Even if examples below are in Chinese, you MUST translate them and reply in English.
+HEART (inner thoughts) may be in Chinese, but REPLIES must be 100% English.
+VIOLATION OF THIS RULE = FAILURE.
+`
+    : "";
 
+  return `你是蜘蛛侠世界模拟器的 DM。
+${globalLangRule} 
 【游戏内当前日期 · 死锚】${timeStr}
 【当前阶段】${phase.name}（${phase.year}年${phase.monthRange[0]}-${phase.monthRange[1]}月）
 
@@ -2120,6 +2187,8 @@ ${choice}
     localStorage.setItem("sv_theaters", JSON.stringify(list));
 
    if (q.closed) {
+  // ★ 小剧场完结，平行宇宙的彼得身份对玩家默认公开
+  localStorage.setItem("sv_peter_identity_revealed", "1");
   const pb = store.getPeterBinding();
   if (pb && pb.theaterId === q.id) store.setPeterBinding(null);
   toast("🎭 小剧场已完结：" + q.title);
@@ -2184,6 +2253,22 @@ function applyAppearance() {
 
 // 页面加载时自动应用一次
 setTimeout(applyAppearance, 100);
+
+// ===== 人设专用 10 格存档（独立于世界线存档）=====
+const PROFILE_SLOTS_KEY = "sv_profile_slots_10";   // 注意用新 key
+const PROFILE_SLOT_COUNT = 10;
+
+function getProfileSlots() {
+  let slots = JSON.parse(localStorage.getItem(PROFILE_SLOTS_KEY) || "null");
+  if (!Array.isArray(slots) || slots.length !== PROFILE_SLOT_COUNT) {
+    slots = Array(PROFILE_SLOT_COUNT).fill(null);
+    localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
+  }
+  return slots;
+}
+function setProfileSlots(slots) {
+  localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
+}
 
 const apps = {
 Appearance: {
@@ -2524,11 +2609,10 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
         });
         toast("人设已保存");
       };
-// ===== 人设存档 / 读档（含所有 App 数据）=====
-      const PROFILE_SLOTS_KEY = "sv_profile_slots";
+// ===== 人设存档 / 读档（10 格独立档位）=====
+      // 注意：不再声明 PROFILE_SLOTS_KEY（已移到全局，见 apps 定义前）
 
       const ensureSaveCurrentProfile = () => {
-        // 存档前先把输入框里未保存的内容写进 profile
         const name = body.querySelector("#p_name").value.trim();
         const personality = body.querySelector("#p_personality").value.trim();
         const background = body.querySelector("#p_background").value.trim();
@@ -2540,7 +2624,7 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
             identity: body.querySelector("#p_identity").value.trim(),
             appearance: body.querySelector("#p_appearance").value.trim(),
             likes: body.querySelector("#p_likes").value.trim(),
-            catchphrase: body.querySelector("#p_catchphrase").value.trim(),
+            catchphrase: body.querySelector("#p_catchphrase") ? body.querySelector("#p_catchphrase").value.trim() : "",
             notes: body.querySelector("#p_notes").value.trim()
           });
         }
@@ -2557,71 +2641,100 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
         return data;
       };
 
+      // ===== 存档人设：弹出 10 格选择 =====
       body.querySelector("#profileSaveBtn").onclick = () => {
         ensureSaveCurrentProfile();
-        const label = prompt("为该存档起一个名字（如：主线-第一阶段）：");
-        if (!label) return;
-        const slots = JSON.parse(localStorage.getItem(PROFILE_SLOTS_KEY) || "[]");
-        slots.unshift({
-          label: label,
-          timestamp: Date.now(),
-          profile: store.getProfile(),
-          data: collectAllData()
+        const slots = getProfileSlots();
+
+        const div = document.createElement("div");
+        div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
+        div.innerHTML = `<h2 style="color:var(--text);margin-top:0">💾 存档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
+        const list = div.querySelector("#pslotList");
+
+        slots.forEach((snap, i) => {
+          const filled = !!snap;
+          const label = filled
+            ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+            : "（空白档）";
+          const row = document.createElement("div");
+          row.style.cssText = "background:#14141c;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+          row.innerHTML = `<div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
+            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled ? "覆盖" : "保存"}</button>`;
+          list.appendChild(row);
         });
-        localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
-        toast("已存档：" + label);
-      };
 
-      body.querySelector("#profileLoadBtn").onclick = () => {
-        const slots = JSON.parse(localStorage.getItem(PROFILE_SLOTS_KEY) || "[]");
-        if (!slots.length) return toast("还没有任何存档");
+        list.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-idx]");
+          if (!btn) return;
+          const idx = parseInt(btn.dataset.idx);
+          if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
 
-        const menu = document.createElement("div");
-        menu.className = "__global_menu";
-        menu.style.cssText = "position:fixed;bottom:50%;left:50%;transform:translate(-50%,50%);background:#222;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.5);width:82vw;max-width:340px;max-height:60vh;overflow-y:auto;";
-        menu.innerHTML = `<div style="font-size:12px;color:#aaa;padding:4px 8px 8px;">选择要读取的存档（会覆盖当前所有数据）</div>`;
+          const p = store.getProfile();
+          const autoLabel = `${p.name || "未命名"} · ${new Date().toLocaleString()}`;
 
-        slots.forEach((s, idx) => {
-          const item = document.createElement("div");
-          item.style.cssText = "padding:10px;border-bottom:1px solid #444;cursor:pointer;color:#fff;font-size:13px;";
-          const when = new Date(s.timestamp).toLocaleString();
-          item.innerHTML = `<div style="font-weight:bold;">${s.label}</div>
-            <div style="font-size:11px;color:#999;margin-top:2px;">${when} · ${s.profile && s.profile.name ? s.profile.name : "未命名"}</div>`;
-          item.onclick = () => {
-            if (!confirm("读档会覆盖当前所有 App 数据，确定继续？")) return;
-            Object.keys(s.data || {}).forEach(k => {
-              if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
-                localStorage.setItem(k, s.data[k]);
-              }
-            });
-            if (s.profile) localStorage.setItem("sv_profile", JSON.stringify(s.profile));
-            mask.remove();
-            menu.remove();
-            toast("已读档：" + s.label);
-            setTimeout(() => location.reload(), 500);
+          slots[idx] = {
+            label: autoLabel,
+            timestamp: Date.now(),
+            profile: JSON.parse(JSON.stringify(store.getProfile())),
+            data: collectAllData()
           };
-          menu.appendChild(item);
+          setProfileSlots(slots);
+
+          toast(`已保存到人设档位 ${idx + 1}`);
+          div.remove();
+          // ★ 保存成功后返回设置界面
+          apps.settings.render($("#appBody"));
         });
 
-        const delAllBtn = document.createElement("div");
-        delAllBtn.style.cssText = "padding:10px;cursor:pointer;color:#e62429;font-size:12px;text-align:center;border-top:1px solid #444;margin-top:4px;";
-        delAllBtn.textContent = "🗑️ 清空所有存档";
-        delAllBtn.onclick = () => {
-          if (!confirm("确定清空所有存档吗？")) return;
-          localStorage.removeItem(PROFILE_SLOTS_KEY);
-          mask.remove();
-          menu.remove();
-          toast("已清空所有存档");
-        };
-        menu.appendChild(delAllBtn);
-
-        const mask = document.createElement("div");
-        mask.className = "__global_menu_mask";
-        mask.style.cssText = "position:fixed;inset:0;z-index:998;background:rgba(0,0,0,0.55);";
-        document.body.appendChild(mask);
-        document.body.appendChild(menu);
-        mask.onclick = () => { mask.remove(); menu.remove(); };
+        div.querySelector("#pslotClose").onclick = () => div.remove();
+        document.querySelector(".device").appendChild(div);
       };
+
+      // ===== 读档人设：弹出 10 格选择 =====
+      body.querySelector("#profileLoadBtn").onclick = () => {
+        const slots = getProfileSlots();
+        if (!slots.some(s => s)) return toast("还没有任何人设存档");
+
+        const div = document.createElement("div");
+        div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
+        div.innerHTML = `<h2 style="color:var(--text);margin-top:0">📂 读档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
+        const list = div.querySelector("#pslotList");
+
+        slots.forEach((snap, i) => {
+          const filled = !!snap;
+          const label = filled
+            ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+            : "（空白档）";
+          const row = document.createElement("div");
+          row.style.cssText = "background:#14141c;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+          row.innerHTML = `<div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
+            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px" ${filled ? "" : "disabled"}>${filled ? "读取" : "不可用"}</button>`;
+          list.appendChild(row);
+        });
+
+        list.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-idx]");
+          if (!btn || btn.disabled) return;
+          const idx = parseInt(btn.dataset.idx);
+          const snap = slots[idx];
+          if (!snap) return toast("该档位为空");
+          if (!confirm("读档会将当前所有数据覆盖为该存档内容，确定继续？")) return;
+
+          Object.keys(snap.data || {}).forEach(k => {
+            if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
+              localStorage.setItem(k, snap.data[k]);
+            }
+          });
+          if (snap.profile) localStorage.setItem("sv_profile", JSON.stringify(snap.profile));
+
+          toast("已读档：档位 " + (idx + 1));
+          setTimeout(() => location.reload(), 500);
+        });
+
+        div.querySelector("#pslotClose").onclick = () => div.remove();
+        document.querySelector(".device").appendChild(div);
+      };
+
      // ===== 数据管理 =====
       body.querySelector("#exportDataBtn").onclick = () => {
         const dump = {};
@@ -2693,91 +2806,229 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
 
 messages: {
   title: "信息", hasSettings: true, view: "list", currentUser: "", lastUserText: "", quoteData: null,
-  renderSettings(body) {
-    if (this.view === "chat") {
-  const contacts = store.getContacts();
-  const c = contacts.find(x => x.name === this.currentUser) || { name: this.currentUser, desc: "", affinity: 0, heart: "" };
-      body.innerHTML = `<div style="padding:14px"><div class="card"><h3>${esc(c.name)} 的设定</h3>
-        <div class="field"><label>个人简介</label><textarea id="c_desc" rows="3">${esc(c.desc)}</textarea></div>
-        <div class="field">
-  <label>好感度 (0-200) —— 可直接修改</label>
-  <div class="row" style="gap:6px;">
-    <button class="btn ghost" id="aff_minus" style="width:auto;padding:6px 14px;font-size:16px;">−</button>
-    <input id="c_aff" type="number" min="0" max="200" value="${c.affinity}" style="flex:1;text-align:center;font-weight:bold;color:var(--accent-2);">
-    <button class="btn ghost" id="aff_plus" style="width:auto;padding:6px 14px;font-size:16px;">＋</button>
-  </div>
-  <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="aff_level_hint">${affinityLevelHint(c.affinity)}</div>
-</div>
-        <div class="field"><label>心声 (AI 生成)</label><textarea id="c_heart" rows="3" readonly style="opacity:0.7">${esc(c.heart || "暂无")}</textarea></div>
-        <button class="btn" id="save">保存简介</button>
-        <button class="btn ghost" id="back" style="margin-top:10px">返回聊天</button>
-      </div></div>`;
-// ===== 好感度手动修改 =====
-const affInput = body.querySelector("#c_aff");
-const affHint = body.querySelector("#aff_level_hint");
-const syncAffHint = () => {
-  const v = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
-  affHint.textContent = affinityLevelHint(v);
-};
-affInput.addEventListener("input", syncAffHint);
-body.querySelector("#aff_minus").onclick = () => {
-  affInput.value = Math.max(0, (parseInt(affInput.value) || 0) - 5);
-  syncAffHint();
-};
-body.querySelector("#aff_plus").onclick = () => {
-  affInput.value = Math.min(200, (parseInt(affInput.value) || 0) + 5);
-  syncAffHint();
-};
+ renderSettings(body) {
+  const self = this;
 
-// ★ 只绑一次：同时保存简介 + 好感度
-body.querySelector("#save").onclick = () => {
-  const newAff = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
-  const list = store.getContacts();
-  const target = list.find(x => x.name === this.currentUser);
-  if (target) {
-    target.desc = body.querySelector("#c_desc").value;
-    target.affinity = newAff;
-    store.setContacts(list); // 写入 localStorage
-
-    // 如果改的是彼得，同步世界线好感度
-    if (this.currentUser === "彼得·帕克") {
-      const s = store.getState();
-      s.affinity = newAff;
-      store.setState(s);
-    }
-  }
-  toast(`已保存 · 好感度 ${newAff} · ${affinityLevelHint(newAff)}`);
-};
-
-body.querySelector("#back").onclick = () => openApp('messages');
-return;
-    }
-
-    const cfg = store.getChatConfig();
-    body.innerHTML = `<div style="padding:14px"><div class="card"><h3>聊天设置</h3>
-      <div class="field"><label>背景图 URL</label><input id="c_bg" value="${esc(cfg.bg || "")}"></div>
-      <div class="field"><label>上下文条数</label><input id="c_ctx" type="number" value="${cfg.maxContext || 10}"></div>
-      <div class="field"><label>AI 回复语言</label>
-        <select id="c_lang">
-          <option value="zh" ${cfg.lang !== 'en' ? 'selected' : ''}>中文 (默认)</option>
-          <option value="en" ${cfg.lang === 'en' ? 'selected' : ''}>英文 (English)</option>
-        </select>
+  // ========== 情况 A：在群聊里点设置 → 群聊设置面板 ==========
+  const curC = store.getContacts().find(x => x.name === this.currentUser);
+  if (curC && curC.isGroup) {
+    body.innerHTML = `<div style="padding:14px"><div class="card"><h3>${esc(this.currentUser)}</h3>
+      <p style="font-size:13px;color:var(--muted);">群聊不支持好感度与心声设置。</p >
+      <div class="field" style="margin-top:12px;">
+        <label>群成员（${(curC.members||[]).length}）</label>
+        <div style="font-size:13px;color:var(--text);line-height:1.7;">${(curC.members||[]).map(esc).join("、")}</div>
       </div>
-      <button class="btn" id="save">保存</button>
-      <button class="btn ghost" id="back" style="margin-top:10px">返回</button>
+      <button class="btn ghost" id="renameGroup" style="margin-top:10px;">✏️ 修改群名</button>
+      <button class="btn ghost" id="back" style="margin-top:12px;">返回聊天</button>
+      <button class="btn ghost" id="dissolveGroup" style="margin-top:10px;color:#e62429;border-color:#e62429;">🗑️ 解散群聊</button>
     </div></div>`;
-    body.querySelector("#save").onclick = () => { 
-      store.setChatConfig({
-        bg: body.querySelector("#c_bg").value, 
-        maxContext: parseInt(body.querySelector("#c_ctx").value) || 10,
-        lang: body.querySelector("#c_lang").value
-      }); 
-      openApp('messages'); 
+
+    body.querySelector("#back").onclick = () => openApp('messages');
+
+    body.querySelector("#renameGroup").onclick = () => {
+      const oldName = self.currentUser;
+      const newName = prompt("修改群聊名称：", oldName);
+      if (!newName || !newName.trim()) return;
+      const trimmed = newName.trim();
+      if (trimmed === oldName) return;
+      const contacts = store.getContacts();
+      if (contacts.some(c => c.name === trimmed)) return toast("该名称已存在");
+      const idx = contacts.findIndex(c => c.name === oldName);
+      if (idx === -1) return toast("群聊不存在");
+      contacts[idx].name = trimmed;
+      store.setContacts(contacts);
+      const chats = store.getChats();
+      if (chats[oldName]) {
+        chats[trimmed] = chats[oldName];
+        delete chats[oldName];
+        store.setChats(chats);
+      }
+      self.currentUser = trimmed;
+      toast("群聊名称已修改");
+      self.render(body);
+    };
+
+    body.querySelector("#dissolveGroup").onclick = () => {
+      const groupName = self.currentUser;
+      if (!groupName) return toast("当前不在群聊中");
+      if (!confirm(`确定解散「${groupName}」吗？\n\n解散后该群聊及全部聊天记录将被删除，此操作不可恢复。`)) return;
+
+      const contacts = store.getContacts().filter(c => c.name !== groupName);
+      store.setContacts(contacts);
+
+      const chats = store.getChats();
+      delete chats[groupName];
+      store.setChats(chats);
+
+      self.currentUser = "";
+      self.view = "list";
+
+      currentApp = "messages";
+      $("#desktop").classList.remove("active");
+      $("#appView").classList.add("active");
+      $("#appTitle").textContent = "信息";
+      const sb = $("#appSettingsBtn");
+      sb.style.display = "flex";
+      sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+      sb.querySelector("#setBtn").onclick = () => self.renderSettings($("#appBody"));
+      sb.querySelector("#retryBtn").onclick = () => {
+        if (self.lastUserText) self.sendMessage($("#appBody"), self.lastUserText, true);
+        else toast("还没有可以重试的消息");
+      };
+
+      toast("群聊已解散");
+      self.render($("#appBody"));
+    };
+    return;
+  }
+
+  // ========== 情况 B：在单人聊天里点设置 → 联系人设置面板 ==========
+  if (this.view === "chat" && this.currentUser) {
+    const contacts = store.getContacts();
+
+    const c = contacts.find(x => x.name === this.currentUser) || { name: this.currentUser, desc: "", affinity: 0, heart: "" };
+    body.innerHTML = `<div style="padding:14px"><div class="card"><h3>${esc(c.name)} 的设定</h3>
+      <div class="field"><label>个人简介</label><textarea id="c_desc" rows="3">${esc(c.desc)}</textarea></div>
+      <div class="field">
+        <label>好感度 (0-${this.currentUser === "彼得·帕克" ? 200 : 100}) —— 可直接修改</label>
+        <div class="row" style="gap:6px;">
+          <button class="btn ghost" id="aff_minus" style="width:auto;padding:6px 14px;font-size:16px;">−</button>
+          <input id="c_aff" type="number" min="0" max="${this.currentUser === "彼得·帕克" ? 200 : 100}" value="${this.currentUser === "彼得·帕克" ? c.affinity : Math.min(100, c.affinity)}" style="flex:1;text-align:center;font-weight:bold;color:var(--accent-2);">
+          <button class="btn ghost" id="aff_plus" style="width:auto;padding:6px 14px;font-size:16px;">＋</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="aff_level_hint">${affinityLevelHint(c.affinity)}</div>
+      </div>
+      <div class="field"><label>心声 (AI 生成)</label><textarea id="c_heart" rows="3" readonly style="opacity:0.7">${esc(c.heart || "暂无")}</textarea></div>
+      <button class="btn" id="save">保存简介</button>
+      <button class="btn ghost" id="back" style="margin-top:10px">返回聊天</button>
+    </div></div>`;
+
+    const affInput = body.querySelector("#c_aff");
+    const affHint = body.querySelector("#aff_level_hint");
+    const syncAffHint = () => {
+      const v = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
+      affHint.textContent = affinityLevelHint(v);
+    };
+    affInput.addEventListener("input", syncAffHint);
+    body.querySelector("#aff_minus").onclick = () => {
+      affInput.value = Math.max(0, (parseInt(affInput.value) || 0) - 5);
+      syncAffHint();
+    };
+    body.querySelector("#aff_plus").onclick = () => {
+      const cap = (this.currentUser === "彼得·帕克") ? 200 : 100;
+      affInput.value = Math.min(cap, (parseInt(affInput.value) || 0) + 5);
+      syncAffHint();
+    };
+
+    body.querySelector("#save").onclick = () => {
+      const rawAff = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
+      const newAff = (this.currentUser === "彼得·帕克") ? rawAff : Math.min(100, rawAff);
+      const list = store.getContacts();
+      const target = list.find(x => x.name === this.currentUser);
+      if (target) {
+        target.desc = body.querySelector("#c_desc").value;
+        target.affinity = newAff;
+        store.setContacts(list);
+        if (this.currentUser === "彼得·帕克") {
+          const s = store.getState();
+          s.affinity = newAff;
+          store.setState(s);
+        }
+      }
+      toast(`已保存 · 好感度 ${newAff} · ${affinityLevelHint(newAff)}`);
     };
 
     body.querySelector("#back").onclick = () => openApp('messages');
-  },
-  async render(body) {
+    return;
+  }
+
+  // ========== 情况 C：在主页列表点设置 → 全局聊天设置面板（★修复重点）==========
+  const cfg = store.getChatConfig();
+  const lang = cfg.lang || "zh";
+  const bg = cfg.bg || "";
+  const maxCtx = cfg.maxContext || 10;
+
+  body.innerHTML = `<div style="padding:14px">
+    <div class="card">
+      <h3>🌐 聊天语言模式</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">选择角色回复的语言（心声始终为中文）。</p >
+      <div class="field">
+        <select id="cc_lang">
+          <option value="zh" ${lang === "zh" ? "selected" : ""}>中文模式（角色用中文回复）</option>
+          <option value="en" ${lang === "en" ? "selected" : ""}>English Mode（角色用英文回复，可点气泡翻译）</option>
+        </select>
+      </div>
+      <button class="btn" id="save_lang">保存语言设置</button>
+    </div>
+
+    <div class="card">
+      <h3>🖼️ 聊天背景壁纸</h3>
+      <div class="field">
+        <label>上传图片（应用于所有单人/群聊）</label>
+        <input type="file" id="cc_bg" accept="image/*" style="font-size:12px">
+      </div>
+      ${bg ? `<div style="margin:8px 0;"><img src="${esc(bg)}" style="width:100%;max-height:120px;object-fit:cover;border-radius:10px;"></div>` : ""}
+      <button class="btn ghost" id="clear_bg" style="font-size:12px;">恢复默认背景</button>
+    </div>
+
+    <div class="card">
+      <h3>🧠 上下文长度</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">AI 每次携带的历史消息条数（越大越连贯，但更慢更贵）。</p >
+      <div class="field">
+        <input id="cc_ctx" type="number" min="3" max="40" value="${maxCtx}">
+      </div>
+      <button class="btn" id="save_ctx">保存上下文设置</button>
+    </div>
+
+    <div class="card">
+      <h3>ℹ️ 说明</h3>
+      <p style="font-size:12px;color:var(--text);line-height:1.7;margin:0;opacity:0.85;">
+        · 本面板是<b>全局聊天设置</b>，影响所有联系人。<br>
+        · 想改单个联系人的简介/好感度/心声，请先进入对话框，再点右上角「设置」。<br>
+        · 群聊的设置请先进入群聊，再点右上角「设置」。
+      </p >
+    </div>
+  </div>`;
+
+  body.querySelector("#save_lang").onclick = () => {
+    const newCfg = store.getChatConfig();
+    newCfg.lang = body.querySelector("#cc_lang").value;
+    store.setChatConfig(newCfg);
+    toast(newCfg.lang === "en" ? "已切换到 English Mode" : "已切换到中文模式");
+  };
+
+  body.querySelector("#cc_bg").onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const newCfg = store.getChatConfig();
+      newCfg.bg = ev.target.result;
+      store.setChatConfig(newCfg);
+      toast("聊天背景已更新");
+      self.renderSettings(body);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  body.querySelector("#clear_bg").onclick = () => {
+    const newCfg = store.getChatConfig();
+    newCfg.bg = "";
+    store.setChatConfig(newCfg);
+    toast("已恢复默认背景");
+    self.renderSettings(body);
+  };
+
+  body.querySelector("#save_ctx").onclick = () => {
+    const v = parseInt(body.querySelector("#cc_ctx").value) || 10;
+    const newCfg = store.getChatConfig();
+    newCfg.maxContext = Math.max(3, Math.min(40, v));
+    store.setChatConfig(newCfg);
+    toast("上下文长度已保存：" + newCfg.maxContext);
+  };
+},
+
+async render(body) {
     body.innerHTML = "";
     const self = this;
     const sb = $("#appSettingsBtn");
@@ -2794,6 +3045,13 @@ sb.querySelector("#retryBtn").onclick = () => {
   }
   // 只删除最后一条 AI 回复，然后重发
   const chatsNow = store.getChats();
+// ==========================================
+// 🌟 群聊独立分流
+// ==========================================
+const contact = store.getContacts().find(x => x.name === self.currentUser);
+if (contact && contact.isGroup) {
+  return self.sendGroupMessage(body, text, isRetry);
+}
   const arr = chatsNow[self.currentUser] || [];
   const lastThemIdx = arr.map(m => m.role).lastIndexOf("them");
   if (lastThemIdx !== -1) {
@@ -2805,7 +3063,130 @@ sb.querySelector("#retryBtn").onclick = () => {
   // 延迟一点点，让 render 完成后再发
   setTimeout(() => self.sendMessage(body, self.lastUserText, true), 100);
 };
-    
+   
+// ==========================================
+// 🌟 群聊独立渲染
+// ==========================================
+const currentContact = store.getContacts().find(c => c.name === self.currentUser);
+if (currentContact && currentContact.isGroup) {
+  const chats = store.getChats(), msgs = chats[self.currentUser] || [];
+  let chatHtml = `<div id="chatPage" style="display:flex;flex-direction:column;height:100%;width:100%;overflow:hidden;">`;
+  
+  // 标题栏
+  chatHtml += `<div style="flex-shrink:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;box-sizing:border-box;">
+    <button id="backToListBtn" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;">‹</button>
+    <div style="width:28px;height:28px;border-radius:6px;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">👥</div>
+    <div style="font-size:13px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+      <span id="groupNameLabel" style="color:var(--text);font-weight:600;cursor:pointer;border-bottom:1px dashed var(--line);">${esc(self.currentUser)}</span>
+    </div>
+    <button id="clearChatBtn" title="清空聊天记录" style="background:none;border:none;color:var(--accent);font-size:16px;cursor:pointer;padding:4px 8px;line-height:1;">🗑️</button>
+</div>`;
+
+// 消息区
+chatHtml += `<div id="chatThread">`;
+  chatHtml += msgs.map((m, idx) => {
+    if (m.role === "me") {
+      return `<div class="msg-row me" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;justify-content:flex-end;">
+        <div class="bubble me" style="max-width:72%;">${esc(m.content)}</div>
+      </div>`;
+    } else {
+      const senderName = m.groupSender || "群成员";
+      const memberC = store.getContacts().find(c => c.name === senderName);
+      const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
+      return `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
+        <div style="width:32pxpx;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">
+          ${senderAvatar ? `<img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((senderName || "?")[0])}
+        </div>
+        <div style="max-width:72%;min-width:0;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(senderName)}</div>
+          <div class="bubble them" style="max-width:100%;">${esc(m.content)}</div>
+        </div>
+      </div>`;
+    }
+  }).join("");
+  chatHtml += `</div>`;
+  
+  // 输入区
+  chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
+    <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
+    <button id="sendBtn">发送</button>
+  </div>`;
+  
+  chatHtml += `</div>`;
+  body.innerHTML = chatHtml;
+  
+  // 绑定事件
+  body.querySelector("#backToListBtn").onclick = () => {
+    self.view = "list"; self.currentUser = ""; self.render(body);
+  };
+  
+  // 群名点击改名
+  body.querySelector("#groupNameLabel").onclick = () => {
+    const oldName = self.currentUser;
+    const newName = prompt("修改群聊名称：", oldName);
+    if (!newName || !newName.trim()) return;
+    const trimmed = newName.trim();
+    if (trimmed === oldName) return;
+    const contacts = store.getContacts();
+    if (contacts.some(c => c.name === trimmed)) return toast("该名称已存在");
+    const idx = contacts.findIndex(c => c.name === oldName);
+    if (idx === -1) return toast("群聊不存在");
+    contacts[idx].name = trimmed;
+    store.setContacts(contacts);
+    const chatsNow = store.getChats();
+    if (chatsNow[oldName]) {
+      chatsNow[trimmed] = chatsNow[oldName];
+      delete chatsNow[oldName];
+      store.setChats(chatsNow);
+    }
+    self.currentUser = trimmed;
+    toast("群聊名称已修改");
+    self.render(body);
+  };
+  
+  body.querySelector("#clearChatBtn").onclick = () => {
+    if (!confirm(`确定清空与「${self.currentUser}」的全部聊天记录吗？`)) return;
+    const chatsNow = store.getChats();
+    delete chatsNow[self.currentUser];
+    store.setChats(chatsNow);
+    toast("聊天记录已清空");
+    self.render(body);
+  };
+  
+  const thread = body.querySelector("#chatThread");
+  thread.scrollTop = thread.scrollHeight;
+  
+  body.querySelector("#sendBtn").onclick = () => {
+    const text = body.querySelector("#msgInput").value.trim();
+    if(!text) return;
+    body.querySelector("#msgInput").value = "";
+    self.sendMessage(body, text, false);
+  };
+  body.querySelector("#msgInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); body.querySelector("#sendBtn").click(); }
+  });
+  // ★ 关键修复：群聊界面必须重新绑定设置按钮，指向 self.renderSettings
+ const sbG = $("#appSettingsBtn");
+sbG.style.display = "flex";
+sbG.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+sbG.querySelector("#setBtn").onclick = () => self.renderSettings($("#appBody"));
+sbG.querySelector("#retryBtn").onclick = () => {
+  if (!self.lastUserText) return toast("还没有可以重试的消息");
+  const chatsNow = store.getChats();
+  const arrNow = chatsNow[self.currentUser] || [];
+  const lastThemIdx = arrNow.map(m => m.role).lastIndexOf("them");
+  if (lastThemIdx !== -1) {
+    arrNow.splice(lastThemIdx, 1);
+    chatsNow[self.currentUser] = arrNow;
+    store.setChats(chatsNow);
+  }
+  self.render($("#appBody"));
+  setTimeout(() => self.sendGroupMessage($("#appBody"), self.lastUserText, true), 100);
+};
+  
+  return; // 拦截，不走后面的单人逻辑
+}
+ 
     if (self.view === "list") {
       const contacts = store.getContacts();
 body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn">➕ 添加联系人</button><button class="btn ghost" id="groupBtn" style="margin-top:8px">👥 发起群聊</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contacts.map(c=>`<div class="chat-row" data-user="${esc(c.name)}" style="padding:12px;border-bottom:1px solid #333;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:bold;color:var(--text)">${esc(c.name)}</div><div style="font-size:12px;color:var(--muted)">${esc(c.desc || "")}</div></div><span style="color:var(--muted)">›</span></div>`).join("")}</div></div>`;
@@ -2838,9 +3219,58 @@ body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn
       };
       
 body.querySelector("#groupBtn").onclick = () => {
-  const names=prompt("群聊成员（逗号分隔，例如：彼得·帕克,内德·利兹）");
-  if(!names) return;
-  self.currentUser="群聊-"+names; self.view="chat"; self.render(body);
+  const all = store.getContacts().filter(c => !c.isGroup);
+  if (all.length < 2) return toast("至少需要 2 个联系人才可以建群");
+
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
+  div.innerHTML = `
+    <h2 style="color:var(--text);margin-top:0">👥 发起群聊</h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">勾选要拉进群的成员（至少 2 个）</p >
+    <div id="grpList"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn ghost" id="grpCancel" style="flex:1">取消</button>
+      <button class="btn" id="grpOk" style="flex:1">创建群聊</button>
+    </div>`;
+  const list = div.querySelector("#grpList");
+
+  all.forEach((c, i) => {
+    const row = document.createElement("label");
+    row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--text);font-size:13px;";
+    row.innerHTML = `<input type="checkbox" class="grp-check" data-name="${esc(c.name)}" style="width:18px;height:18px;">
+      <span>${esc(c.name)}</span>`;
+    list.appendChild(row);
+  });
+
+  div.querySelector("#grpCancel").onclick = () => div.remove();
+  div.querySelector("#grpOk").onclick = () => {
+    const checked = Array.from(div.querySelectorAll(".grp-check:checked")).map(x => x.dataset.name);
+    if (checked.length < 2) return toast("至少选择 2 个成员");
+
+    const groupName = "群聊 · " + checked.join("、");
+
+    const contacts = store.getContacts();
+    if (contacts.find(c => c.name === groupName)) {
+      toast("该群聊已存在");
+    } else {
+      contacts.push({
+  name: groupName,
+  desc: "群聊：" + checked.join("、"),
+  affinity: 0,
+  heart: "暂无",
+  isGroup: true,
+  members: checked,
+  avatar: ""
+});
+      store.setContacts(contacts);
+    }
+    div.remove();
+    self.currentUser = groupName;
+    self.view = "chat";
+    self.render(body);
+  };
+
+  document.querySelector(".device").appendChild(div);
 };
 return;
     }
@@ -2858,73 +3288,235 @@ if (!self.currentUser || !store.getContacts().find(c => c.name === self.currentU
 }
 
     const chats=store.getChats(), msgs=chats[self.currentUser]||[], cfg=store.getChatConfig();
-    
-   let chatHtml = `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''} padding-top:44px;">`;
-    chatHtml += msgs.map((m, idx) => {
-      const quoteHtml = m.quote
-        ? `<div style="font-size:11px;color:var(--muted);border-left:2px solid #666;padding-left:6px;margin-bottom:4px;opacity:0.8">引用: ${esc(m.quote)}</div>`
-        : "";
 
-      // ===== 语音气泡 =====
-      if (m.type === "voice") {
-        const asset = VOICE_ASSETS[m.voiceKey] || {};
-        const dur = asset.duration || 3;
-        return `<div class="bubble ${m.role} voice-bubble" data-idx="${idx}" data-voice="${esc(m.voiceKey)}" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;">
-          ${quoteHtml}
-          <span class="voice-icon" style="font-size:16px;">${m.role === "me" ? "🔊" : "🔈"}</span>
-          <span class="voice-bar" style="flex:1;display:flex;gap:2px;align-items:center;">
-            <i style="width:${Math.min(60, 12 + dur * 4)}px;height:2px;background:currentColor;opacity:.6;display:inline-block;border-radius:2px;"></i>
-          </span>
-          <span class="voice-dur" style="font-size:12px;opacity:.8;">${dur}"</span>
-        </div>`;
+// ★ 旧群聊消息补 groupSender（只对群聊生效）
+{
+  const _c = store.getContacts().find(c => c.name === self.currentUser);
+  if (_c && _c.isGroup && _c.members && _c.members.length) {
+    let changed = false;
+    msgs.forEach((m, i) => {
+      if (m.role === "them" && !m.groupSender) {
+        // 依次轮询成员填进去，至少不会全显示"群"
+        m.groupSender = _c.members[i % _c.members.length];
+        changed = true;
       }
-
-     // ===== 普通文字气泡 =====
-// 如果 content 是以 "[语音]" 开头的（兼容旧数据），不显示文字，显示语音条
-if (m.content && m.content.startsWith("[语音]")) {
-  const vk = m.voiceKey || m.content.replace("[语音]", "").trim();
-  const asset = VOICE_ASSETS[vk] || {};
-  const dur = asset.duration || 3;
-  return `<div class="bubble ${m.role} voice-bubble" data-idx="${idx}" data-voice="${esc(vk)}" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;">
-    ${quoteHtml}
-    <span class="voice-icon" style="font-size:16px;">${m.role === "me" ? "🔊" : "🔈"}</span>
-    <span class="voice-bar" style="flex:1;display:flex;gap:2px;align-items:center;">
-      <i style="width:${Math.min(60, 12 + dur * 4)}px;height:2px;background:currentColor;opacity:.6;display:inline-block;border-radius:2px;"></i>
-    </span>
-    <span class="voice-dur" style="font-size:12px;opacity:.8;">${dur}"</span>
-  </div>`;
+    });
+    if (changed) {
+      chats[self.currentUser] = msgs;
+      store.setChats(chats);
+    }
+  }
 }
+    
+  // ===== 外层 flex 三段式：标题栏 / 消息区 / 输入区 =====
+let chatHtml = `<div id="chatPage" style="display:flex;flex-direction:column;height:100%;width:100%;overflow:hidden;">`;
 
-// ===== 普通文字气泡 =====
-const isEn = store.getChatConfig().lang === "en";
-const transHtml = (isEn && m.role === "them" && m.translation) 
-  ? `<div class="bubble-trans">${esc(m.translation)}</div>` 
-  : "";
-return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">${quoteHtml}${esc(m.content)}${transHtml}</div>`;
-    }).join("");
-    chatHtml += `</div>`;
-      const curContact = store.getContacts().find(c => c.name === self.currentUser);
-const avatarHtml = curContact && curContact.avatar 
+// --- 标题栏 ---
+const curContact = store.getContacts().find(c => c.name === self.currentUser);
+const avatarHtml = curContact && curContact.avatar
   ? `<img src="${curContact.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
   : `<div style="width:28px;height:28px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
 
-chatHtml += `<div style="position:absolute;top:0;left:0;right:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;">
+const curContactTop = store.getContacts().find(c => c.name === self.currentUser);
+const isGroupTop = !!(curContactTop && curContactTop.isGroup);
+
+let groupAvatarHtml = "";
+if (isGroupTop) {
+  let gAv = curContactTop.avatar || "";
+  if (!gAv && curContactTop.members && curContactTop.members.length) {
+    const firstM = store.getContacts().find(x => x.name === curContactTop.members[0]);
+    gAv = (firstM && firstM.avatar) ? firstM.avatar : "";
+  }
+  groupAvatarHtml = `<div style="width:28px;height:28px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:13px;">
+    ${gAv ? `<img src="${gAv}" style="width:100%;height:100%;object-fit:cover;">` : "👥"}
+  </div>`;
+}
+
+const titleAvatar = isGroupTop ? groupAvatarHtml : avatarHtml;
+const titleNameHtml = isGroupTop
+  ? `<span id="groupNameLabel" style="color:var(--text);font-weight:600;cursor:pointer;border-bottom:1px dashed var(--line);">${esc(self.currentUser)}</span>`
+  : `<b style="color:var(--text);">${esc(self.currentUser)}</b>`;
+
+chatHtml += `<div style="flex-shrink:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;box-sizing:border-box;">
   <button id="backToListBtn" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;">‹</button>
-  ${avatarHtml}
-  <div style="font-size:13px;color:var(--muted);">当前对话：<b style="color:var(--text);">${esc(self.currentUser)}</b></div>
+  ${titleAvatar}
+  <div style="font-size:13px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${isGroupTop ? "" : "当前对话："}${titleNameHtml}</div>
+  <button id="clearChatBtn" title="清空聊天记录" style="background:none;border:none;color:var(--accent);font-size:16px;cursor:pointer;padding:4px 8px;line-height:1;">🗑️</button>
 </div>`;
-    chatHtml += `<div id="quotePreview" style="display:none;padding:8px 14px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12px;color:var(--muted);"><div style="display:flex;justify-content:space-between;align-items:center;"><span id="quoteText"></span><span id="cancelQuote" style="cursor:pointer;color:var(--accent)">✕</span></div></div>`;
-    chatHtml += `<div class="composer"><input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}..."><button id="sendBtn">发送</button></div>`;
+
+// --- 消息滚动区 ---
+chatHtml += `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''}">`;
+
+chatHtml += msgs.map((m, idx) => {
+  const quoteHtml = m.quote
+    ? `<div style="font-size:11px;color:var(--muted);border-left:2px solid #666;padding-left:6px;margin-bottom:4px;opacity:0.8">引用: ${esc(m.quote)}</div>`
+    : "";
+
+  // ===== 语音气泡 =====
+  if (m.type === "voice") {
+    const asset = VOICE_ASSETS[m.voiceKey] || {};
+    const dur = asset.duration || 3;
+    return `<div class="bubble ${m.role} voice-bubble" data-idx="${idx}" data-voice="${esc(m.voiceKey)}" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;">
+      ${quoteHtml}
+      <span class="voice-icon" style="font-size:16px;">${m.role === "me" ? "🔊" : "🔈"}</span>
+      <span class="voice-bar" style="flex:1;display:flex;gap:2px;align-items:center;">
+        <i style="width:${Math.min(60, 12 + dur * 4)}px;height:2px;background:currentColor;opacity:.6;display:inline-block;border-radius:2px;"></i>
+      </span>
+      <span class="voice-dur" style="font-size:12px;opacity:.8;">${dur}"</span>
+    </div>`;
+  }
+
+  // ===== 旧数据兼容 [语音] 前缀 =====
+  if (m.content && m.content.startsWith("[语音]")) {
+    const vk = m.voiceKey || m.content.replace("[语音]", "").trim();
+    const asset = VOICE_ASSETS[vk] || {};
+    const dur = asset.duration || 3;
+    return `<div class="bubble ${m.role} voice-bubble" data-idx="${idx}" data-voice="${esc(vk)}" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;">
+      ${quoteHtml}
+      <span class="voice-icon" style="font-size:16px;">${m.role === "me" ? "🔊" : "🔈"}</span>
+      <span class="voice-bar" style="flex:1;display:flex;gap:2px;align-items:center;">
+        <i style="width:${Math.min(60, 12 + dur * 4)}px;height:2px;background:currentColor;opacity:.6;display:inline-block;border-radius:2px;"></i>
+      </span>
+      <span class="voice-dur" style="font-size:12px;opacity:.8;">${dur}"</span>
+    </div>`;
+  }
+
+  // ===== 普通文字气泡 =====
+  const isEn = store.getChatConfig().lang === "en";
+  const transHtml = (isEn && m.role === "them" && m.translation)
+    ? `<div class="bubble-trans">${esc(m.translation)}</div>`
+    : "";
+
+  const curContactForRow = store.getContacts().find(c => c.name === self.currentUser);
+  const isGroupChat = !!(curContactForRow && curContactForRow.isGroup);
+
+  // ===== 群聊对方消息：头像 + 名字 =====
+  if (isGroupChat && m.role === "them") {
+    let senderName = (m.groupSender || "").trim();
+    if (!senderName) {
+      senderName = (curContactForRow.members && curContactForRow.members[0]) || "群成员";
+    }
+    const memberC = store.getContacts().find(c => c.name === senderName);
+    const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
+    const firstChar = esc((senderName || "?")[0]);
+
+    const avatarBlock = `<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
+      ${senderAvatar ? `<img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : firstChar}
+    </div>`;
+
+    return `<div class="msg-row them" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
+      ${avatarBlock}
+      <div style="max-width:72%;min-width:0;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(senderName)}</div>
+        <div class="bubble them" data-idx="${idx}" style="cursor:pointer;max-width:100%;">${quoteHtml}${esc(m.content)}${transHtml}</div>
+      </div>
+    </div>`;
+  }
+
+  // ===== 单人聊天：对方消息带头像 =====
+  if (!isGroupChat && m.role === "them") {
+    const c = curContactForRow;
+    const av = (c && c.avatar) ? c.avatar : "";
+    const firstChar = esc((c ? c.name : "?")[0]);
+    return `<div class="msg-row them" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
+      <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
+        ${av ? `<img src="${av}" style="width:100%;height:100%;object-fit:cover;">` : firstChar}
+      </div>
+      <div class="bubble them" data-idx="${idx}" style="cursor:pointer;max-width:72%;">${quoteHtml}${esc(m.content)}${transHtml}</div>
+    </div>`;
+  }
+
+ // ===== 玩家自己：右侧头像 =====
+  if (m.role === "me") {
+    const cfgA = store.get("sv_appearance", {});
+    const myAv = cfgA.userAvatar || "";
+    const myFirst = esc((store.getProfile().name || "我")[0]);
+    return `<div class="msg-row me" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;justify-content:flex-end;">
+      <div class="bubble me" data-idx="${idx}" style="cursor:pointer;max-width:72%;">${quoteHtml}${esc(m.content)}${transHtml}</div>
+      <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
+        ${myAv ? `<img src="${myAv}" style="width:100%;height:100%;object-fit:cover;">` : myFirst}
+      </div>
+    </div>`;
+  }
+
+  // ★ 兜底（正常情况下不会走到，防止返回 undefined）
+  return `<div class="bubble ${m.role}" data-idx="${idx}" style="cursor:pointer">${quoteHtml}${esc(m.content)}${transHtml}</div>`;
+}).join("");   // ★ 关键：闭合 msgs.map 并 join
+
+chatHtml += `</div>`;  // 关闭 #chatThread
+
+// --- 引用预览 ---
+chatHtml += `<div id="quotePreview" style="display:none;padding:8px 14px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-shrink:0;"><div style="display:flex;justify-content:space-between;align-items:center;"><span id="quoteText"></span><span id="cancelQuote" style="cursor:pointer;color:var(--accent)">✕</span></div></div>`;
+
+// --- 输入区 ---
+chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));"><input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}..."><button id="sendBtn">发送</button></div>`;
+
+chatHtml += `</div>`;  // 关闭 #chatPage
+
+body.innerHTML = chatHtml;
     
-   body.innerHTML = chatHtml;
-    
+// ★ 强制重绑右上角设置按钮，指向最新的 renderSettings
+const sbG = $("#appSettingsBtn");
+sbG.style.display = "flex";
+sbG.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+sbG.querySelector("#setBtn").onclick = () => self.renderSettings($("#appBody"));
+sbG.querySelector("#retryBtn").onclick = () => {
+  if (!self.lastUserText) return toast("还没有可以重试的消息");
+  const chatsNow = store.getChats();
+  const arrNow = chatsNow[self.currentUser] || [];
+  const lastThemIdx = arrNow.map(m => m.role).lastIndexOf("them");
+  if (lastThemIdx !== -1) {
+    arrNow.splice(lastThemIdx, 1);
+    chatsNow[self.currentUser] = arrNow;
+    store.setChats(chatsNow);
+  }
+  self.render($("#appBody"));
+  setTimeout(() => self.sendGroupMessage($("#appBody"), self.lastUserText, true), 100);
+};
+
     body.querySelector("#backToListBtn").onclick = () => {
       self.view = "list";
       self.currentUser = "";
       store.setPeterBinding(null);   // 从剧场聊天退出时，彼得自动回到主线
       self.render(body);
     };
-
+const clearBtn = body.querySelector("#clearChatBtn");
+if (clearBtn) {
+  clearBtn.onclick = () => {
+    if (!confirm(`确定清空与「${self.currentUser}」的全部聊天记录吗？此操作不可恢复。`)) return;
+    const chatsNow = store.getChats();
+    delete chatsNow[self.currentUser];
+    store.setChats(chatsNow);
+    toast("聊天记录已清空");
+    self.render(body);
+  };
+}
+// ===== 群名点击改名 =====
+const gLabel = body.querySelector("#groupNameLabel");
+if (gLabel) {
+  gLabel.onclick = () => {
+    const oldName = self.currentUser;
+    const newName = prompt("修改群聊名称：", oldName);
+    if (!newName || !newName.trim()) return;
+    const trimmed = newName.trim();
+    if (trimmed === oldName) return;
+    const contacts = store.getContacts();
+    if (contacts.some(c => c.name === trimmed)) return toast("该名称已存在");
+    const idx = contacts.findIndex(c => c.name === oldName);
+    if (idx === -1) return toast("群聊不存在");
+    contacts[idx].name = trimmed;
+    store.setContacts(contacts);
+    const chats = store.getChats();
+    if (chats[oldName]) {
+      chats[trimmed] = chats[oldName];
+      delete chats[oldName];
+      store.setChats(chats);
+    }
+    self.currentUser = trimmed;
+    toast("群聊名称已修改");
+    self.render(body);
+  };
+}
     const thread=body.querySelector("#chatThread");
     thread.scrollTop=thread.scrollHeight;
     
@@ -3108,6 +3700,11 @@ body.querySelector("#backToListBtn").onclick = () => {
   },
   async sendMessage(body, text, isRetry) {
   const self = this;
+  // 识别群聊，直接走独立发送逻辑
+  const c = store.getContacts().find(x => x.name === self.currentUser);
+  if (c && c.isGroup) {
+    return self.sendGroupMessage(body, text, isRetry);
+  }
   const thread = body.querySelector("#chatThread");
   
   // ===== 校验聊天对象 =====
@@ -3165,33 +3762,205 @@ body.querySelector("#backToListBtn").onclick = () => {
     try {
       const contacts = store.getContacts();
       let contact = contacts.find(x=>x.name === self.currentUser) || { affinity: 0 };
-      
-      // ★ 好感度 → 行为准则（统一用全局函数）
+      const isGroup = !!contact.isGroup;
+      const groupMembers = contact.members || [];
+
+      // 🌟 强制关闭群聊心声
+      window.__skipHeartForThisChat = !!isGroup;
+
+      const liveCfg = JSON.parse(localStorage.getItem("sv_chat_cfg") || '{"lang":"zh"}');
+const isEn = liveCfg.lang === "en";
+const langBrief = isEn
+  ? [
+      "=== CRITICAL LANGUAGE RULE · MUST FOLLOW · VIOLATION = FAILURE ===",
+      "You are an English-speaking character in New York.",
+      "You MUST write EVERY reply in ENGLISH ONLY.",
+      "DO NOT write a single Chinese character in REPLIES.",
+      "Even if the user's previous messages are in Chinese, you reply in English.",
+      "Even if your inner thoughts (HEART) are Chinese, REPLIES must be 100% English.",
+      "Example of WRONG reply: 好啊我马上到",
+      "Example of CORRECT reply: Sure, I'll be there in a sec",
+      "======================================================",
+      ""
+    ].join("\n")
+  : "【只用中文】你是中文角色，必须用中文回复，不要出现英文句子。\n\n";
+
+// 英文模式：在 system prompt 末尾再补一次强制语言提醒
+const langTail = isEn
+  ? "\n\n=== FINAL REMINDER ===\nREPLIES MUST BE 100% ENGLISH. NO CHINESE CHARACTERS ALLOWED.\nHEART must be Chinese (inner thoughts), but REPLIES must be pure English.\n"
+  : "";
+
+      const sSnap = store.getState();
+      const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
+      const playerName = store.getProfile().name || "玩家";
+      const playerGender = store.getProfile().gender === "male" ? "男" : "女";
+      const playerPronoun = playerGender === "男" ? "他" : "她";
       const contactAff = getAffinityOf(self.currentUser);
-      const attitude = affinityLevelHint(contactAff);
+const attitude = affinityLevelHint(contactAff);
+const affBehavior = buildAffinityBehaviorBlock(store.getProfile().gender === "male" ? "他" : "她", contactAff);
       const genderPronoun = (store.getProfile().gender === "male") ? "他" : "她";
-const affBehavior = buildAffinityBehaviorBlock(genderPronoun, contactAff);
 
       const recent = arr.slice(-store.getChatConfig().maxContext * 2)
         .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
         .filter(m => m.content && m.content.trim() !== "");
-        
-      // ★ 强制每次从 localStorage 读取最新配置，防止缓存/作用域问题
-const liveCfg = JSON.parse(localStorage.getItem("sv_chat_cfg") || '{"lang":"zh"}');
-const isEn = liveCfg.lang === "en";
-console.log("[LANG CHECK]", liveCfg.lang, "→ isEn =", isEn);
-      const langBrief = isEn
-        ? "ENGLISH ONLY】You are an English-speaking character. Reply in English only. No Chinese.\n\n"
-        : "【只用中文】你是中文角色，必须用中文回复，不要出现英文句子。\n\n";
 
+      // ============================================================
+      // 🌟 群聊逻辑（完全独立，直接 return）
+      // ============================================================
+      if (isGroup) {
+        const memberList = groupMembers.join("、");
+        
+        // 清洗历史记录，防止以前的 HEART 格式污染 AI
+recent.forEach(r => {
+  if (r.role === "assistant") {
+    r.content = r.content.replace(/\|\|/g, "，").replace(/HEART\s*[:：][\s\S]*/i, "").trim();
+  }
+});
+
+const memberAffinityMap = {};
+groupMembers.forEach(name => { memberAffinityMap[name] = getAffinityOf(name); });
+
+const memberAffinityBlock = groupMembers.map(name => {
+  const aff = memberAffinityMap[name] || 0;
+  return `【${name} 对玩家好感度：${aff}/200 · ${affinityLevelHint(aff)}】`;
+}).join("\n");
+
+        const groupSysPrompt = `${langBrief}这是一个手机群聊，群成员有：${memberList}，以及「${playerName}」（${playerGender}，用「${playerPronoun}」指代）。
+
+【当前日期】${nowStr}
+
+【群成员各自好感度（独立，影响说话态度与亲疏）】
+${memberAffinityBlock}
+
+【群聊规则 · 铁律 · 违反即失败】
+1. 群成员共 ${groupMembers.length} 人：${memberList}。你必须让这 ${groupMembers.length} 人【每一个】都至少发一条消息，一个都不能少。
+2. 发言人名字必须严格使用以下之一，每字不差：${memberList}。不得缩写、不得翻译、不得加称号、不得加括号。
+3. 每条消息格式：成员名：消息内容（中文冒号「：」）。
+4. 消息之间必须用 || 分隔（两个竖线，前后各一个空格）。绝对不要用换行分隔，也不要把多条消息合并成一条。
+5. 消息总数 = 群成员人数（${groupMembers.length}）+ 0~2 条额外插话。
+6. 严格符合每个群成员的性格，以及各自对玩家的好感度（高→亲近热情，低→客气疏离）。
+7. ${isEn ? "全部用英文。" : "全部用纯中文，可夹少量英文口语。"}
+8. 严禁动作描写、神态描写、括号、星号。
+
+【输出格式 · 绝对禁止输出心声】
+直接输出群聊对话，不要输出任何 REPLIES:、HEART: 等前缀，不要输出任何心声、心理活动。
+只按以下格式输出一行：
+${groupMembers.map(n => n + "：消息内容").join(" || ")}`;
+
+        let replyRawGroup = "";
+        try {
+          replyRawGroup = await callAI(recent, groupSysPrompt);
+        } catch (e) {
+          const loadG = body.querySelector("#loading");
+          if (loadG) loadG.textContent = "失败: " + e.message;
+          window.__skipHeartForThisChat = false;
+          return;
+        }
+
+        const loadG = body.querySelector("#loading");
+        if (loadG) loadG.remove();
+
+        let groupText = String(replyRawGroup || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").replace(/\r/g, "").trim();
+        groupText = groupText.replace(/\n?HEART\s*[:：][\s\S]*/i, "").trim();
+        groupText = groupText.replace(/^REPLIES\s*[:：]\s*/i, "").trim();
+
+        let rawList = groupText.split(/\|\|/).map(s => s.trim()).filter(Boolean);
+        if (rawList.length <= 1) {
+          rawList = groupText.split(/\n+/).map(s => s.trim()).filter(Boolean);
+        }
+
+        const parseSender = (msgText) => {
+          let sender = "", bodyText = msgText;
+          let m = msgText.match(/^([^:：]{1,30})[:：]\s*([\s\S]+)$/);
+          if (m) { sender = m[1].trim(); bodyText = m[2].trim(); }
+          else {
+            m = msgText.match(/^【(.+?)】\s*([\s\S]+)$/);
+            if (m) { sender = m[1].trim(); bodyText = m[2].trim(); }
+            else {
+              m = msgText.match(/^(.+?)说[:：]\s*([\s\S]+)$/);
+              if (m) { sender = m[1].trim(); bodyText = m[2].trim(); }
+            }
+          }
+          if (sender) {
+            const matched = groupMembers.find(name =>
+              sender === name || sender.includes(name) || name.includes(sender) ||
+              sender.toLowerCase() === name.toLowerCase()
+            );
+            if (matched) sender = matched;
+          }
+          return { sender, bodyText };
+        };
+
+        let parsedList = rawList.map(parseSender).filter(x => x.bodyText);
+
+        const spoken = new Set(parsedList.map(x => x.sender).filter(s => groupMembers.includes(s)));
+        const missing = groupMembers.filter(n => !spoken.has(n));
+        for (const missName of missing) {
+          try {
+            const missAff = memberAffinityMap[missName] || 0;
+            const missPrompt = `${langBrief}这是手机群聊，群成员有：${memberList}。
+【当前日期】${nowStr}
+【${missName} 对玩家好感度：${missAff}/200 · ${affinityLevelHint(missAff)}】
+
+现在轮到「${missName}」发言。只生成「${missName}」的 1 条消息，严格符合 ta 的性格和好感度。
+${isEn ? "全部用英文。" : "全部用纯中文，可夹少量英文口语。"}
+严禁动作描写、括号、星号。
+
+输出格式（只一行）：
+${missName}：消息内容`;
+
+            const missRaw = await callAI(recent, missPrompt);
+            let missText = String(missRaw || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").trim();
+            missText = missText.replace(/\n?HEART\s*[:：][\s\S]*/i, "").trim();
+            missText = missText.replace(new RegExp("^" + missName + "\\s*[:：]\\s*"), "").trim();
+            if (missText) parsedList.push({ sender: missName, bodyText: missText });
+          } catch (_) {}
+        }
+
+        parsedList = parsedList.map((x, i) => ({
+          sender: x.sender || groupMembers[i % groupMembers.length] || "",
+          bodyText: x.bodyText
+        }));
+
+        for (let i = 0; i < parsedList.length; i++) {
+          const { sender, bodyText } = parsedList[i];
+          if (!bodyText) continue;
+
+          arr.push({ role: "them", content: bodyText, groupSender: sender });
+          chatsNow[self.currentUser] = arr;
+          store.setChats(chatsNow);
+
+          const curThread = body.querySelector("#chatThread");
+          if (curThread) {
+            const memberC = store.getContacts().find(c => c.name === sender);
+            const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
+            const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">
+              ${senderAvatar ? `<img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
+            </div>`;
+            const nameTagTmp = sender ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(sender)}</div>` : "";
+            curThread.innerHTML += `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+              ${avatarHtmlTmp}
+              <div style="max-width:75%;min-width:0;">
+                ${nameTagTmp}
+                <div class="bubble them">${esc(bodyText)}</div>
+              </div>
+            </div>`;
+            curThread.scrollTop = curThread.scrollHeight;
+          }
+          if (i < parsedList.length - 1) await new Promise(r => setTimeout(r, 700));
+        }
+
+        window.__skipHeartForThisChat = false;
+        return;
+      }
+
+      // ============================================================
+      // 🌟 单人逻辑（保留变量防报错）
+      // ============================================================
       let quoteInstruction = "";
       if (quoteContent) quoteInstruction = `\n【特别注意你之前发的消息："${quoteContent}"，请在回复中自然地回应这句引用。`;
-      
-      const sSnap = store.getState();
-      const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
-      let characterVibe = "";
 
-      const contactInfo = store.getContacts().find(c => c.name === self.currentUser);
+      let characterVibe = "";
       const peterBinding = store.getPeterBinding();
       let theaterTheme = null;
       if (self.currentUser === "彼得·帕克" && peterBinding && peterBinding.theaterId) {
@@ -3201,8 +3970,8 @@ console.log("[LANG CHECK]", liveCfg.lang, "→ isEn =", isEn);
       }
 
       if (theaterTheme) {
-  const tq = theaterTheme;
-  characterVibe = `【小剧场模式 · ${tq.title}】\n【背景设定】${tq.background}\n【玩家身份】${tq.identity}\n【氛围倾向】${tq.tone}\n【当前剧情进展】${tq.story.slice(0, 800)}\n【要求】严格贴合剧场背景，短信形式简短、口语化。\n【语言要求】${isEn ? "必须全部用英文回复。" : "必须全部用中文回复。"}`;
+        const tq = theaterTheme;
+        characterVibe = `【小剧场模式 · ${tq.title}】\n【背景设定】${tq.background}\n【玩家身份】${tq.identity}\n【氛围倾向】${tq.tone}\n【当前剧情进展】${tq.story.slice(0, 800)}\n【要求】严格贴合剧场背景，短信形式简短、口语化。\n【语言要求】${isEn ? "必须全部用英文回复。" : "必须全部用中文回复。"}`;
       } else if (self.currentUser === "内德·利兹") {
         characterVibe = `【内德的话痨与技术宅属性】\n- 聊天经常跑题，喜欢突然聊起：最近的漫威电影、新出的电子游戏、他刚写的代码、或者是他在网上看到的外星人阴谋论。\n- 极度崇拜蜘蛛侠，经常想当彼得的“后台技术支持”。\n- 容易激动，经常用感叹号和连发多条消息。`;
       } else if (self.currentUser === "米歇尔·琼斯") {
@@ -3225,19 +3994,68 @@ console.log("[LANG CHECK]", liveCfg.lang, "→ isEn =", isEn);
 - 可以夹杂少量英文口语（如 okay, wow）。
 - 严禁出现大段的英文原句。`;
 
-const heartLangRule = `
+      const heartLangRule = `
 【心声语言 · 铁律 · 违反即失败】
 1. HEART 字段必须用**纯中文**书写，即使玩家发的是英文。
 2. 严禁在 HEART 里出现任何完整的英文句子。
 3. 允许保留少量英文单词（如 "okay"、"wow"）作为口语点缀，但不得超过 3 个词。
-4. 心声是彼得的内心独白，不是心理分析报告，要口语、自然、有点碎碎念。
+4. 心声是彼得的内心独白，不是分析报告，要口语、自然、有点碎碎念。
 `;
 
-     // ★ 不再用 buildSystem（它是世界线 DM 提示词，会污染短信语言）
-      const playerName = store.getProfile().name || "玩家";
-const playerGender = store.getProfile().gender === "male" ? "男" : "女";
-const playerPronoun = playerGender === "男" ? "他" : "她";
-const sysPrompt = `${langBrief}你在扮演「${self.currentUser}」，正在和「${playerName}」（${playerGender}，用「${playerPronoun}」指代）用手机发短信。
+     // ===== 判断彼得是否已向玩家公开蜘蛛侠身份 =====
+      const peterIdentityRevealed = (function () {
+        // 只有彼得本人 + 好感度足够高 + 剧情里已明确互相知道，才算公开
+        // 用好感度阈值 + 一个可手动开关的标记双重控制
+        const flag = localStorage.getItem("sv_peter_identity_revealed") === "1";
+        return flag;
+      })();
+
+      const peterSecretRule = (self.currentUser === "彼得·帕克" && !peterIdentityRevealed)
+        ? `
+【蜘蛛侠身份 · 绝对铁律 · 违反即失败】
+1. 你现在**还没有告诉玩家**你就是蜘蛛侠。玩家也还不知道。
+2. 在 REPLIES 里，你绝对**不能**承认、暗示、说漏"我就是蜘蛛侠""我昨晚在抓坏人"之类。
+3. 你会绕着弯子撒谎：说"我最近有点忙""我得帮梅婶办事""我临时有事"，用各种蹩脚借口搪塞。
+4. 你撒谎时会紧张、会心虚、会转移话题、会突然变得结巴——这是你的真实反应，写进 REPLIES 的措辞里。
+5. 但【HEART 心声】里，你**可以**焦虑地想着"完了完了差点说漏嘴""她要是知道了会怎么看我""不能让梅婶知道，更不能让她知道"。心声是你自己心里想，不对外说。
+6. 如果玩家直接问"你是不是蜘蛛侠"，你必须在 REPLIES 里强烈否认或岔开话题，但 HEART 里慌得一批。
+`
+        : "";
+
+      // ===== 阶段感：按好感度切分彼得的"聊天距离" =====
+      const peterStageRule = (self.currentUser === "彼得·帕克")
+        ? (function () {
+            const a = contactAff;
+            if (a >= 151) return `【聊天距离 · 亲密关系】你和她说话已经完全放松，会直接说"想你""想见你"，会撒娇、会吃醋、会主动约她。但仍然是发短信，不要写成情书。`;
+            if (a >= 101) return `【聊天距离 · 暧昧期】你会忍不住多聊几句、找借口多待一会儿，会试探她、逗她、话说一半收回来，偶尔会突然安静然后冒出一句认真的话。但她还不是你女朋友，不要喊"宝贝""亲爱的"，不要直接告白。`;
+            if (a >= 51) return `【聊天距离 · 信任好友】你把她当铁哥们一样聊，会约她一起看动漫、拼乐高、吃披萨、吐槽内德。会互相损、互相借作业、互相抱怨。**严禁吃醋、严禁脸红、严禁"想她""喜欢她"这类暧昧词。**`;
+            if (a >= 21) return `【聊天距离 · 普通朋友】你会礼貌地回，偶尔吐槽两句，但不会主动约、不会分享太私人的事。不会一连发好几条。`;
+            return `【聊天距离 · 陌生人/点头之交】你回复简短客气，甚至有点敷衍。不会主动多聊，不会分享私事。`;
+          })()
+        : "";
+
+      // ===== 非彼得联系人的"关系天花板"提醒 =====
+      const nonPeterCeilingRule = (self.currentUser !== "彼得·帕克")
+        ? `【关系天花板 · 铁律】你和玩家之间只能是友情/亲情关系（${self.currentUser === "梅婶" ? "长辈与晚辈" : "朋友"}）。无论好感度多高，都严禁出现吃醋、脸红、心跳加速、占有欲、告白、暧昧暗示等任何恋爱倾向。`
+        : "";
+
+      // ===== 彼得话痨跑题的风格约束（只在彼得时注入）=====
+      const peterChatterRule = (self.currentUser === "彼得·帕克")
+        ? `
+【彼得·帕克 · 发短信风格 · 极其重要】
+1. **话痨感**：很容易一条接一条地发，经常"啊等等"、"我刚想起来"、"对了"、"算了没事"。
+2. **爱跑题**：聊着正事突然岔到"今天化学课"、"内德又搞了什么"、"梅婶做的意面"、"刚才在便利店看到个怪人"，然后"哦对，你刚才说什么来着？"
+3. **自嘲+焦虑**：会自损两句"我真是蠢死了"、"完了完了"、"我脑子是不是有洞"。
+4. **突然认真**：跑题到一半突然冒出一句很真诚的话，然后又赶紧"算了算了别在意"。
+5. **俚语感**：口语化，用"真的假的""行吧""我服了""不骗你""说真的"。
+6. **短信节奏**：经常一句很短 + 一句很长 + 再来一句补刀。例如：
+   REPLIES: 等等 || 你刚才说的那个我好像在哪见过 || 啊不对我想起来了是内德昨天跟我扯的 || 算了不重要哈哈哈
+7. 严禁写成"客服腔"：不许"请问有什么可以帮您"、"我理解你的感受"、"希望能帮到你"这种。
+8. 严禁每回合都说"我正在忙蜘蛛侠的事"——你还有正常的高中生活。
+`
+        : "";
+
+      const sysPrompt = `${langBrief}你在扮演「${self.currentUser}」，正在和「${playerName}」（${playerGender}，用「${playerPronoun}」指代）用手机发短信。
 
 【当前日期】${nowStr}
 【当前关系】${attitude}
@@ -3245,17 +4063,12 @@ const sysPrompt = `${langBrief}你在扮演「${self.currentUser}」，正在和
 ${affBehavior}
 ${peterInitiativeHint}
 ${characterVibe}
+${peterChatterRule}
+${peterStageRule}
+${nonPeterCeilingRule}
+${peterSecretRule}
 
-${isEn ? `
-【语言铁律 · 违反即失败】
-- 你必须用**英文**回复。
-- 严禁出现任何中文字符。
-- 即使对方发中文，你也用英文回。
-` : `
-【语言铁律 · 违反即失败】
-- 你必须用**中文**回复。
-- 严禁出现英文句子（可以夹 okay / wow 这种口语词，不超过 3 个）。
-`}
+${langRule}
 
 【短信格式 · 违反即失败】
 1. 这是**手机短信**，不是小说。
@@ -3263,167 +4076,218 @@ ${isEn ? `
 3. 严禁用括号 () （） 或星号 ** 包裹内容。
 4. 严禁写成 *"..."* 这种台词格式。
 
-【输出格式 · 必须严格两行】
-REPLIES: 第一条短信 || 第二条短信 || 第三条短信
-HEART: 你此刻真实的内心独白（第一人称，40-100 字，纯中文）
+【输出格式 · 必须严格三行 · 违反即失败】
+第 1 行：REPLIES: 第一条短信 || 第二条短信 || 第三条短信
+第 2 行：HEART: 你此刻真实的内心独白（第一人称，40-100 字，纯中文）
+
+⚠️ 严禁事项：
+- 严禁使用加粗 **REPLIES:** 或 **HEART:** 等 markdown 语法。
+- 严禁在 REPLIES 和 HEART 之间插入空行以外的任何内容。
+- 严禁把多条短信写在同一行却不加 || 分隔。
+- 严禁把 || 换成换行符以外的任何符号。
 
 【REPLIES 要求】
 - 2 到 4 条，用 || 分隔。
 - 像真人发微信：可以一句短、一句长、连发。
-- 示例：
-REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
+- **彼得·帕克尤其要做到话痨+跑题+突然认真**，不要每条都是整整齐齐的完整句子。
 
-【HEART 要求】
-- 必须输出，必须有内容。
+【HEART 要求 · 极其重要 · 别憋着】
+- HEART 是"心声"，是你心里**无脑直出**的碎碎念，不是心理分析报告！
+- **想什么就写什么，不要过滤，不要提炼成一句人话**。可以是：
+  · "啊啊啊她怎么突然问这个，完了完了完了"
+  · "我刚才是不是说错话了？应该没说错吧？算了不管了"
+  · "她要是知道我昨晚干了什么肯定会骂我"
+  · "行吧我承认我有点想跟她多聊一会儿但我不能表现得太明显"
+- 口语、碎片、有语气词、可以骂自己、可以突然想到别的事再拐回来。
+- **禁止写成**："我感受到了她话语中的关心，这让我心中涌起一阵暖意"这种AI腔。
 - 第一人称，纯中文（即使回复是英文，心声也用中文）。
-- 口语化、碎碎念、真实，不是心理分析报告。
 - 缺了 HEART 字段，这次回复作废。
 `;
 
-      /// ★★★ 真正调用 AI ★★★
+      // ★★★ 真正调用 AI ★★★
       const replyRaw = await callAI(recent, sysPrompt);
 
-// ============================================
-// ★ 统一解析器（REPLIES:/HEART: 文本格式优先，JSON 兜底静默）
-// ============================================
-function parseReplyRaw(raw, isEnMode) {
+      // ============================================
+      // ★ 统一解析器（REPLIES:/HEART: 文本格式优先，JSON 兜底静默）
+      // ============================================
+     function parseReplyRaw(raw, isEnMode) {
   let text = String(raw || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").trim();
+
+  // ★ 修复 1：先去 markdown 加粗/斜体符号，再匹配
+  text = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1");
+
   let replies = [];
   let heart = "";
 
-  // 1) 正则强行抓取 REPLIES 和 HEART
-  const rMatch = text.match(/REPLIES\s*[:：]\s*([\s\S]*?)(?=\nHEART|HEART\s*[:：]|$)/i);
-  const hMatch = text.match(/HEART\s*[:：]\s*([\s\S]+)/i);
+  // ★ 修复 2：REPLIES 匹配更宽容
+ text = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1");
+const rMatch = text.match(
+  /(?:^|\n)\s*\**\s*(?:REPLIES?|REPLY|回复)\s*\**\s*[:：]\s*\**\s*([\s\S]*?)(?=\n\s*\**\s*HEART\s*\**\s*[:：]|$)/i
+);
+const hMatch = text.match(
+  /(?:^|\n)\s*\**\s*HEART\s*\**\s*[:：]\s*([\s\S]+)/i
+);
 
-  if (rMatch) {
-    replies = rMatch[1].replace(/\r/g, "").split(/\|\||\n/).map(s => s.trim()).filter(Boolean);
-  }
-  if (hMatch) {
-    heart = hMatch[1].trim();
-  }
-
-  // 2) JSON 兜底
-  if (replies.length === 0 || !heart) {
-    try {
-      const startIdx = text.indexOf("{"), endIdx = text.lastIndexOf("}");
-      if (startIdx !== -1 && endIdx > startIdx) {
-        const obj = JSON.parse(text.substring(startIdx, endIdx + 1));
-        if (!replies.length && Array.isArray(obj.replies)) replies = obj.replies;
-        if (!heart && typeof obj.heart === "string") heart = obj.heart;
-      }
-    } catch (_) {}
-  }
-
-  // 3) 极端兜底：没按格式来，整段当一条
-  if (replies.length === 0) {
-    replies = [text.replace(/REPLIES\s*[:：]/i, "").trim()];
-  }
-
-  // 4) 清洗气泡
-  const cleanBubble = (s) => {
-    if (!s) return "";
-    let c = String(s);
-    c = c.replace(/\*[^*]*\*/g, "");
-    c = c.replace(/[\(（\[【][^\)）\]】]*[\)）\]】]/g, "");
-    c = c.replace(/\s+/g, " ").trim();
-
-    if (!isEnMode) {
-      // ★ 中文模式：只有英文占绝对多数才清洗，避免误杀"okay"之类
-      const enCount = (c.match(/[a-zA-Z]/g) || []).length;
-      const cnCount = (c.match(/[\u4e00-\u9fa5]/g) || []).length;
-      if (enCount > cnCount * 2 && enCount > 5) {
-        const stripped = c.replace(/[a-zA-Z]+/g, "").trim();
-        if (stripped.length >= 2) c = stripped;
-      }
-    }
-    // 英文模式：什么都不删
-
-    return c;
-  };
-  replies = replies.map(cleanBubble).filter(t => t && t !== "..." && t !== "…");
-
-  if (replies.length === 0) replies = isEnMode ? ["Uh..."] : ["嗯……"];
-
-  // 5) 心声兜底（随机）
-  if (!heart || !heart.trim()) {
-    const defaultHearts = [
-      "（盯着屏幕看了两秒，琢磨着该怎么回）",
-      "（嘴角抽了一下，感觉有点好笑）",
-      "（手指悬在键盘上，犹豫了一下）",
-      "（看完之后，深吸了一口气）"
-    ];
-    heart = defaultHearts[Math.floor(Math.random() * defaultHearts.length)];
-  }
-
-  return { replies, heart };
+        if (rMatch) {
+  replies = rMatch[1].replace(/\r/g, "").split(/\|\||\n/).map(s => s.trim()).filter(Boolean);
+}
+if (hMatch) {
+  heart = hMatch[1].trim();
 }
 
-let { replies: replyList, heart: heartText } = parseReplyRaw(replyRaw, isEn);
-console.log("[RAW AI]", replyRaw); 
-console.log("[HEART FINAL]", heartText);
+// ★ 修复 3：终极保险 —— 无论走哪条路，只要某条 reply 里还残留 ||
+//   就强制再拆一次。彻底杜绝 "A || B || C" 整条显示。
+if (replies.length > 0) {
+  replies = replies
+    .flatMap(r => String(r).split(/\|\|/))
+    .map(s => s.trim())
+    .filter(Boolean);
+}
 
-// ★ 如果心声是兜底文案（说明 AI 没输出 HEART），强制补一次
-const isFallbackHeart = [
-  "（盯着屏幕看了两秒，琢磨着该怎么回）",
-  "（嘴角抽了一下，感觉有点好笑）",
-  "（手指悬在键盘上，犹豫了一下）",
-  "（看完之后，深吸了一口气）"
-].includes(heartText);
+        if (replies.length === 0 || !heart) {
+          try {
+            const startIdx = text.indexOf("{"), endIdx = text.lastIndexOf("}");
+            if (startIdx !== -1 && endIdx > startIdx) {
+              const obj = JSON.parse(text.substring(startIdx, endIdx + 1));
+              if (!replies.length && Array.isArray(obj.replies)) replies = obj.replies;
+              if (!heart && typeof obj.heart === "string") heart = obj.heart;
+            }
+          } catch (_) {}
+        }
 
-if (isFallbackHeart) {
-  console.warn("[HEART] AI 未输出有效心声，触发补生成...");
+        if (replies.length === 0) {
+          replies = [text.replace(/REPLIES\s*[:：]/i, "").trim()];
+        }
+
+        const cleanBubble = (s) => {
+  if (!s) return "";
+  let c = String(s);
+  c = c.replace(/\*[^*]*\*/g, "");
+  c = c.replace(/[\(（\[【][^\)）\]】]*[\)）\]】]/g, "");
+  c = c.replace(/\s+/g, " ").trim();
+  c = c.replace(/\s*\|\|\s*/g, " ").trim(); 
+
+          if (!isEnMode) {
+            const enCount = (c.match(/[a-zA-Z]/g) || []).length;
+            const cnCount = (c.match(/[\u4e00-\u9fa5]/g) || []).length;
+            if (enCount > cnCount * 2 && enCount > 5) {
+              const stripped = c.replace(/[a-zA-Z]+/g, "").trim();
+              if (stripped.length >= 2) c = stripped;
+            }
+          }
+          return c;
+        };
+
+if (replies.length > 0) {
+  replies = replies
+    .flatMap(r => String(r).split(/\|\|/))
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+        replies = replies.map(cleanBubble).filter(t => t && t !== "..." && t !== "…");
+
+        if (replies.length === 0) replies = isEnMode ? ["Uh..."] : ["嗯……"];
+
+        if (!heart || !heart.trim()) {
+          const defaultHearts = [
+            "（盯着屏幕看了两秒，琢磨着该怎么回）",
+            "（嘴角抽了一下，感觉有点好笑）",
+            "（手指悬在键盘上，犹豫了一下）",
+            "（看完之后，深吸了一口气）"
+          ];
+          heart = defaultHearts[Math.floor(Math.random() * defaultHearts.length)];
+        }
+// ★ 强制约束：彼得·帕克必须 2-4 条，其他联系人至少 1 条
+// 如果少于下限，返回一个标记让外层重试
+const minReplies = (self.currentUser === "彼得·帕克") ? 2 : 1;
+if (replies.length < minReplies) {
+  return { replies, heart, needRetry: true };
+}
+        return { replies, heart };
+      }
+
+      let parsed = parseReplyRaw(replyRaw, isEn);
+let replyList = parsed.replies;
+let heartText = parsed.heart;
+
+// ★ 彼得回复条数不足时重试一次
+if (parsed.needRetry) {
   try {
-    const heartPrompt = `你是「${self.currentUser}」。刚才玩家发了这条消息："${text}"。
-你（${self.currentUser}）心里的真实想法是什么？
-要求：
-1. 第一人称，40-80字。
-2. 纯中文，口语化，碎碎念。
-3. 只输出想法本身，不要任何前缀、括号、引号。
-4. 例如："他这么问肯定有事，但又不好意思直说……算了先问清楚吧。"`;
-    const heartRes = await callAI([{ role: "user", content: "写内心想法" }], heartPrompt);
-    if (heartRes && heartRes.trim().length > 5) {
-      heartText = heartRes.trim();
-      console.log("[HEART] 补生成成功:", heartText);
+    const retrySysPrompt = sysPrompt + `\n\n【本次重试 · 上一次回复条数不足，必须严格 2~4 条】`;
+    const retryRaw = await callAI(recent, retrySysPrompt);
+    const retryParsed = parseReplyRaw(retryRaw, isEn);
+    if (!retryParsed.needRetry) {
+      replyList = retryParsed.replies;
+      heartText = retryParsed.heart;
     }
-  } catch (e) {
-    console.warn("[HEART] 补生成失败，保留兜底:", e.message);
-  }
+  } catch (_) {}
 }
+      
+      const isFallbackHeart = [
+        "（盯着屏幕看了两秒，琢磨着该怎么回）",
+        "（嘴角抽了一下，感觉有点好笑）",
+        "（手指悬在键盘上，犹豫了一下）",
+        "（看完之后，深吸了一口气）"
+      ].includes(heartText);
 
-// ============================================
-// ★ 心声处理 · 保存 + 弹窗
-// ============================================
-try {
-  const contactsNow = store.getContacts();
-  const idx = contactsNow.findIndex(x => x.name === self.currentUser);
-  if (idx !== -1) {
-    contactsNow[idx].heart = heartText.trim();
-    store.setContacts(contactsNow);
-  }
-} catch (e) {
-  console.error("[HEART] 保存失败:", e);
-}
+      if (isFallbackHeart && !window.__skipHeartForThisChat) {
+        try {
+          const heartPrompt = `你是「${self.currentUser}」。刚才玩家发了这条消息："${text}"。
+你（${self.currentUser}）心里的真实想法是什么？
 
-try {
-  const heartBox = document.createElement("div");
-  heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
-  heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(heartText.trim());
-  document.body.appendChild(heartBox);
-  setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
-} catch (e) {
-  console.error("[HEART] ❌ 弹窗崩溃:", e);
-}
+【绝对铁律 · 违反即失败】
+1. 玩家是**女性**，必须用「她」指代，严禁使用「他」、「兄弟」、「这家伙」等男性词汇。
+2. 第一人称，40-80字。
+3. 纯中文，口语化，碎碎念，符合对应的人设。要体现出思考的过程，不要无脑直出想法。
+4. 只输出想法本身，不要任何前缀、括号、引号。
+5. 例如："她这么问肯定有事，但又不好意思直说……算了先问清楚吧。"`;
+          const heartRes = await callAI([{ role: "user", content: "写内心想法" }], heartPrompt);
+          if (heartRes && heartRes.trim().length > 5) {
+            heartText = heartRes.trim();
+          }
+        } catch (e) {}
+      }
 
-const load = body.querySelector("#loading"); 
-if (load) load.remove();
+      if (!window.__skipHeartForThisChat) {
+        try {
+          const contactsNow = store.getContacts();
+          const idx = contactsNow.findIndex(x => x.name === self.currentUser);
+          if (idx !== -1) {
+            contactsNow[idx].heart = heartText.trim();
+            store.setContacts(contactsNow);
+          }
+        } catch (e) {}
 
-for (let i = 0; i < replyList.length; i++) {
+        try {
+          const heartBox = document.createElement("div");
+          heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
+          heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(heartText.trim());
+          document.body.appendChild(heartBox);
+          setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
+        } catch (e) {}
+      }
+
+      const load = body.querySelector("#loading"); 
+      if (load) load.remove();
+
+      for (let i = 0; i < replyList.length; i++) {
         const msgText = replyList[i].trim();
         if (!msgText) continue;
         arr.push({ role: "them", content: msgText });
         chatsNow[self.currentUser] = arr;
         store.setChats(chatsNow);
-        currentThread.innerHTML += '<div class="bubble them">' + esc(msgText) + '</div>';
+        
+        const curContactLive = store.getContacts().find(c => c.name === self.currentUser);
+        const liveAv = (curContactLive && curContactLive.avatar) ? curContactLive.avatar : "";
+        const liveFirst = esc((curContactLive ? curContactLive.name : "?")[0]);
+        currentThread.innerHTML +=
+          '<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
+            '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
+              (liveAv ? '<img src="' + liveAv + '" style="width:100%;height:100%;object-fit:cover;">' : liveFirst) +
+            '</div>' +
+            '<div class="bubble them" style="max-width:72%;">' + esc(msgText) + '</div>' +
+          '</div>';
         currentThread.scrollTop = currentThread.scrollHeight;
         if (i < replyList.length - 1) {
           await new Promise(r => setTimeout(r, 800));
@@ -3442,6 +4306,180 @@ for (let i = 0; i < replyList.length; i++) {
     }
   },
 
+async sendGroupMessage(body, text, isRetry) {
+    const self = this;
+    const thread = body.querySelector("#chatThread");
+    const contact = store.getContacts().find(x => x.name === self.currentUser);
+    if (!contact || !contact.isGroup) return;
+    
+    const groupMembers = contact.members || [];
+
+    const chatsNow = store.getChats();
+    const arr = chatsNow[self.currentUser] || [];
+
+    if (!isRetry) {
+      self.lastUserText = text;
+      arr.push({ role: "me", content: text });
+      chatsNow[self.currentUser] = arr;
+      store.setChats(chatsNow);
+      self.render(body);
+    } else {
+      const lastAiIdx = arr.map(m => m.role).lastIndexOf("them");
+      if (lastAiIdx !== -1) {
+        arr.splice(lastAiIdx, 1);
+        chatsNow[self.currentUser] = arr;
+        store.setChats(chatsNow);
+        self.render(body);
+      }
+    }
+
+    const currentThread = body.querySelector("#chatThread");
+    currentThread.innerHTML += `<div class="bubble them typing-indicator" id="loading" style="color:var(--muted);font-style:italic;font-size:12px;display:flex;align-items:center;gap:4px;">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span> 正在输入...
+    </div>`;
+    currentThread.scrollTop = currentThread.scrollHeight;
+
+    try {
+      const liveCfg = JSON.parse(localStorage.getItem("sv_chat_cfg") || '{"lang":"zh"}');
+const isEn = liveCfg.lang === "en";
+const langBrief = isEn
+  ? "=== CRITICAL LANGUAGE RULE ===\nEvery member of this group chat MUST reply in ENGLISH ONLY.\nDO NOT write any Chinese characters in the messages.\n================================\n\n"
+  : "【只用中文】\n\n";
+      
+      const sSnap = store.getState();
+      const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
+      const playerName = store.getProfile().name || "玩家";
+      const playerGender = store.getProfile().gender === "male" ? "男" : "女";
+      const playerPronoun = playerGender === "男" ? "他" : "她";
+
+      const memberList = groupMembers.join("、");
+      
+      // 读取每个成员的真实好感度
+      const memberAffinityBlock = groupMembers.map(name => {
+        const aff = getAffinityOf(name);
+        return `【${name} 对玩家好感度：${aff}/200】`;
+      }).join("\n");
+
+      const recent = arr.slice(-store.getChatConfig().maxContext * 2)
+        .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
+        .filter(m => m.content && m.content.trim() !== "");
+
+      // 清洗历史记录里的心声格式
+      recent.forEach(r => {
+        if (r.role === "assistant") {
+          r.content = r.content.replace(/\|\|/g, "，").replace(/HEART\s*[:：][\s\S]*/i, "").trim();
+        }
+      });
+
+      const groupSysPrompt = `${langBrief}这是一个手机群聊，群成员有：${memberList}，以及「${playerName}」（${playerGender}，用「${playerPronoun}」指代）。
+
+【当前日期】${nowStr}
+
+【群成员各自好感度】
+${memberAffinityBlock}
+
+【群聊规则 · 铁律 · 违反即失败】
+1. 群成员共 ${groupMembers.length} 人：${memberList}。你必须让这 ${groupMembers.length} 人【每一个】都至少发一条消息。
+2. 发言人名字必须严格使用以下之一，每字不差：${memberList}。
+3. 每条消息格式：成员名：消息内容（中文冒号「：」）。
+4. 消息之间必须用 || 分隔（两个竖线）。绝对不要用换行分隔。
+5. 严禁动作描写、神态描写、括号、星号。
+
+【输出格式 · 绝对禁止输出心声】
+直接输出群聊对话，不要输出任何 REPLIES:、HEART: 等前缀，不要输出任何心声、心理活动。
+只按以下格式输出一行：
+${groupMembers.map(n => n + "：" + (isEn ? "English message here" : "消息内容")).join(" || ")}${isEn ? "\n\n=== REMINDER: ALL MESSAGES MUST BE IN ENGLISH ===" : ""}`;
+      const replyRawGroup = await callAI(recent, groupSysPrompt);
+      const loadG = body.querySelector("#loading");
+      if (loadG) loadG.remove();
+
+      // 解析回复
+      let groupText = String(replyRawGroup || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").trim();
+      groupText = groupText.replace(/\n?HEART\s*[:：][\s\S]*/i, "").trim();
+      groupText = groupText.replace(/^REPLIES\s*[:：]\s*/i, "").trim();
+
+      let rawList = groupText.split(/\|\|/).map(s => s.trim()).filter(Boolean);
+      if (rawList.length <= 1) {
+        rawList = groupText.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      }
+
+      const parseSender = (msgText) => {
+        let sender = "", bodyText = msgText;
+        let m = msgText.match(/^([^:：]{1,30})[:：]\s*([\s\S]+)$/);
+        if (m) { sender = m[1].trim(); bodyText = m[2].trim(); }
+        else {
+          m = msgText.match(/^【(.+?)】\s*([\s\S]+)$/);
+          if (m) { sender = m[1].trim(); bodyText = m[2].trim(); }
+          else {
+            m = msgText.match(/^(.+?)说[:：]\s*([\s\S]+)$/);
+            if (m) { sender = m[1].trim(); bodyText = m[2].trim(); }
+          }
+        }
+        if (sender) {
+          const matched = groupMembers.find(name =>
+            sender === name || sender.includes(name) || name.includes(sender)
+          );
+          if (matched) sender = matched;
+        }
+        return { sender, bodyText };
+      };
+
+      let parsedList = rawList.map(parseSender).filter(x => x.bodyText);
+
+      // 校验是否每个人都发言了
+      const spoken = new Set(parsedList.map(x => x.sender).filter(s => groupMembers.includes(s)));
+      const missing = groupMembers.filter(n => !spoken.has(n));
+      for (const missName of missing) {
+        try {
+          const missPrompt = `${langBrief}这是群聊，成员：${memberList}。
+现在轮到「${missName}」发言。生成 1 条消息。
+输出格式只一行：
+${missName}：消息内容`;
+          const missRaw = await callAI(recent, missPrompt);
+          let missText = String(missRaw || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").trim();
+          missText = missText.replace(new RegExp("^" + missName + "\\s*[:：]\\s*"), "").trim();
+          if (missText) parsedList.push({ sender: missName, bodyText: missText });
+        } catch (_) {}
+      }
+
+      parsedList = parsedList.map((x, i) => ({
+        sender: x.sender || groupMembers[i % groupMembers.length] || "",
+        bodyText: x.bodyText
+      }));
+
+      // 逐条渲染
+      for (let i = 0; i < parsedList.length; i++) {
+        const { sender, bodyText } = parsedList[i];
+        if (!bodyText) continue;
+
+        arr.push({ role: "them", content: bodyText, groupSender: sender });
+        chatsNow[self.currentUser] = arr;
+        store.setChats(chatsNow);
+
+        const curThread = body.querySelector("#chatThread");
+        if (curThread) {
+          const memberC = store.getContacts().find(c => c.name === sender);
+          const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
+          const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">
+            ${senderAvatar ? `<img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
+          </div>`;
+          const nameTagTmp = sender ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(sender)}</div>` : "";
+          curThread.innerHTML += `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+            ${avatarHtmlTmp}
+            <div style="max-width:75%;min-width:0;">
+              ${nameTagTmp}
+              <div class="bubble them">${esc(bodyText)}</div>
+            </div>
+          </div>`;
+          curThread.scrollTop = curThread.scrollHeight;
+        }
+        if (i < parsedList.length - 1) await new Promise(r => setTimeout(r, 700));
+      }
+    } catch (e) {
+      const load = body.querySelector("#loading");
+      if (load) load.textContent = "失败: " + e.message;
+    }
+  },
   // ===== 语音播放 =====
  playVoice(key) {
   const asset = VOICE_ASSETS[key];
@@ -3488,7 +4526,11 @@ thread.appendChild(loadingEl);
       }
 
       // 使用与主聊天一致的纯文本格式，避免 JSON 解析失败
-      const sysPrompt = `你正在扮演漫威的「彼得·帕克」，现在你正在用手机和玩家发短信。
+      const isEnVoice = store.getChatConfig().lang === "en";
+const voiceLangHead = isEnVoice
+  ? "=== CRITICAL: REPLY IN ENGLISH ONLY. NO CHINESE IN REPLIES. ===\n"
+  : "";
+const sysPrompt = voiceLangHead + `你正在扮演漫威的「彼得·帕克」，现在你正在用手机和玩家发短信。
 【当前日期】${nowStr}
 【当前关系】好感度：${contact.affinity}/200
 【刚刚发生的事】${voiceContext}
@@ -3522,7 +4564,7 @@ REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
 
       const isEn = store.getChatConfig().lang === "en";
 
-      const replyRaw = await callAI(recent, sysPrompt);
+      const replyRaw = await callAI(recent, sysPrompt + (isEnVoice ? "\n\n=== REPLIES MUST BE 100% ENGLISH ===" : ""));
 
       // ===== 复用同一套解析器 =====
       const parsedVoice = (function parseVoice(raw) {
@@ -4302,6 +5344,11 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
    - **如果只是场景切换但仍是同一天（比如从学校走到彼得家），不要写时间推进**。
    - 如果剧情里写"一个月后"就 +30，"一周后"就 +7，"第二天"就 +1。
    - 如果不确定，宁可写 0，也不要瞎跳。
+11. **【阶段推进 · 极重要】**
+   - 当前阶段的大事件（如果有）一旦结束，或者你的剧情已经自然走到了当前阶段的尾声，**必须**在末尾单独输出一行：
+     【阶段完成】
+   - 输出【阶段完成】后，不要写下一阶段的剧情，让系统自动为你推进。
+   - **不要强行把剧情无限拖在本阶段！** 如果是日常阶段，写 3-5 回合日常后，自然过渡到下一个大事件。
 ${contextStr}`);
 
         const res = await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
@@ -4318,16 +5365,40 @@ ${contextStr}`);
         }
 
         // ★ 解析【时间推进】
-        const timeAdvance = parseTimeAdvance(res);
-        if (timeAdvance !== 0) {
-          const advanced = advanceTimeByDays(s, timeAdvance);
-          if (advanced) {
-            const np = WORLD.timeline[s.anchor];
-            toast(`⏱️ 时间推进 → ${s.gameYear}年${s.gameMonth}月${s.gameDay}日（${np.name}）`);
-          } else {
-            toast(`⏱️ 时间推进 → ${s.gameYear}年${s.gameMonth}月${s.gameDay}日`);
-          }
-        }
+const timeAdvance = parseTimeAdvance(res);
+if (timeAdvance !== 0) {
+  const advanced = advanceTimeByDays(s, timeAdvance);
+  if (advanced) {
+    const np = WORLD.timeline[s.anchor];
+    toast(`⏱️ 时间推进 → ${s.gameYear}年${s.gameMonth}月${s.gameDay}日（${np.name}）`);
+  } else {
+    toast(`⏱️ 时间推进 → ${s.gameYear}年${s.gameMonth}月${s.gameDay}日`);
+  }
+}
+
+// ★ 解析【阶段完成】并自动跳转
+if (res.includes("【阶段完成】")) {
+  if (s.anchor < WORLD.timeline.length - 1) {
+    // ★ 主线阶段推进到 phase4（复联大厦）后，彼得身份默认公开
+    if (s.anchor >= 3) {
+      localStorage.setItem("sv_peter_identity_revealed", "1");
+    }
+    s.anchor += 1;
+    const np = WORLD.timeline[s.anchor];
+    // 将时间对齐到新阶段
+    s.gameYear = np.year;
+    s.gameMonth = np.monthRange[0];
+    s.gameDay = 1;
+    
+    // 清空当前剧情，强制 AI 接下来生成新阶段的剧情
+    s.currentStory = ""; 
+    s.currentOptions = "";
+    
+    toast(`⏭️ 阶段推进 → ${np.name}`);
+  } else {
+    toast("🎉 已到达最终阶段");
+  }
+}
 
         s.currentStory = (parts[0]||"")
           .replace('【剧情】','')
@@ -5622,8 +6693,10 @@ ${lastDiaryHint}
         createdAt: Date.now(),
         response: ""
       };
-      myDiaries.push(entry);
-      localStorage.setItem("sv_diary_me", JSON.stringify(myDiaries));
+      // ★ 修复：先从本地读取已有的日记数组，再 push
+const myDiaries = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
+myDiaries.push(entry);
+localStorage.setItem("sv_diary_me", JSON.stringify(myDiaries));
       div.remove();
       toast("日记已保存，正在让彼得回应...");
 
