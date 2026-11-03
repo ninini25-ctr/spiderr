@@ -1086,7 +1086,7 @@ body.theme-light .bubble-trans {
       <button class="app-icon" data-app="Theater"><span>🎭</span><label>小剧场</label></button>
       <button class="app-icon" data-app="Diary"><span>📓</span><label>双人日记</label></button>
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
-      <button class="app-icon" data-app="contacts"><span>🫂</span><label>社交圈</label></button>
+      <button class="app-icon" data-app="contacts"><span>👥</span><label>社交圈</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
       <button class="app-icon" data-app="Appearance"><span>🎨</span><label>外观</label></button>
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
@@ -1468,7 +1468,8 @@ const store = {
     currentStory: "",
     currentOptions: "",
     history: [],
-    outcomes: {}
+    outcomes: {},
+    pov: "third"
   };
   if (chosen) {
     init.anchor = chosen.anchor ?? 0;
@@ -2894,6 +2895,18 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
           </div>
           <button class="btn" id="saveTheme">应用外观</button>
         </div>
+
+        <div class="card"><h3>👁️ 世界线叙事人称</h3>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">控制主线剧情如何指代你。切换后从下一回合剧情开始生效。</p >
+          <div class="field">
+            <select id="s_pov">
+              <option value="first" ${(store.getState().pov || "second") === "first" ? "selected" : ""}>第一人称（我）</option>
+              <option value="second" ${(store.getState().pov || "second") === "second" ? "selected" : ""}>第二人称（你）</option>
+              <option value="third" ${(store.getState().pov || "second") === "third" ? "selected" : ""}>第三人称（她 / 玩家名）</option>
+            </select>
+          </div>
+          <button class="btn" id="savePov">保存人称设置</button>
+        </div>
        <div class="card"><h3>⏳ 开局时间</h3>
    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">
      当前开局：<b style="color:var(--text);">${(() => {
@@ -2971,6 +2984,13 @@ const themeSel = body.querySelector("#s_theme");
         if(t === "light") document.body.classList.add("theme-light");
         else document.body.classList.remove("theme-light");
         toast("外观已切换");
+      };
+
+      body.querySelector("#savePov").onclick = () => {
+        const st = store.getState();
+        st.pov = body.querySelector("#s_pov").value;
+        store.setState(st);
+        toast("已保存人称设置：" + { first: "第一人称", second: "第二人称", third: "第三人称" }[st.pov]);
       };
       const sel = body.querySelector("#c_provider");
       sel.onchange = () => {
@@ -3066,21 +3086,21 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
         const slots = getProfileSlots();
 
         const div = document.createElement("div");
-        div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
-        div.innerHTML = `<h2 style="color:var(--text);margin-top:0">💾 存档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
-        const list = div.querySelector("#pslotList");
+div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+div.innerHTML = `<h2 style="color:var(--text);margin-top:0">💾 存档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
+const list = div.querySelector("#pslotList");
 
-        slots.forEach((snap, i) => {
-          const filled = !!snap;
-          const label = filled
-            ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
-            : "（空白档）";
-          const row = document.createElement("div");
-          row.style.cssText = "background:#14141c;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-          row.innerHTML = `<div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
-            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled ? "覆盖" : "保存"}</button>`;
-          list.appendChild(row);
-        });
+slots.forEach((snap, i) => {
+  const filled = !!snap;
+  const label = filled
+    ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+    : "（空白档）";
+  const row = document.createElement("div");
+  row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+  row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
+    <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled ? "覆盖" : "保存"}</button>`;
+  list.appendChild(row);
+});
 
         list.addEventListener("click", (e) => {
           const btn = e.target.closest("button[data-idx]");
@@ -3115,21 +3135,21 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
         if (!slots.some(s => s)) return toast("还没有任何人设存档");
 
         const div = document.createElement("div");
-        div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
-        div.innerHTML = `<h2 style="color:var(--text);margin-top:0">📂 读档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
-        const list = div.querySelector("#pslotList");
+div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+div.innerHTML = `<h2 style="color:var(--text);margin-top:0">📂 读档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
+const list = div.querySelector("#pslotList");
 
-        slots.forEach((snap, i) => {
-          const filled = !!snap;
-          const label = filled
-            ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
-            : "（空白档）";
-          const row = document.createElement("div");
-          row.style.cssText = "background:#14141c;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-          row.innerHTML = `<div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
-            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px" ${filled ? "" : "disabled"}>${filled ? "读取" : "不可用"}</button>`;
-          list.appendChild(row);
-        });
+slots.forEach((snap, i) => {
+  const filled = !!snap;
+  const label = filled
+    ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+    : "（空白档）";
+  const row = document.createElement("div");
+  row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+  row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
+    <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px" ${filled ? "" : "disabled"}>${filled ? "读取" : "不可用"}</button>`;
+  list.appendChild(row);
+});
 
         list.addEventListener("click", (e) => {
           const btn = e.target.closest("button[data-idx]");
@@ -5700,7 +5720,16 @@ if (window._worldlineMode === "main") {
          ? `\n【上回合刚发生大事件 · 强制过渡】\n玩家上回合刚刚经历/收尾了本阶段的大事件。本回合【必须】写"善后、余波、关系变化、日常喘息"，**严禁**在本回合开启下一个大事件或推进到下一阶段。允许写：受伤休养、被追问、情绪消化、和亲友的关系变化、生活恢复正常的一段。\n`
          : "";
 
-        const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
+// ★ 人性解析
+        const pov = s.pov || "second";
+        const playerNameForPov = store.getProfile().name || "玩家";
+        const povRule = pov === "first"
+          ? `【叙事人称 · 第一人称 · 铁律】\n全程用「我」称呼玩家本人（玩家=我）。玩家自己的心理、动作、对白，全部用第一人称。不要用"她/你/玩家"指代玩家本人。`
+          : pov === "third"
+          ? `【叙事人称 · 第三人称 · 铁律】\n全程用「${playerNameForPov}」或「她」称呼玩家（玩家=第三人称视角下的${playerNameForPov}）。不要用"我/你"指代玩家本人。`
+          : `【叙事人称 · 第二人称 · 铁律】\n全程用「你」称呼玩家（玩家=你）。不要用"我/她/玩家"指代玩家本人。`;
+       const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
+${povRule}
 ${transitionHint}
 【硬性时间锚点】${timeLabel}
 【当前阶段】${phase.name}
@@ -5860,6 +5889,8 @@ if (res.includes("【阶段完成】")) {
     const deltaStr = lastDelta === 0 ? "0 (无变化)" : (lastDelta > 0 ? `+${lastDelta}` : lastDelta.toString());
 const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
 const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+  const currentPov = s.pov || "second";
+  const povLabelMap = { first: "第一人称", second: "第二人称", third: "第三人称" };
   body.innerHTML = `<div style="padding:14px">
 <div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #2d6bff;display:flex;justify-content:space-between;align-items:center;">
   <div>
@@ -5867,7 +5898,10 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
     <div style="font-weight:bold;color:var(--text);font-size:14px;">${liveTimeStr}</div>
     <div style="font-size:11px;color:var(--muted);margin-top:4px;">${phase.name} · ${phase.summary.slice(0, 40)}...</div>
   </div>
-  <button id="twTimeBtn" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">⏱️ 时间</button>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+    <button id="twPovBtn" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">👁️ ${povLabelMap[currentPov]}</button>
+    <button id="twTimeBtn" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">⏱️ 时间</button>
+  </div>
 </div>
   <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
     <div>
@@ -5888,6 +5922,54 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
         <button class="btn" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
       </div>
     </div>`;
+// 👁️ 人称切换
+    body.querySelector("#twPovBtn").onclick = () => {
+      const st = store.getState();
+      const current = st.pov || "second";
+      const div = document.createElement("div");
+      div.style.cssText = "position:absolute;inset:0;background:rgba(0,0,0,.85);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;";
+
+      const makeOpt = (val, label, desc) => {
+        const isActive = current === val;
+        const borderColor = isActive ? "var(--accent-2)" : "var(--line)";
+        const bgColor = isActive ? "rgba(45,107,255,.12)" : "var(--panel-2)";
+        const check = isActive ? " ✓" : "";
+        return '<button class="pov-opt" data-pov="' + val + '" style="'
+          + "width:100%;text-align:left;padding:14px;margin-bottom:8px;"
+          + "border-radius:12px;border:2px solid " + borderColor + ";"
+          + "background:" + bgColor + ";color:var(--text);cursor:pointer;font-size:14px;"
+          + '">'
+          + '<div style="font-weight:700;margin-bottom:4px;">' + label + check + '</div>'
+          + '<div style="font-size:12px;color:var(--muted);line-height:1.5;">' + desc + '</div>'
+          + '</button>';
+      };
+
+      div.innerHTML = '<div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;max-width:380px;width:100%;">'
+        + '<h3 style="margin:0 0 4px;color:var(--text);font-size:16px;">👁️ 选择叙事人称</h3>'
+        + '<p style="font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.5;">切换后从下一回合剧情开始生效，当前已生成的剧情不受影响。</p >'
+        + makeOpt("first", "第一人称（我）", "玩家用「我」指代自己，更沉浸。")
+        + makeOpt("second", "第二人称（你）", "玩家用「你」指代，传统互动小说写法。")
+        + makeOpt("third", "第三人称（她 / 玩家名）", "旁观视角，用玩家名字或「她」指代玩家。")
+        + '<div style="display:flex;gap:8px;margin-top:6px;">'
+        + '<button id="pov_cancel" class="btn ghost" style="flex:1;">取消</button>'
+        + '</div>'
+        + '</div>';
+
+      document.querySelector(".device").appendChild(div);
+      var closePov = function() { div.remove(); };
+      div.querySelector("#pov_cancel").onclick = closePov;
+      div.querySelectorAll(".pov-opt").forEach(function(btn) {
+        btn.onclick = function() {
+          st.pov = btn.dataset.pov;
+          store.setState(st);
+          closePov();
+          var names = { first: "第一人称", second: "第二人称", third: "第三人称" };
+          toast("已切换为：" + names[st.pov]);
+          openApp("worldline");
+        };
+      });
+    };
+
 // ⏱️ 手动变更时间
     body.querySelector("#twTimeBtn").onclick = () => {
       const st = store.getState();
@@ -7215,6 +7297,7 @@ async render(body) {
             <div class="diary-card-title">${esc(d.title)}</div>
             <div class="diary-card-preview">${esc(preview)}...</div>
             ${d.response ? `<div class="diary-card-response">💬 ${esc((d.response || "").slice(0, 40))}...</div>` : ""}
+${(Array.isArray(d.replies) && d.replies.length) ? `<div style="margin-top:6px;font-size:11px;color:var(--accent-2);font-weight:600;">💬 有 ${d.replies.length} 条留言</div>` : ""}
           </div>`;
       }).join("");
     }
@@ -7596,14 +7679,36 @@ ${content}
     const div = document.createElement("div");
     div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
     const isPeter = who === "peter";
-    // 我的日记用自定义纸张；彼得日记默认卡片（或也可以给彼得配纸）
     const paper = (!isPeter && d.paperStyle) ? d.paperStyle : "";
     const badge = d.timeSource === "real"
       ? `<span class="diary-time-badge real">现实</span>`
       : (d.timeSource === "world" ? `<span class="diary-time-badge world">世界线</span>` : "");
 
+    // ===== 留言往来渲染（优化尺寸与排版） =====
+    const replies = Array.isArray(d.replies) ? d.replies : [];
+    const repliesHtml = replies.length
+      ? `<div style="margin-top:24px;padding-top:20px;border-top:1px dashed var(--line);">
+          <div style="display:flex;justify-content:center;margin-bottom:16px;">
+            <div style="font-size:11px;color:var(--muted);font-weight:600;background:var(--panel-2);padding:4px 12px;border-radius:12px;">💬 留言往来</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            ${replies.map(r => {
+              const isMe = r.role === "me";
+              return `
+                <div style="display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};width:100%;">
+                  ${!isMe ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;margin-left:4px;">🕷️ 彼得</div>` : `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;margin-right:4px;">我</div>`}
+                  <div style="max-width:85%;${isMe ? 'background:linear-gradient(135deg,#2d6bff,#5b8dff);color:#fff;border-radius:16px 16px 4px 16px;' : 'background:var(--panel-2);border:1px solid var(--line);border-radius:16px 16px 16px 4px;color:var(--text);'}padding:12px 16px;font-size:14px;line-height:1.7;word-break:break-word;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+                    ${esc(r.content).replace(/\n/g, '<br>')}
+                  </div>
+                </div>`;
+            }).join("")}
+          </div>
+        </div>`
+      : "";
+
+    // ===== 主体 =====
     div.innerHTML = `
-      <div style="max-width:520px;margin:20px auto;">
+      <div style="max-width:520px;margin:20px auto;padding-bottom:20px;">
         <div class="diary-detail ${paper}" style="padding:24px;">
           <div class="diary-detail-meta">${esc(d.date)}${badge} · ${esc(d.stage || "")} · ${isPeter ? "🕷️ 彼得" : "✍️ 我"}</div>
           <div class="diary-detail-title">${esc(d.title)}</div>
@@ -7614,14 +7719,124 @@ ${content}
               <div class="diary-detail-response-text">${esc(d.response)}</div>
             </div>
           ` : ""}
+          ${repliesHtml}
         </div>
-        <button class="btn" id="diaryCloseBtn" style="margin-top:12px;">关闭</button>
+
+        ${isPeter ? `
+          <div style="margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;">
+            <div style="font-size:13px;color:var(--text);margin-bottom:10px;font-weight:600;">✍️ 回复这篇日记</div>
+            <textarea id="diaryReplyInput" rows="3" placeholder="你想对彼得说些什么..." style="width:100%;box-sizing:border-box;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.6;resize:none;outline:none;font-family:inherit;transition:border .2s;" onfocus="this.style.borderColor='var(--accent-2)'" onblur="this.style.borderColor='var(--line)'"></textarea>
+            <button id="diaryReplySend" class="btn" style="width:100%;margin-top:10px;border-radius:12px;padding:12px;">发送</button>
+          </div>
+        ` : ""}
+
+        <button class="btn ghost" id="diaryCloseBtn" style="margin-top:16px;width:100%;border-radius:12px;padding:12px;">关闭</button>
       </div>
     `;
     document.querySelector(".device").appendChild(div);
 
     div.querySelector("#diaryCloseBtn").onclick = () => div.remove();
     div.onclick = (e) => { if (e.target === div) div.remove(); };
+
+    // ===== 回复发送逻辑 =====
+    const sendBtn = div.querySelector("#diaryReplySend");
+    const replyInput = div.querySelector("#diaryReplyInput");
+    if (sendBtn && replyInput) {
+      const doSend = async () => {
+        const text = replyInput.value.trim();
+        if (!text) return toast("请先写点什么");
+        replyInput.disabled = true;
+        sendBtn.disabled = true;
+        sendBtn.textContent = "发送中...";
+
+        // 1. 定位日记
+        const diaries = JSON.parse(localStorage.getItem("sv_diary") || "[]");
+        const idx = diaries.findIndex(x => (x.timestamp || 0) === (d.timestamp || 0) && x.title === d.title);
+        if (idx === -1) {
+          toast("找不到这篇日记");
+          replyInput.disabled = false;
+          sendBtn.disabled = false;
+          sendBtn.textContent = "发送";
+          return;
+        }
+
+        // 2. 保存我的回复
+        diaries[idx].replies = Array.isArray(diaries[idx].replies) ? diaries[idx].replies : [];
+        diaries[idx].replies.push({ role: "me", content: text, ts: Date.now() });
+        localStorage.setItem("sv_diary", JSON.stringify(diaries));
+
+        // 3. 请求彼得回应（重写提示词，绑定玩家身份和好感度）
+        let peterReply = "";
+        try {
+          const s = store.getState();
+          const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+          
+          // 获取玩家信息与好感度
+          const profile = store.getProfile();
+          const playerName = profile.name || "玩家";
+          const playerGender = profile.gender === "male" ? "男" : "女";
+          const playerPronoun = playerGender === "男" ? "他" : "她";
+          
+          const contactAff = getAffinityOf("彼得·帕克");
+          const affBehavior = buildAffinityBehaviorBlock("彼得·帕克", contactAff);
+
+          const sysPrompt = `你是漫威的「彼得·帕克」。你写了一篇私人日记，你的朋友「${playerName}」（${playerGender}，用「${playerPronoun}」指代）读了之后在下面给你留言了。
+
+【当前日期】${date}
+【你写的日记标题】${d.title}
+【你写的日记内容】
+${d.content}
+
+【「${playerName}」在你日记下的留言】
+${text}
+
+${affBehavior}
+
+【你的任务】
+写一小段你对「${playerName}」这条留言的回应（80~150字），用第一人称「我」。
+
+【绝对铁律 · 违反即失败】
+1. **她是你的朋友/熟人，不是陌生人！** 严禁使用"陌生人""网友""路人"等词汇。她和你的关系见上方的好感度设定。
+2. **话痨+自嘲**：遇到尴尬或感动的事，你会用碎碎念和自黑来掩饰。比如"啊这，我居然被发现了……"、"完了，我是不是又写得太矫情了"。
+3. **跑题**：聊着一半可能会突然扯到"这让我想起内德昨天……"或者"梅婶今天又……"。
+4. **绝对不能写成 AI 读后感**：不许出现"我感受到了你的关心""这让我心中一暖""谢谢你的留言"这种客服腔。
+5. 口语化，可以用「老天」「说真的」「我服了」「救命」。
+6. 可以加 1~2 个 emoji（😅 😄 🕸️），但不要堆砌。
+7. 严禁用括号 () 或星号 * * 描写动作（比如"（挠头）"）。
+8. 全部中文，第一人称「我」。
+
+直接输出回应内容，不要任何前缀。`;
+
+          const res = await callAI([{ role: "user", content: "回应这条留言" }], sysPrompt);
+          peterReply = (res || "").trim();
+        } catch (e) {
+          toast("彼得回应失败：" + e.message);
+        }
+
+        // 4. 保存彼得回应
+        if (peterReply) {
+          const diaries2 = JSON.parse(localStorage.getItem("sv_diary") || "[]");
+          const idx2 = diaries2.findIndex(x => (x.timestamp || 0) === (d.timestamp || 0) && x.title === d.title);
+          if (idx2 !== -1) {
+            diaries2[idx2].replies = Array.isArray(diaries2[idx2].replies) ? diaries2[idx2].replies : [];
+            diaries2[idx2].replies.push({ role: "peter", content: peterReply, ts: Date.now() });
+            localStorage.setItem("sv_diary", JSON.stringify(diaries2));
+          }
+        }
+
+        div.remove();
+        toast(peterReply ? "彼得回复了你" : "回复已保存");
+        apps.Diary.render(document.getElementById("appBody"));
+      };
+
+      sendBtn.onclick = doSend;
+      replyInput.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          doSend();
+        }
+      });
+    }
   }
 },
 
@@ -8357,20 +8572,21 @@ function loadSlot(idx){
 window.showMemory=()=>{
   const s=store.getState(), history=s.history||[];
   const div=document.createElement("div");
-  div.style.cssText="position:absolute;inset:0;background:#000e;z-index:300;padding:20px;overflow-y:auto;color:#ddd;font-size:14px;line-height:1.7;";
+  div.style.cssText="position:absolute;inset:0;background:var(--bg);z-index:300;padding:20px;overflow-y:auto;color:var(--text);font-size:14px;line-height:1.7;";
   if(!history.length){
-    div.innerHTML=`<h2 style="color:var(--text)">📜 回忆</h2><p style="color:var(--muted) ">还没有任何历史剧情记录。</p><button class="btn" style="margin-top:20px" onclick="this.parentNode.remove()">关闭</button>`;
+    div.innerHTML=`<h2 style="color:var(--text)">📜 回忆</h2><p style="color:var(--muted)">还没有任何历史剧情记录。</p ><button class="btn" style="margin-top:20px" onclick="this.parentNode.remove()">关闭</button>`;
   } else {
-    div.innerHTML=`<h2 style="color:var(--text);position:sticky;top:0;background:#000e;padding-bottom:10px">📜 回忆 · 共 ${history.length} 段</h2>
-      ${history.map((h,i)=>`<div style="background:#14141c;padding:12px;border-radius:12px;margin-bottom:10px;border-left:3px solid var(--accent-2)">
+    div.innerHTML=`<h2 style="color:var(--text);padding-bottom:10px;margin-top:0">📜 回忆 · 共 ${history.length} 段</h2>
+      ${history.map((h,i)=>`<div style="background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:10px;border-left:3px solid var(--accent-2)">
         <div style="color:var(--muted);font-size:12px;margin-bottom:6px">— 第 ${i+1} 段 —</div>
-        <div style="white-space:pre-wrap;color:var(--sidebar-text-color) ;max-height:200px;overflow-y:auto">${esc(h.story)}</div>
-        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #333;color:var(--accent)">➤ 你的选择：${esc(h.choice)}</div>
+        <div style="white-space:pre-wrap;color:var(--text);max-height:200px;overflow-y:auto">${esc(h.story)}</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);color:var(--accent)">➤ 你的选择：${esc(h.choice)}</div>
       </div>`).join("")}
       <button class="btn" style="margin-top:10px" onclick="this.parentNode.remove()">关闭</button>`;
   }
   document.querySelector(".device").appendChild(div);
 };
+
 // ===== 剧情联动：NPC 主动发短信 =====
  async function triggerNpcMessage(storyContext) {
   const contacts = store.getContacts();
