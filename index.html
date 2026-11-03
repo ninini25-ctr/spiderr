@@ -393,6 +393,164 @@ body.theme-light .toast{
   transition: background 0.3s;
 }
 body.theme-light .notch{ background:#1d1d1f; }
+/* ===== 社交圈 App ===== */
+.sc-tabs {
+  display: flex; gap: 6px;
+  background: var(--panel-2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.sc-tab {
+  flex: 1; padding: 10px 8px;
+  text-align: center; font-size: 13px; font-weight: 600;
+  color: var(--muted); cursor: pointer; border-radius: 10px;
+  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.sc-tab.active { background: var(--panel); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.sc-tab-count {
+  font-size: 10px; background: var(--line); color: var(--muted);
+  padding: 1px 6px; border-radius: 8px; font-weight: 500;
+}
+.sc-tab.active .sc-tab-count { background: var(--accent-2); color: #fff; }
+
+.sc-list { display: flex; flex-direction: column; gap: 8px; }
+.sc-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; padding: 12px;
+  cursor: pointer; transition: all .15s;
+  position: relative;
+}
+.sc-row:hover { border-color: var(--accent-2); }
+.sc-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #fff; font-weight: 700; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sc-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.sc-desc { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-aff-bar {
+  margin-top: 6px; height: 4px; background: var(--panel-2);
+  border-radius: 2px; overflow: hidden;
+}
+.sc-aff-fill {
+  height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  border-radius: 2px; transition: width .3s;
+}
+.sc-aff-text { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.sc-del-btn {
+  background: none; border: none; color: var(--muted);
+  font-size: 14px; cursor: pointer; padding: 4px 6px;
+  border-radius: 6px; transition: all .15s; flex-shrink: 0;
+}
+.sc-del-btn:hover { color: var(--accent); background: rgba(230,36,41,.1); }
+.sc-empty {
+  text-align: center; padding: 32px 16px;
+  color: var(--muted); font-size: 13px;
+}
+
+.sc-group-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--panel-2); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.sc-group-mini-av {
+  width: 22px; height: 22px; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--panel);
+  position: absolute;
+}
+.sc-group-mini-av:nth-child(1) { top: 2px; left: 2px; }
+.sc-group-mini-av:nth-child(2) { top: 2px; right: 2px; }
+.sc-group-mini-av:nth-child(3) { bottom: 2px; left: 11px; }
+.sc-group-mini-av-letter {
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #fff; font-weight: 700; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ===== 号角日报入口卡片 ===== */
+.daily-card {
+  background: linear-gradient(135deg, #1a1a24 0%, #0f0f15 100%);
+  border: 1px solid var(--line);
+  border-radius: 16px; padding: 24px 20px;
+  text-align: center; position: relative; overflow: hidden;
+}
+body.theme-light .daily-card {
+  background: linear-gradient(135deg, #f5f3eb 0%, #e8e3d5 100%);
+}
+.daily-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #b8935a, #d4af6e, #b8935a);
+}
+.daily-logo { font-size: 48px; margin-bottom: 10px; }
+.daily-title { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: 2px; font-family: "SimSun", "宋体", serif; }
+.daily-subtitle { font-size: 10px; color: var(--muted); letter-spacing: 3px; margin-top: 4px; font-weight: 600; }
+.daily-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 14px 0 20px; }
+.daily-btn { padding: 12px 20px !important; font-size: 14px; }
+
+/* 存档列表 */
+.daily-saved-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.daily-saved-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px 14px;
+  cursor: pointer; transition: all .15s;
+}
+.daily-saved-item:hover { border-color: var(--accent-2); }
+.daily-saved-info { flex: 1; min-width: 0; }
+.daily-saved-title { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.daily-saved-date { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.daily-saved-del { background: none; border: none; color: var(--muted); font-size: 14px; padding: 6px; cursor: pointer; border-radius: 6px; }
+.daily-saved-del:hover { color: var(--accent); background: rgba(230,36,41,.1); }
+
+/* 报纸本体 */
+.daily-paper {
+  background: #f5efdc; border-radius: 12px;
+  padding: 18px 14px;
+  border: 1px solid #d6c9a8;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  font-family: "FangSong", "仿宋", "STFangsong", "KaiTi", "楷体", "Kaiti SC", serif;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(120,90,50,.012) 3px, rgba(120,90,50,.012) 4px);
+}
+.daily-paper * {
+  font-family: inherit;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.daily-paper-header { text-align: center; border-bottom: 3px double #3a2f1f; padding-bottom: 10px; margin-bottom: 14px; }
+.daily-paper-title { font-size: clamp(18px, 5.2vw, 22px); font-weight: 900; letter-spacing: 2px; color: #1a1408; }
+.daily-paper-cn { font-size: 13px; font-weight: 800; letter-spacing: 4px; color: #3a2f1f; margin-top: 2px; }
+.daily-paper-line { height: 1px; background: #3a2f1f; margin: 8px 20px; }
+.daily-paper-meta { font-size: 10px; color: #5a4a30; display: flex; justify-content: center; gap: 6px; letter-spacing: 0.5px; flex-wrap: wrap; line-height: 1.5; }
+
+.daily-headline { text-align: center; padding-bottom: 14px; }
+.daily-h1 { font-size: clamp(16px, 4.8vw, 20px); font-weight: 900; color: #1a1408; line-height: 1.4; letter-spacing: 0.5px; margin: 0 0 8px; }
+.daily-h1-sub { font-size: clamp(12px, 3.6vw, 14px); color: #3a2f1f; line-height: 1.5; margin: 4px 0 8px; font-weight: 700; }
+.daily-h1-body { font-size: clamp(12px, 3.4vw, 13px); line-height: 1.85; color: #2a2010; margin: 0; text-align: justify; }
+.daily-divider { text-align: center; font-size: 12px; font-weight: 800; color: #3a2f1f; letter-spacing: 2px; margin: 16px 0 10px; }
+
+.daily-entry { padding: 12px 0; border-bottom: 1px dashed #c9bb96; }
+.daily-entry:last-child { border-bottom: none; }
+.daily-entry-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.daily-entry-tag { font-size: 9px; font-weight: 700; background: #3a2f1f; color: #f5efdc; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px; flex-shrink: 0; }
+.daily-entry-title { font-size: clamp(13px, 3.8vw, 14px); font-weight: 800; color: #1a1408; margin: 0; line-height: 1.4; }
+.daily-entry-body { font-size: clamp(12px, 3.4vw, 12.5px); line-height: 1.8; color: #2a2010; margin: 0; text-align: justify; }
+
+.daily-paper-footer { margin-top: 18px; text-align: center; }
+.daily-footer-line { height: 1px; background: #3a2f1f; margin-bottom: 8px; }
+.daily-footer-text { font-size: 9px; color: #5a4a30; letter-spacing: 0.5px; font-style: italic; line-height: 1.5; }
 /* ===== 双人日记 ===== */
 .diary-wrap { padding: 16px; }
 .diary-header { margin-bottom: 16px; }
@@ -475,6 +633,209 @@ body.theme-light .notch{ background:#1d1d1f; }
 }
 .diary-detail-response-label { font-size: 11px; color: var(--accent-2); font-weight: 600; margin-bottom: 8px; }
 .diary-detail-response-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+
+/* ===== 双人日记 · 4 种纸张背景（只作用于日记卡片/详情页） ===== */
+/* 牛皮纸 */
+.paper-kraft {
+  background-color: #d9c7ae;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(120,90,50,.12) 1px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(120,90,50,.10) 1px, transparent 1px),
+    radial-gradient(circle at 40% 80%, rgba(120,90,50,.08) 1px, transparent 1px),
+    linear-gradient(160deg, #e8d7bf 0%, #d9c7ae 50%, #cbb89c 100%);
+  background-size: 18px 18px, 26px 26px, 34px 34px, 100% 100%;
+  color: #3b2a1a;
+  border: 1px solid #b9a385;
+  box-shadow: inset 0 0 40px rgba(120,90,50,.15), 0 2px 6px rgba(0,0,0,.08);
+}
+.paper-kraft .diary-detail-title,
+.paper-kraft .diary-detail-content,
+.paper-kraft .diary-detail-meta,
+.paper-kraft .diary-card-title,
+.paper-kraft .diary-card-preview,
+.paper-kraft .diary-card-date,
+.paper-kraft .diary-card-stage { color: #3b2a1a !important; }
+
+/* 日记本（横线格） */
+.paper-notebook {
+  background-color: #fbfaf3;
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #c9d6e3 27px, #c9d6e3 28px),
+    linear-gradient(180deg, #fdfcf6 0%, #f6f3e6 100%);
+  color: #2b2b2b;
+  position: relative;
+  border: 1px solid #d8d2c0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+}
+.paper-notebook::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 28px;
+  width: 1px;
+  background: #e0a3a3;
+  pointer-events: none;
+}
+.paper-notebook .diary-detail-title,
+.paper-notebook .diary-detail-content,
+.paper-notebook .diary-detail-meta,
+.paper-notebook .diary-card-title,
+.paper-notebook .diary-card-preview,
+.paper-notebook .diary-card-date,
+.paper-notebook .diary-card-stage { color: #2b2b2b !important; }
+.paper-notebook .diary-detail-content { padding-left: 26px; }
+
+/* 书轴（卷轴） */
+.paper-scroll {
+  background-color: #ecdfc6;
+  background-image:
+    linear-gradient(90deg, rgba(140,110,60,.06) 0%, transparent 20%, transparent 80%, rgba(140,110,60,.06) 100%),
+    linear-gradient(180deg, #f2e8d0 0%, #ecdfc6 50%, #dccaa8 100%);
+  color: #4a3520;
+  border: 1px solid #c9b48b;
+  border-left: 6px double #b89c6e;
+  border-right: 6px double #b89c6e;
+  box-shadow:
+    inset 0 0 30px rgba(120,90,50,.18),
+    0 3px 8px rgba(0,0,0,.08);
+}
+.paper-scroll .diary-detail-title,
+.paper-scroll .diary-detail-content,
+.paper-scroll .diary-detail-meta,
+.paper-scroll .diary-card-title,
+.paper-scroll .diary-card-preview,
+.paper-scroll .diary-card-date,
+.paper-scroll .diary-card-stage { color: #4a3520 !important; }
+
+/* 空白纸 */
+.paper-blank {
+  background-color: #ffffff;
+  background-image:
+    radial-gradient(circle at 50% 20%, rgba(0,0,0,.015) 0%, transparent 60%);
+  color: #1d1d1f;
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 6px rgba(0,0,0,.04);
+}
+.paper-blank .diary-detail-title,
+.paper-blank .diary-detail-content,
+.paper-blank .diary-detail-meta,
+.paper-blank .diary-card-title,
+.paper-blank .diary-card-preview,
+.paper-blank .diary-card-date,
+.paper-blank .diary-card-stage { color: #1d1d1f !important; }
+
+/* ===== 纸张选择器 ===== */
+.paper-picker {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0 4px;
+  flex-wrap: wrap;
+}
+.paper-picker-item {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all .15s;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paper-picker-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--muted);
+}
+.paper-picker-item.active {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(45,107,255,.2);
+}
+
+/* 每个选择器内部的「迷你纸张预览」——只画背景色/纹理，不继承纸张的文字颜色 */
+.paper-picker-item .pp-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 4 种迷你预览 */
+.pp-preview.pp-blank {
+  background: #ffffff;
+  background-image: radial-gradient(circle at 50% 20%, rgba(0,0,0,.015) 0%, transparent 60%);
+}
+.pp-preview.pp-kraft {
+  background-color: #d9c7ae;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(120,90,50,.14) 1px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(120,90,50,.12) 1px, transparent 1px),
+    linear-gradient(160deg, #e8d7bf 0%, #d9c7ae 50%, #cbb89c 100%);
+  background-size: 10px 10px, 14px 14px, 100% 100%;
+}
+.pp-preview.pp-notebook {
+  background-color: #fbfaf3;
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 9px, #c9d6e3 9px, #c9d6e3 10px),
+    linear-gradient(180deg, #fdfcf6 0%, #f6f3e6 100%);
+}
+.pp-preview.pp-scroll {
+  background-color: #ecdfc6;
+  background-image: linear-gradient(180deg, #f2e8d0 0%, #ecdfc6 50%, #dccaa8 100%);
+  border-left: 4px double #b89c6e;
+  border-right: 4px double #b89c6e;
+}
+
+/* 选择器上的文字标签 */
+.paper-picker-label {
+  position: relative;
+  z-index: 2;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text);
+  text-shadow: 0 1px 2px rgba(255,255,255,.85), 0 0 4px rgba(255,255,255,.6);
+  padding: 1px 4px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.04);
+  pointer-events: none;
+}
+body.theme-light .paper-picker-label {
+  color: #1d1d1f;
+  text-shadow: none;
+  background: rgba(255,255,255,.6);
+}
+
+/* active 时右上角一个小勾 */
+.paper-picker-item.active::after {
+  content: "✓";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  z-index: 3;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent-2);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 时间来源徽标 */
+.diary-time-badge {
+  display: inline-block;
+  font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 8px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.diary-time-badge.world { background: rgba(45,107,255,.15); color: var(--accent-2); }
+.diary-time-badge.real  { background: rgba(76,175,80,.15); color: #4caf50; }
+
 /* ===== 平行宇宙剧场 ===== */
 .th-wrap { padding: 16px; }
 .th-header { margin-bottom: 20px; }
@@ -725,7 +1086,7 @@ body.theme-light .bubble-trans {
       <button class="app-icon" data-app="Theater"><span>🎭</span><label>小剧场</label></button>
       <button class="app-icon" data-app="Diary"><span>📓</span><label>双人日记</label></button>
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
-      <button class="app-icon" data-app="contacts"><span>👥</span><label>通讯录</label></button>
+      <button class="app-icon" data-app="contacts"><span>🫂</span><label>社交圈</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
       <button class="app-icon" data-app="Appearance"><span>🎨</span><label>外观</label></button>
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
@@ -788,7 +1149,15 @@ const WORLD = {
     events: ["校园日常", "抓小偷", "华盛顿十项全能队训练", "便利店", "地铁通勤"],
     forcedEvent: null,
     mutableOutcomes: [],
-    mjRelation: "普通同学/朋友，MJ 对彼得只是有点好奇，暗恋萌芽禁止"
+    mjRelation: "普通同学/朋友，MJ 对彼得只是有点好奇，暗恋萌芽禁止",
+smallEvents: [
+  "校内：化学课上被点名、走廊撞见Flash被嘲笑、午休和内德在机房写作业",
+  "皇后区：便利店买东西撞见小偷、地铁上制止骚扰、帮老太太搬东西",
+  "家庭：梅婶催作业、房租压力、彼得偷偷算战衣预算",
+  "校园社交：十项全能队训练、Liz Allan搭话、MJ在角落看书偶尔吐槽一句",
+  "蜘蛛侠日常：第一次失败地荡蛛丝、战衣破了个洞、被路人拍视频发网上"
+],
+pacing: "本阶段是日常启蒙期，大事件稀疏。要求：玩家每推进 2~3 回合日常小事件，才允许出现一次'升级感'的事件（比如第一次成功救下一个人、第一次被号角日报点名）。严禁一回合直接跳到华盛顿之类的大事件。"
   },
   {
     key: "phase2",
@@ -801,7 +1170,15 @@ const WORLD = {
     events: ["华盛顿纪念碑", "酒店", "十项全能比赛", "战衣故障"],
     forcedEvent: "华盛顿纪念碑事件必然发生：彼得的战衣追踪器会误触发，他必须在无战衣的情况下救出被困的同学。",
     mutableOutcomes: ["谁被困在电梯里（内德 / MJ / Liz / 都可以变）", "彼得救援成功与否（是否受伤）", "被救同学对彼得的态度变化"],
-    mjRelation: "朋友，可以一起参加十项全能队，一起旅行，但没有恋爱暗示"
+    mjRelation: "朋友，可以一起参加十项全能队，一起旅行，但没有恋爱暗示",
+smallEvents: [
+  "备战华盛顿：十项全能队集训、讨论题、Flash吹牛、MJ冷面吐槽",
+  "出发前夜：彼得收拾行李、藏战衣、和内德密谋、梅婶叮嘱",
+  "旅途日常：大巴上、酒店分房、和同学挤电梯",
+  "华盛顿事件前的小插曲：参观博物馆、走散、被老师点名",
+  "战衣追踪器异常的伏笔：彼得发现信号乱跳、内德远程协助"
+],
+pacing: "本阶段核心是'华盛顿纪念碑事件'，但大事件前必须有铺垫。要求：大事件发生前至少 3 个日常/铺垫小事件回合，让玩家熟悉团队氛围、建立关系，再进入纪念碑。纪念碑事件后仍需 2 回合善后（受伤、被问话、同学态度变化），才能推进到下一阶段。"
   },
   {
     key: "phase3",
@@ -814,7 +1191,16 @@ const WORLD = {
     events: ["渡轮", "ATM 抢劫", "邮车抢劫", "返校节舞会", "科尼岛海滩", "秃鹫的飞机坠毁"],
     forcedEvent: "斯塔克渡轮事件必然发生：秃鹫的武器交易导致渡轮裂开，托尼会到场救场并没收战衣，'没有战衣你什么都不是'会成为彼得的核心创伤。",
     mutableOutcomes: ["彼得是否成功救下渡轮上的乘客", "彼得和秃鹫初次交锋谁受伤", "是否提前得知秃鹫身份（Liz 的父亲）", "彼得在返校节上的表现"],
-    mjRelation: "朋友，MJ 在彼得的社交圈但还没动心，可以一起找线索"
+    mjRelation: "朋友，MJ 在彼得的社交圈且不会动心，可以一起找线索",
+smallEvents: [
+  "追查秃鹫线索：ATM抢劫、邮车抢劫、黑市武器交易现场",
+  "学校线：作业、考试、Flash找茬、Liz Allan的邀请",
+  "家庭线：梅婶的担忧、彼得的谎言与愧疚",
+  "内德助攻：破解装备、做技术支持、一惊一乍",
+  "MJ观察：MJ开始注意到彼得的奇怪行踪，抛出冷幽默的追问",
+  "科尼岛海滩：朋友聚会、彼得中途离场"
+],
+pacing: "本阶段大事件链密集（渡轮→没收战衣→返校节舞会），但不能一回合跳一个。要求：每个大事件之间必须插入 2~3 个日常/追查小事件，尤其是'没收战衣后'要有一整段低谷期（自我怀疑、和内德争吵、被MJ追问），然后再走到返校节。禁止从渡轮事件一回合直接跳到返校节舞会。"
   },
   {
     key: "phase4",
@@ -827,7 +1213,14 @@ const WORLD = {
     events: ["纽约街头战斗", "外星飞船", "奇异博士被绑架", "钢铁蜘蛛战衣登场"],
     forcedEvent: "灭霸的黑暗教团入侵纽约必然发生：乌木喉和黑矮星会来绑架奇异博士，彼得必须去救，然后随钢铁侠去泰坦星。",
     mutableOutcomes: ["彼得是否成功阻止奇异博士被绑架（大概率失败，可延缓）", "彼得在街头的战斗表现（是否受伤）", "彼得与托尼的对话态度（顺从/反抗/恐惧）"],
-    mjRelation: "无（彼得不在纽约）"
+    mjRelation: "无（彼得不在纽约）",
+smallEvents: [
+  "日常：彼得逃课、和内德吃三明治、看新闻里的外星飞船",
+  "校园：学业压力、和MJ的日常对话（纯友情）",
+  "战前：彼得感到不对劲、偷偷准备、和梅婶告别式的一顿饭",
+  "街头初期混乱：市民恐慌、彼得救人、初遇外星敌人"
+],
+pacing: "本阶段时间跨度短（几天内），但事件密度高。要求：入侵爆发前至少 2 回合日常铺垫（让玩家感受到'暴风雨前的平静'），爆发后节奏加快，但每次战斗/危机之间仍要有一回合喘息（受伤、躲藏、和托尼对话）。"
   },
   {
     key: "phase5",
@@ -842,10 +1235,15 @@ const WORLD = {
     mutableOutcomes: [
       "彼得是否化为灰烬（可保留，但也可以让玩家选择让彼得提前被奇异博士传送回地球——需要写得有代价）",
       "谁在彼得面前化灰（可以是星爵 / 毁灭者 / 奇异博士 / 托尼 / 无）",
-      "彼得临死前的最后一句话（台词可自由发挥）",
-      "彼得是否知道 MJ 也被化灰（可留悬念）"
+      "彼得临死前的最后一句话（台词可自由发挥）"
     ],
-    mjRelation: "无（彼得不在纽约）"
+    mjRelation: "无（彼得不在纽约）",
+smallEvents: [
+  "泰坦星飞行途中：飞船里的沉默、和托尼的对话、彼得的恐惧",
+  "泰坦星废墟探索：和星爵一行碰面、临时组队、寻找灭霸",
+  "战斗间隙：彼得受伤、托尼的保护欲、彼得想证明自己"
+],
+pacing: "本阶段是连续高潮（泰坦星→灭霸→响指），几乎没有日常喘息。但仍要求：响指发生前至少 2 回合战斗/情感铺垫，让玩家的恐惧层层递进，不要一回合直接响指。"
   },
   {
     key: "phase6",
@@ -863,7 +1261,14 @@ const WORLD = {
       "MJ 和内德是否也被遗忘",
       "多元宇宙反派谁被治愈、谁被杀死、谁逃回原宇宙"
     ],
-    mjRelation: "英雄远征里 MJ 才对彼得动心；英雄无归结尾所有人遗忘彼得。开始阶段依然是朋友"
+    mjRelation: "英雄无归结尾所有人遗忘彼得。开始阶段依然是朋友",
+smallEvents: [
+  "欧洲游学日常：观光、同学起哄",
+  "神秘客登场前：威尼斯水怪传闻、团队分头行动",
+  "身份暴露后的余波：被围堵、家人受牵连、记者追逐",
+  "多元宇宙撕裂后：反派逐个出现、彼得求助奇异博士、梅婶的质问"
+],
+pacing: "本阶段跨度长、事件多（游学→神秘客→身份暴露→多元宇宙→梅婶之死→被遗忘）。要求：每两个大事件之间至少 2 回合过渡（情绪落点、关系变化、代价显现），尤其是'梅婶之死'前要有陪伴铺垫，'所有人遗忘彼得'后要有至少 1 回合的孤独收尾，禁止一回合打包完。"
   }
 ],
 
@@ -1111,19 +1516,22 @@ setPosts(p){this.set("sv_posts",p);},
       { name:"梅婶", desc:"彼得的监护人，坚强独立，非常关心彼得。", affinity: 0, heart: "暂无" }
     ];
     this.set("sv_contacts", list);
-  } else {
-    // 兼容旧数据，补齐缺失字段（千万不要覆盖已存在的 affinity）
-    list = list.map(c => {
-      if (typeof c === 'string') return { name: c, desc: "自定义联系人", affinity: 0, heart: "暂无" };
-      return { 
-        name: c.name || "未知", 
-        desc: c.desc || "自定义联系人", 
-        affinity: (typeof c.affinity === 'number') ? c.affinity : 0, 
-        heart: c.heart || "暂无" 
-      };
-    });
-    this.set("sv_contacts", list);
-  }
+ } else {
+  // 兼容旧数据，补齐缺失字段（保留 isGroup / members / note / avatar 等所有字段）
+  list = list.map(c => {
+    if (typeof c === 'string') return { name: c, desc: "自定义联系人", affinity: 0, heart: "暂无" };
+    return {
+      ...c,
+      name: c.name || "未知",
+      desc: c.desc || "自定义联系人",
+      affinity: (typeof c.affinity === 'number') ? c.affinity : 0,
+      heart: c.heart || "暂无",
+      isGroup: c.isGroup === true,
+      members: Array.isArray(c.members) ? c.members : (c.isGroup ? [] : undefined)
+    };
+  });
+  this.set("sv_contacts", list);
+}
   return list; 
 },
 setContacts(c){
@@ -1586,9 +1994,17 @@ const timeStr = `${year}年${month}月${day}日`;
     }
   } catch(e) {}
 
-  const forcedStr = phase.forcedEvent
-    ? `\n【本阶段必然发生的大事件 · 不可改变】\n${phase.forcedEvent}\n【可改变的结局变量】\n- ${(phase.mutableOutcomes || []).join("\n- ")}\n⚠️ 注意：大事件本身必然发生，但"谁来承担后果""谁受伤谁活着""如何善后"可以被玩家的选择改变。`
-    : "";
+ const forcedStr = phase.forcedEvent
+  ? `\n【本阶段必然发生的大事件 · 不可改变】\n${phase.forcedEvent}\n【可改变的结局变量】\n- ${(phase.mutableOutcomes || []).join("\n- ")}\n⚠️ 注意：大事件本身必然发生，但"谁来承担后果""谁受伤谁活着""如何善后"可以被玩家的选择改变。`
+  : "";
+
+const smallEventsStr = (phase.smallEvents && phase.smallEvents.length)
+  ? `\n【本阶段可用的小事件池（务必穿插使用，不要一回合直冲大事件）】\n- ${phase.smallEvents.join("\n- ")}\n`
+  : "";
+
+const pacingStr = phase.pacing
+  ? `\n【节奏控制 · 铁律 · 违反即失败】\n${phase.pacing}\n⚠️ 大事件之间必须用小事件/日常/人物关系铺垫过渡，禁止一回合从一个大事件直接跳到下一个大事件。若玩家上一回合刚经历完大事件，本回合必须写"善后/过渡/日常"，不得提前开启下一个大事件。\n`
+  : "";
 
 // ★ 新增：全局语言强制
   const globalLang = store.getChatConfig().lang || "zh";
@@ -1608,6 +2024,8 @@ ${globalLangRule}
 
 【阶段说明】${phase.summary}
 ${forcedStr}
+${smallEventsStr}
+${pacingStr}
 
 【允许出现的角色】${phase.allowed.join("、")}
 【禁止出现的角色】${phase.forbidden.join("、")}
@@ -2187,12 +2605,14 @@ ${choice}
     localStorage.setItem("sv_theaters", JSON.stringify(list));
 
    if (q.closed) {
-  // ★ 小剧场完结，平行宇宙的彼得身份对玩家默认公开
-  localStorage.setItem("sv_peter_identity_revealed", "1");
-  const pb = store.getPeterBinding();
-  if (pb && pb.theaterId === q.id) store.setPeterBinding(null);
-  toast("🎭 小剧场已完结：" + q.title);
-  setTimeout(() => openApp("Theater"), 800);
+      // ★ 小剧场完结，平行宇宙的彼得身份对玩家默认公开
+      localStorage.setItem("sv_peter_identity_revealed", "1");
+      const pb = store.getPeterBinding();
+      if (pb && pb.theaterId === q.id) store.setPeterBinding(null);
+      toast("🎭 小剧场已完结：" + q.title);
+
+      // ★ 留在当前页渲染结局（renderQuest 会显示"已完结"面板 + 回顾按钮）
+      apps.Theater.renderQuest(body, q);
     } else {
       apps.Theater.renderQuest(body, q);
     }
@@ -2624,7 +3044,6 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
             identity: body.querySelector("#p_identity").value.trim(),
             appearance: body.querySelector("#p_appearance").value.trim(),
             likes: body.querySelector("#p_likes").value.trim(),
-            catchphrase: body.querySelector("#p_catchphrase") ? body.querySelector("#p_catchphrase").value.trim() : "",
             notes: body.querySelector("#p_notes").value.trim()
           });
         }
@@ -2809,78 +3228,90 @@ messages: {
  renderSettings(body) {
   const self = this;
 
-  // ========== 情况 A：在群聊里点设置 → 群聊设置面板 ==========
-  const curC = store.getContacts().find(x => x.name === this.currentUser);
-  if (curC && curC.isGroup) {
-    body.innerHTML = `<div style="padding:14px"><div class="card"><h3>${esc(this.currentUser)}</h3>
-      <p style="font-size:13px;color:var(--muted);">群聊不支持好感度与心声设置。</p >
-      <div class="field" style="margin-top:12px;">
-        <label>群成员（${(curC.members||[]).length}）</label>
-        <div style="font-size:13px;color:var(--text);line-height:1.7;">${(curC.members||[]).map(esc).join("、")}</div>
+ // ========== 情况 A：在群聊里点设置 → 群聊设置面板 ==========
+const curC = store.getContacts().find(x => x.name === this.currentUser);
+if (curC && curC.isGroup) {
+  body.innerHTML = `<div style="padding:14px">
+    <div class="card" style="text-align:center;padding:24px 16px;">
+      <div style="width:64px;height:64px;border-radius:16px;background:var(--panel-2);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px;">👥</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;">${esc(curC.name)}</div>
+      <div style="font-size:12px;color:var(--muted);">群聊 · ${(curC.members||[]).length} 位成员</div>
+    </div>
+
+    <div class="card">
+      <h3>✏️ 群名修改</h3>
+      <div class="field">
+        <input id="g_newName" value="${esc(curC.name)}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
       </div>
-      <button class="btn ghost" id="renameGroup" style="margin-top:10px;">✏️ 修改群名</button>
-      <button class="btn ghost" id="back" style="margin-top:12px;">返回聊天</button>
-      <button class="btn ghost" id="dissolveGroup" style="margin-top:10px;color:#e62429;border-color:#e62429;">🗑️ 解散群聊</button>
-    </div></div>`;
+      <button class="btn" id="g_saveName" style="margin-top:8px;">保存群名</button>
+    </div>
 
-    body.querySelector("#back").onclick = () => openApp('messages');
+    <div class="card">
+      <h3>👥 群成员</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+        ${(curC.members||[]).map(m => {
+          const mc = store.getContacts().find(x => x.name === m);
+          const av = mc && mc.avatar ? `<img src="${mc.avatar}" style="width:100%;height:100%;object-fit:cover;">` : esc(m[0].toUpperCase());
+          return `<div style="display:flex;align-items:center;gap:6px;background:var(--panel-2);padding:6px 12px 6px 6px;border-radius:20px;font-size:13px;color:var(--text);">
+            <div style="width:24px;height:24px;border-radius:50%;background:var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:bold;color:var(--text);">${av}</div>
+            ${esc(m)}
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
 
-    body.querySelector("#renameGroup").onclick = () => {
-      const oldName = self.currentUser;
-      const newName = prompt("修改群聊名称：", oldName);
-      if (!newName || !newName.trim()) return;
-      const trimmed = newName.trim();
-      if (trimmed === oldName) return;
-      const contacts = store.getContacts();
-      if (contacts.some(c => c.name === trimmed)) return toast("该名称已存在");
-      const idx = contacts.findIndex(c => c.name === oldName);
-      if (idx === -1) return toast("群聊不存在");
-      contacts[idx].name = trimmed;
-      store.setContacts(contacts);
-      const chats = store.getChats();
-      if (chats[oldName]) {
-        chats[trimmed] = chats[oldName];
-        delete chats[oldName];
-        store.setChats(chats);
-      }
-      self.currentUser = trimmed;
-      toast("群聊名称已修改");
-      self.render(body);
-    };
+    <div class="card" style="border-color:rgba(230,36,41,.3);">
+      <h3 style="color:var(--accent);">⚠️ 危险操作</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">解散群聊将会永久删除该群聊及所有聊天记录，无法恢复。</p >
+      <button class="btn ghost" id="g_dissolve" style="color:var(--accent);border-color:var(--accent);">🗑️ 解散群聊</button>
+    </div>
+    
+    <button class="btn ghost" id="g_back" style="margin-top:12px;">返回聊天</button>
+  </div>`;
 
-    body.querySelector("#dissolveGroup").onclick = () => {
-      const groupName = self.currentUser;
-      if (!groupName) return toast("当前不在群聊中");
-      if (!confirm(`确定解散「${groupName}」吗？\n\n解散后该群聊及全部聊天记录将被删除，此操作不可恢复。`)) return;
-
-      const contacts = store.getContacts().filter(c => c.name !== groupName);
-      store.setContacts(contacts);
-
-      const chats = store.getChats();
-      delete chats[groupName];
+  body.querySelector("#g_back").onclick = () => openApp('messages');
+  
+  body.querySelector("#g_saveName").onclick = () => {
+    const oldName = self.currentUser;
+    const newName = body.querySelector("#g_newName").value.trim();
+    if (!newName || newName === oldName) return;
+    const contacts = store.getContacts();
+    if (contacts.some(c => c.name === newName)) return toast("该名称已存在");
+    
+    const idx = contacts.findIndex(c => c.name === oldName);
+    if (idx === -1) return toast("群聊不存在");
+    contacts[idx].name = newName;
+    store.setContacts(contacts);
+    
+    const chats = store.getChats();
+    if (chats[oldName]) {
+      chats[newName] = chats[oldName];
+      delete chats[oldName];
       store.setChats(chats);
+    }
+    self.currentUser = newName;
+    toast("群聊名称已修改");
+    self.renderSettings(body);
+  };
 
-      self.currentUser = "";
-      self.view = "list";
+  body.querySelector("#g_dissolve").onclick = () => {
+    const groupName = self.currentUser;
+    if (!confirm(`确定解散「${groupName}」吗？\n\n解散后该群聊及全部聊天记录将被删除，此操作不可恢复。`)) return;
 
-      currentApp = "messages";
-      $("#desktop").classList.remove("active");
-      $("#appView").classList.add("active");
-      $("#appTitle").textContent = "信息";
-      const sb = $("#appSettingsBtn");
-      sb.style.display = "flex";
-      sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
-      sb.querySelector("#setBtn").onclick = () => self.renderSettings($("#appBody"));
-      sb.querySelector("#retryBtn").onclick = () => {
-        if (self.lastUserText) self.sendMessage($("#appBody"), self.lastUserText, true);
-        else toast("还没有可以重试的消息");
-      };
+    const contacts = store.getContacts().filter(c => c.name !== groupName);
+    store.setContacts(contacts);
 
-      toast("群聊已解散");
-      self.render($("#appBody"));
-    };
-    return;
-  }
+    const chats = store.getChats();
+    delete chats[groupName];
+    store.setChats(chats);
+
+    self.currentUser = "";
+    self.view = "list";
+    toast("群聊已解散");
+    openApp('messages');
+  };
+  return;
+}
 
   // ========== 情况 B：在单人聊天里点设置 → 联系人设置面板 ==========
   if (this.view === "chat" && this.currentUser) {
@@ -2889,6 +3320,7 @@ messages: {
     const c = contacts.find(x => x.name === this.currentUser) || { name: this.currentUser, desc: "", affinity: 0, heart: "" };
     body.innerHTML = `<div style="padding:14px"><div class="card"><h3>${esc(c.name)} 的设定</h3>
       <div class="field"><label>个人简介</label><textarea id="c_desc" rows="3">${esc(c.desc)}</textarea></div>
+<div class="field"><label>备注名（显示在聊天列表和对话中，留空则用本名）</label><input id="c_note" value="${esc(c.note || "")}" placeholder="例如：小虫"></div>
       <div class="field">
         <label>好感度 (0-${this.currentUser === "彼得·帕克" ? 200 : 100}) —— 可直接修改</label>
         <div class="row" style="gap:6px;">
@@ -2927,6 +3359,7 @@ messages: {
       const target = list.find(x => x.name === this.currentUser);
       if (target) {
         target.desc = body.querySelector("#c_desc").value;
+        target.note = (body.querySelector("#c_note").value || "").trim();   // ★ 新增：写入备注
         target.affinity = newAff;
         store.setContacts(list);
         if (this.currentUser === "彼得·帕克") {
@@ -3050,8 +3483,8 @@ sb.querySelector("#retryBtn").onclick = () => {
 // ==========================================
 const contact = store.getContacts().find(x => x.name === self.currentUser);
 if (contact && contact.isGroup) {
-  return self.sendGroupMessage(body, text, isRetry);
-}
+    return self.sendGroupMessage(body, self.lastUserText, true);
+  }
   const arr = chatsNow[self.currentUser] || [];
   const lastThemIdx = arr.map(m => m.role).lastIndexOf("them");
   if (lastThemIdx !== -1) {
@@ -3094,14 +3527,14 @@ chatHtml += `<div id="chatThread">`;
       const memberC = store.getContacts().find(c => c.name === senderName);
       const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
       return `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
-        <div style="width:32pxpx;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">
-          ${senderAvatar ? `<img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((senderName || "?")[0])}
-        </div>
-        <div style="max-width:72%;min-width:0;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(senderName)}</div>
-          <div class="bubble them" style="max-width:100%;">${esc(m.content)}</div>
-        </div>
-      </div>`;
+  <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
+    ${senderAvatar ? `< img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((senderName || "?")[0])}
+  </div>
+  <div style="max-width:72%;min-width:0;">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(senderName)}</div>
+    <div class="bubble them" style="max-width:100%;">${esc(m.content)}</div>
+  </div>
+</div>`;
     }
   }).join("");
   chatHtml += `</div>`;
@@ -3117,8 +3550,18 @@ chatHtml += `<div id="chatThread">`;
   
   // 绑定事件
   body.querySelector("#backToListBtn").onclick = () => {
-    self.view = "list"; self.currentUser = ""; self.render(body);
-  };
+  // 判断当前是不是群聊
+  const currentContact = store.getContacts().find(c => c.name === self.currentUser);
+  if (currentContact && currentContact.isGroup) {
+  apps.contacts.currentTab = "groups"; // 强制切到群聊栏
+  openApp("contacts"); // 群聊返回，退到社交圈
+  return;
+}
+  self.view = "list";
+  self.currentUser = "";
+  store.setPeterBinding(null);   // 从剧场聊天退出时，彼得自动回到主线
+  self.render(body);
+};
   
   // 群名点击改名
   body.querySelector("#groupNameLabel").onclick = () => {
@@ -3189,7 +3632,27 @@ sbG.querySelector("#retryBtn").onclick = () => {
  
     if (self.view === "list") {
       const contacts = store.getContacts();
-body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn">➕ 添加联系人</button><button class="btn ghost" id="groupBtn" style="margin-top:8px">👥 发起群聊</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contacts.map(c=>`<div class="chat-row" data-user="${esc(c.name)}" style="padding:12px;border-bottom:1px solid #333;cursor:pointer;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:bold;color:var(--text)">${esc(c.name)}</div><div style="font-size:12px;color:var(--muted)">${esc(c.desc || "")}</div></div><span style="color:var(--muted)">›</span></div>`).join("")}</div></div>`;
+
+      const contactsWithNote = contacts.map(c => {
+        const note = (c.note || "").trim();
+        const displayName = note || c.name;
+        const avatarHtml = c.avatar
+          ? `<img src="${c.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+          : `<div style="width:40px;height:40px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--text);flex-shrink:0;">${esc((c.name || "?")[0].toUpperCase())}</div>`;
+        return `<div class="chat-row" data-user="${esc(c.name)}" style="padding:12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:12px;">
+          ${avatarHtml}
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:bold;color:var(--text);display:flex;align-items:center;gap:6px;">
+              ${esc(displayName)}
+              ${note ? `<span style="font-size:10px;color:var(--muted);font-weight:400;">（${esc(c.name)}）</span>` : ""}
+            </div>
+            <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.desc || "")}</div>
+          </div>
+          <span style="color:var(--muted);">›</span>
+        </div>`;
+      }).join("");
+
+      body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn">➕ 添加联系人</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contactsWithNote}</div></div>`;
       
       body.querySelectorAll(".chat-row").forEach(el => {
         el.onclick = () => { self.currentUser = el.dataset.user; self.view = "chat"; self.render(body); };
@@ -3218,60 +3681,6 @@ body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn
         store.setContacts(list); self.render(body); toast("已添加："+name);
       };
       
-body.querySelector("#groupBtn").onclick = () => {
-  const all = store.getContacts().filter(c => !c.isGroup);
-  if (all.length < 2) return toast("至少需要 2 个联系人才可以建群");
-
-  const div = document.createElement("div");
-  div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
-  div.innerHTML = `
-    <h2 style="color:var(--text);margin-top:0">👥 发起群聊</h2>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">勾选要拉进群的成员（至少 2 个）</p >
-    <div id="grpList"></div>
-    <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn ghost" id="grpCancel" style="flex:1">取消</button>
-      <button class="btn" id="grpOk" style="flex:1">创建群聊</button>
-    </div>`;
-  const list = div.querySelector("#grpList");
-
-  all.forEach((c, i) => {
-    const row = document.createElement("label");
-    row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--text);font-size:13px;";
-    row.innerHTML = `<input type="checkbox" class="grp-check" data-name="${esc(c.name)}" style="width:18px;height:18px;">
-      <span>${esc(c.name)}</span>`;
-    list.appendChild(row);
-  });
-
-  div.querySelector("#grpCancel").onclick = () => div.remove();
-  div.querySelector("#grpOk").onclick = () => {
-    const checked = Array.from(div.querySelectorAll(".grp-check:checked")).map(x => x.dataset.name);
-    if (checked.length < 2) return toast("至少选择 2 个成员");
-
-    const groupName = "群聊 · " + checked.join("、");
-
-    const contacts = store.getContacts();
-    if (contacts.find(c => c.name === groupName)) {
-      toast("该群聊已存在");
-    } else {
-      contacts.push({
-  name: groupName,
-  desc: "群聊：" + checked.join("、"),
-  affinity: 0,
-  heart: "暂无",
-  isGroup: true,
-  members: checked,
-  avatar: ""
-});
-      store.setContacts(contacts);
-    }
-    div.remove();
-    self.currentUser = groupName;
-    self.view = "chat";
-    self.render(body);
-  };
-
-  document.querySelector(".device").appendChild(div);
-};
 return;
     }
     // ===== 校验聊天对象 =====
@@ -3295,8 +3704,8 @@ if (!self.currentUser || !store.getContacts().find(c => c.name === self.currentU
   if (_c && _c.isGroup && _c.members && _c.members.length) {
     let changed = false;
     msgs.forEach((m, i) => {
-      if (m.role === "them" && !m.groupSender) {
-        // 依次轮询成员填进去，至少不会全显示"群"
+      // 如果发言人名字是空的，或者是“群成员”、“群”，就重新分配
+      if (m.role === "them" && (!m.groupSender || m.groupSender === "群成员" || m.groupSender === "群")) {
         m.groupSender = _c.members[i % _c.members.length];
         changed = true;
       }
@@ -3333,9 +3742,13 @@ if (isGroupTop) {
 }
 
 const titleAvatar = isGroupTop ? groupAvatarHtml : avatarHtml;
+
+// ★ 备注名优先（有备注显示备注，无备注显示本名）
+const curContactObj = store.getContacts().find(c => c.name === self.currentUser);
+const noteOfCur = (curContactObj && curContactObj.note) ? curContactObj.note.trim() : "";
 const titleNameHtml = isGroupTop
   ? `<span id="groupNameLabel" style="color:var(--text);font-weight:600;cursor:pointer;border-bottom:1px dashed var(--line);">${esc(self.currentUser)}</span>`
-  : `<b style="color:var(--text);">${esc(self.currentUser)}</b>`;
+  : `<b style="color:var(--text);">${esc(noteOfCur || self.currentUser)}</b>${noteOfCur ? `<span style="font-size:11px;color:var(--muted);margin-left:6px;">（${esc(self.currentUser)}）</span>` : ""}`;
 
 chatHtml += `<div style="flex-shrink:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;z-index:30;box-sizing:border-box;">
   <button id="backToListBtn" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;">‹</button>
@@ -3475,11 +3888,18 @@ sbG.querySelector("#retryBtn").onclick = () => {
 };
 
     body.querySelector("#backToListBtn").onclick = () => {
-      self.view = "list";
-      self.currentUser = "";
-      store.setPeterBinding(null);   // 从剧场聊天退出时，彼得自动回到主线
-      self.render(body);
-    };
+  // 判断当前是不是群聊
+  const currentContact = store.getContacts().find(c => c.name === self.currentUser);
+  if (currentContact && currentContact.isGroup) {
+  apps.contacts.currentTab = "groups"; // 强制切到群聊栏
+  openApp("contacts"); // 群聊返回，退到社交圈
+  return;
+}
+  self.view = "list";
+  self.currentUser = "";
+  store.setPeterBinding(null);   // 从剧场聊天退出时，彼得自动回到主线
+  self.render(body);
+};
 const clearBtn = body.querySelector("#clearChatBtn");
 if (clearBtn) {
   clearBtn.onclick = () => {
@@ -3820,10 +4240,7 @@ recent.forEach(r => {
 const memberAffinityMap = {};
 groupMembers.forEach(name => { memberAffinityMap[name] = getAffinityOf(name); });
 
-const memberAffinityBlock = groupMembers.map(name => {
-  const aff = memberAffinityMap[name] || 0;
-  return `【${name} 对玩家好感度：${aff}/200 · ${affinityLevelHint(aff)}】`;
-}).join("\n");
+const memberAffinityBlock = "【群聊中不显示好感度，保持自然群聊氛围】";
 
         const groupSysPrompt = `${langBrief}这是一个手机群聊，群成员有：${memberList}，以及「${playerName}」（${playerGender}，用「${playerPronoun}」指代）。
 
@@ -3900,7 +4317,6 @@ ${groupMembers.map(n => n + "：消息内容").join(" || ")}`;
             const missAff = memberAffinityMap[missName] || 0;
             const missPrompt = `${langBrief}这是手机群聊，群成员有：${memberList}。
 【当前日期】${nowStr}
-【${missName} 对玩家好感度：${missAff}/200 · ${affinityLevelHint(missAff)}】
 
 现在轮到「${missName}」发言。只生成「${missName}」的 1 条消息，严格符合 ta 的性格和好感度。
 ${isEn ? "全部用英文。" : "全部用纯中文，可夹少量英文口语。"}
@@ -3934,9 +4350,9 @@ ${missName}：消息内容`;
           if (curThread) {
             const memberC = store.getContacts().find(c => c.name === sender);
             const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
-            const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">
-              ${senderAvatar ? `<img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
-            </div>`;
+            const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
+  ${senderAvatar ? `< img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
+</div>`;
             const nameTagTmp = sender ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(sender)}</div>` : "";
             curThread.innerHTML += `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
               ${avatarHtmlTmp}
@@ -4133,15 +4549,6 @@ const hMatch = text.match(
 }
 if (hMatch) {
   heart = hMatch[1].trim();
-}
-
-// ★ 修复 3：终极保险 —— 无论走哪条路，只要某条 reply 里还残留 ||
-//   就强制再拆一次。彻底杜绝 "A || B || C" 整条显示。
-if (replies.length > 0) {
-  replies = replies
-    .flatMap(r => String(r).split(/\|\|/))
-    .map(s => s.trim())
-    .filter(Boolean);
 }
 
         if (replies.length === 0 || !heart) {
@@ -4460,9 +4867,9 @@ ${missName}：消息内容`;
         if (curThread) {
           const memberC = store.getContacts().find(c => c.name === sender);
           const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
-          const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">
-            ${senderAvatar ? `<img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
-          </div>`;
+          const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
+  ${senderAvatar ? `< img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
+</div>`;
           const nameTagTmp = sender ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(sender)}</div>` : "";
           curThread.innerHTML += `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
             ${avatarHtmlTmp}
@@ -5280,10 +5687,21 @@ if (window._worldlineMode === "main") {
         }
 
  const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
-        const timeLabel = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+       const timeLabel = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+
+       // ★ 检测上回合是否刚撞上"大事件"（forcedEvent 关键词命中）
+       const lastStoryText = lastTurn ? (lastTurn.story || "") : "";
+       const forcedKeywords = (phase.forcedEvent || "")
+         .split(/[，。；、,.\s]+/)
+         .filter(w => w && w.length >= 2)
+         .slice(0, 8);
+       const justHitBigEvent = forcedKeywords.some(k => lastStoryText.includes(k));
+       const transitionHint = justHitBigEvent
+         ? `\n【上回合刚发生大事件 · 强制过渡】\n玩家上回合刚刚经历/收尾了本阶段的大事件。本回合【必须】写"善后、余波、关系变化、日常喘息"，**严禁**在本回合开启下一个大事件或推进到下一阶段。允许写：受伤休养、被追问、情绪消化、和亲友的关系变化、生活恢复正常的一段。\n`
+         : "";
 
         const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
-
+${transitionHint}
 【硬性时间锚点】${timeLabel}
 【当前阶段】${phase.name}
 
@@ -5338,17 +5756,21 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
    【结局更新: 变量名=新值】
    例如：【结局更新: snapVictims=MJ,Ned】【结局更新: auntMayAlive=true】
 10. **【时间推进 · 极重要】**
-   - 如果本回合剧情里**明确发生了时间跳跃**（比如"第二天"、"一周后"、"放学后"、"过了几天"），必须在剧情末尾追加一行：
-     【时间推进: +N天】
-     其中 N 是实际经过的天数（同一天内 = 0，不提就默认 0）。
-   - **如果只是场景切换但仍是同一天（比如从学校走到彼得家），不要写时间推进**。
-   - 如果剧情里写"一个月后"就 +30，"一周后"就 +7，"第二天"就 +1。
-   - 如果不确定，宁可写 0，也不要瞎跳。
-11. **【阶段推进 · 极重要】**
-   - 当前阶段的大事件（如果有）一旦结束，或者你的剧情已经自然走到了当前阶段的尾声，**必须**在末尾单独输出一行：
-     【阶段完成】
-   - 输出【阶段完成】后，不要写下一阶段的剧情，让系统自动为你推进。
-   - **不要强行把剧情无限拖在本阶段！** 如果是日常阶段，写 3-5 回合日常后，自然过渡到下一个大事件。
+    - 一次剧情推进的时间跨度**默认不超过 3 天**。只有玩家明确选择"等我一周后再来""直接到放假"这类跳跃，才允许更大跨度。
+    - 如果本回合剧情里**明确发生了时间跳跃**，必须在剧情末尾追加一行：
+      【时间推进: +N天】
+      其中 N 是实际经过的天数（同一天内 = 0，不提就默认 0）。
+    - **如果只是场景切换但仍是同一天（比如从学校走到彼得家），不要写时间推进**。
+    - 严禁用"两个月后""几周后"这种大幅跳跃来偷懒推进剧情——必须把中间的日常/小事件写出来。
+11. **【节奏推进 · 铁律 · 违反即失败】**
+    - 本阶段的「小事件池」和「节奏控制」规则见上方 system 设定，**必须严格遵守**。
+    - 大事件之间必须插入 2~3 个日常/铺垫/关系小事件回合，再进入下一个大事件。
+    - **判断标准**：如果上一回合的剧情已经写到大事件的收尾/余波，本回合**禁止**直接开启下一个大事件，必须先写"善后、关系变化、日常喘息"。
+    - 只有当以下条件**同时满足**时，才允许在末尾输出【阶段完成】：
+      1. 当前阶段的大事件已经在本回合或之前的回合发生过；
+      2. 大事件后的善后/过渡已经写了至少 2 回合；
+      3. 玩家的当前选择会让剧情自然走出当前阶段的时间范围。
+    - **不要为了清空阶段而硬塞大事件，也不要一回合打包多个大事件。**
 ${contextStr}`);
 
         const res = await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
@@ -6006,10 +6428,18 @@ Theater: {
           ${list.length ? list.map(q => `
             <div class="th-history-item" data-id="${esc(q.id)}">
               <div class="th-history-info">
-                <div class="th-history-title">${esc(q.title)}</div>
-                <div class="th-history-meta">${q.closed ? "✅ 已完结" : "▶ 进行中"} · ${esc(q.date)}</div>
+                <div class="th-history-title">
+                  ${esc(q.title)}
+                  ${q.closed ? `<span style="display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:#4caf50;background:rgba(76,175,80,.15);padding:1px 7px;border-radius:8px;vertical-align:middle;">✅ 完结</span>` : `<span style="display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--accent-2);background:rgba(45,107,255,.15);padding:1px 7px;border-radius:8px;vertical-align:middle;">▶ 进行中</span>`}
+                </div>
+                <div class="th-history-meta">${esc(q.date)} · 已推进 ${(q.history||[]).length} 轮</div>
               </div>
-              <button class="th-history-del" data-del="${esc(q.id)}">✕</button>
+              <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+                ${q.closed
+                  ? `<button class="th-history-review" data-review="${esc(q.id)}" style="background:rgba(76,175,80,.12);color:#4caf50;border:1px solid #4caf50;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;">📖 回顾</button>`
+                  : `<button class="th-history-continue" data-continue="${esc(q.id)}" style="background:var(--accent-2);color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;">▶ 继续</button>`}
+                <button class="th-history-del" data-del="${esc(q.id)}" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px;">✕</button>
+              </div>
             </div>
           `).join("") : `<div class="th-empty">还没有历史剧场</div>`}
         </div>
@@ -6043,6 +6473,22 @@ Theater: {
       el.onclick = (e) => {
         if (e.target.closest(".th-history-del")) return;
         this.openQuest(el.dataset.id);
+      };
+    });
+
+// ★ 继续按钮 → 打开未完结剧场
+    body.querySelectorAll(".th-history-continue").forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        this.openQuest(el.dataset.continue);
+      };
+    });
+
+    // ★ 回顾按钮 → 打开完结剧场的回顾页面
+    body.querySelectorAll(".th-history-review").forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        this.openReview(el.dataset.review);
       };
     });
 
@@ -6339,10 +6785,22 @@ ${povRule}
           <div class="th-quest-bg">${esc((q.background || "").slice(0, 100))}...</div>
         </div>
 
-        <div class="th-quest-actions">
+        <div class="th-quest-actions" style="flex-wrap:wrap;">
           <button class="th-btn ghost small" id="gotoChatBtn">💬 去信息继续聊</button>
           <button class="th-btn ghost small" id="refreshQuestBtn">🔄 重置</button>
         </div>
+
+        ${!isClosed ? `
+        <div class="th-quest-actions" style="margin-top:8px;">
+          <button class="th-btn ghost small" id="thSaveBtn">💾 存档</button>
+          <button class="th-btn ghost small" id="thLoadBtn">📂 读档</button>
+          <button class="th-btn ghost small" id="thMemoryBtn">📜 回忆</button>
+        </div>
+        ` : `
+        <div class="th-quest-actions" style="margin-top:8px;">
+          <button class="th-btn ghost small" id="thMemoryBtn">📜 回顾全部剧情</button>
+        </div>
+        `}
 
         <div class="th-quest-story">${formatDialogue(q.story)}</div>
 
@@ -6355,6 +6813,7 @@ ${povRule}
         ` : `
           <div class="th-quest-closed">
             <div class="th-quest-closed-text">这个小剧场已经完结。</div>
+            <button class="th-btn primary" id="closedReviewBtn" style="margin-bottom:8px;">📖 回顾全部剧情</button>
             <button class="th-btn ghost" onclick="openApp('Theater')">返回列表</button>
           </div>
         `}
@@ -6396,37 +6855,313 @@ ${povRule}
       this.openQuest(q.id);
     };
 
-    if (!isClosed) {
-      const optsEl = body.querySelector("#thOptions");
-      const opts = (q.options || "").split('\n').filter(l => /^[A-D][\.\、]/.test(l.trim()));
-      optsEl.innerHTML = opts.map(o => `
-        <button class="th-option-btn" onclick="window.advanceTheater('${q.id}', '${esc(o).replace(/'/g, "\\'")}')">${esc(o)}</button>
-      `).join("");
+// ★ 存档 / 读档 / 回忆
+    const saveBtn = body.querySelector("#thSaveBtn");
+    const loadBtn = body.querySelector("#thLoadBtn");
+    const memBtn = body.querySelector("#thMemoryBtn");
 
-      const input = body.querySelector("#thCustomAct");
-      const send = () => {
-        const v = input.value.trim();
-        if (!v) return toast("请输入行动");
-        window.advanceTheater(q.id, v);
-      };
-      body.querySelector("#thSendBtn").onclick = send;
-      input.addEventListener("keydown", e => {
-        if (e.key === "Enter") { e.preventDefault(); send(); }
-      });
-    }
+    if (saveBtn) saveBtn.onclick = () => this.openTheaterSlots(q.id, "save");
+    if (loadBtn) loadBtn.onclick = () => this.openTheaterSlots(q.id, "load");
+    if (memBtn) memBtn.onclick = () => this.showTheaterMemory(q);
+
+    if (!isClosed) {
+    const optsEl = body.querySelector("#thOptions");
+    const opts = (q.options || "").split('\n').filter(l => /^[A-D][\.\、]/.test(l.trim()));
+    optsEl.innerHTML = opts.map(o => `
+      <button class="th-option-btn" onclick="window.advanceTheater('${q.id}', '${esc(o).replace(/'/g, "\\'")}')">${esc(o)}</button>
+    `).join("");
+
+    const input = body.querySelector("#thCustomAct");
+    const send = () => {
+      const v = input.value.trim();
+      if (!v) return toast("请输入行动");
+      window.advanceTheater(q.id, v);
+    };
+    body.querySelector("#thSendBtn").onclick = send;
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); send(); }
+    });
   }
+
+  // ★★★ 新增：完结剧场「回顾全部剧情」按钮的事件绑定 ★★★
+ const closedReviewBtn = body.querySelector("#closedReviewBtn");
+if (closedReviewBtn) {
+  closedReviewBtn.onclick = () => apps.Theater.showTheaterMemory(q);
+}
+},
+
+  // ============================================================
+  // ★ 小剧场专用存档/读档（独立 key，不污染主线存档）
+  // ============================================================
+  openTheaterSlots(questId, mode) {
+    const SLOT_KEY = "sv_theater_slots_" + questId;
+    let slots = JSON.parse(localStorage.getItem(SLOT_KEY) || "null");
+    if (!Array.isArray(slots) || slots.length !== 10) {
+      slots = Array(10).fill(null);
+      localStorage.setItem(SLOT_KEY, JSON.stringify(slots));
+    }
+
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
+    div.innerHTML = `
+      <h2 style="color:var(--text);margin-top:0;font-size:17px;">${mode === "save" ? "💾 小剧场存档（共10格）" : "📂 小剧场读档（共10格）"}</h2>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">此存档独立于主线，只影响当前小剧场。</p>
+      <div id="thSlotList"></div>
+      <button class="btn ghost" style="margin-top:12px" id="thSlotClose">关闭</button>`;
+    document.querySelector(".device").appendChild(div);
+
+    const listEl = div.querySelector("#thSlotList");
+    slots.forEach((snap, i) => {
+      const filled = !!snap;
+      const label = filled
+        ? `<b>第 ${snap.turn} 轮</b><br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+        : "（空白档）";
+      const row = document.createElement("div");
+      row.style.cssText = "background:#14141c;border:1px solid #2a2a38;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+      row.innerHTML = `
+        <div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px;">
+          <div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>
+          ${label}
+        </div>
+        <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;${(!filled && mode === "load") ? "opacity:.4;pointer-events:none;" : ""}">
+          ${filled ? (mode === "save" ? "覆盖" : "读取") : (mode === "save" ? "保存" : "不可用")}
+        </button>`;
+      listEl.appendChild(row);
+    });
+
+    div.querySelector("#thSlotClose").onclick = () => div.remove();
+
+    listEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-idx]");
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.idx);
+
+      if (mode === "save") {
+        if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+        const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+        const q = all.find(x => x.id === questId);
+        if (!q) return toast("剧场不存在");
+        slots[idx] = {
+          timestamp: Date.now(),
+          turn: (q.history || []).length + 1,
+          data: JSON.parse(JSON.stringify(q))
+        };
+        localStorage.setItem(SLOT_KEY, JSON.stringify(slots));
+        toast("已保存到小剧场档位 " + (idx + 1));
+        div.remove();
+      } else {
+        if (!slots[idx]) return toast("该档位为空");
+        if (!confirm("读档会把小剧场回退到该存档时刻，确认继续？")) return;
+        const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+        const qIdx = all.findIndex(x => x.id === questId);
+        if (qIdx === -1) return toast("剧场不存在");
+        const backup = { id: all[qIdx].id, createdAt: all[qIdx].createdAt };
+        all[qIdx] = { ...slots[idx].data, ...backup };
+        localStorage.setItem("sv_theaters", JSON.stringify(all));
+        toast("已读取小剧场档位 " + (idx + 1));
+        div.remove();
+        this.openQuest(questId);
+      }
+    });
+  },
+
+  // ============================================================
+  // ★ 小剧场回忆（进行中 / 完结都能看）
+  // ============================================================
+  showTheaterMemory(q) {
+    const history = q.history || [];
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);font-size:14px;line-height:1.7;border-left:1px solid var(--line);";
+
+    if (!history.length && !q.story) {
+      div.innerHTML = `
+        <h2 style="color:var(--text);">📜 回忆</h2>
+        <p style="color:var(--muted);">这个小剧场还没有任何剧情记录。</p >
+        <button class="btn" style="margin-top:20px" id="memClose">关闭</button>`;
+      document.querySelector(".device").appendChild(div);
+      div.querySelector("#memClose").onclick = () => div.remove();
+      return;
+    }
+
+   let blocksHtml = "";
+    history.forEach((h, i) => {
+      blocksHtml += `
+        <div style="background:var(--panel);padding:14px;border-radius:12px;margin-bottom:12px;border-left:3px solid var(--accent-2);border-right:1px solid var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line);">
+          <div style="color:var(--muted);font-size:11px;margin-bottom:8px;letter-spacing:0.5px;">— 第 ${i + 1} 轮 —</div>
+          <div style="white-space:pre-wrap;color:var(--text);font-size:13px;line-height:1.75;max-height:220px;overflow-y:auto;">${formatDialogue(h.story)}</div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);color:var(--accent-2);font-size:12px;">
+            ➤ 你的选择：<span style="color:var(--text);">${esc(h.choice || "")}</span>
+          </div>
+        </div>`;
+    });
+
+    if (q.story) {
+      const isFinal = q.closed;
+      blocksHtml += `
+        <div style="background:var(--panel);padding:14px;border-radius:12px;margin-bottom:12px;border-left:3px solid ${isFinal ? '#4caf50' : 'var(--accent-2)'};border-right:1px solid var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line);">
+          <div style="color:${isFinal ? '#4caf50' : 'var(--muted)'};font-size:11px;margin-bottom:8px;letter-spacing:0.5px;">
+            ${isFinal ? "🏁 结局" : `— 第 ${history.length + 1} 轮（当前）—`}
+          </div>
+          <div style="white-space:pre-wrap;color:var(--text);font-size:13px;line-height:1.75;">${formatDialogue(q.story)}</div>
+        </div>`;
+    }
+
+    const totalTurns = history.length + (q.story ? 1 : 0);
+    div.innerHTML = `
+      <h2 style="color:var(--text);position:sticky;top:0;background:var(--bg);padding-bottom:12px;margin-top:0;font-size:17px;z-index:2;">
+        📜 ${esc(q.title)} · 共 ${totalTurns} 段
+      </h2>
+      ${blocksHtml}
+      <button class="btn" style="margin-top:10px" id="memClose">关闭</button>`;
+    document.querySelector(".device").appendChild(div);
+    div.querySelector("#memClose").onclick = () => div.remove();
+  },
+
+ // ============================================================
+  // ★ 完结剧场「回顾」页（只读）
+  // ============================================================
+  openReview(id) {
+    const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+    const q = list.find(x => x.id === id);
+    if (!q) return toast("剧场不存在");
+
+    currentApp = "theater";
+    $("#desktop").classList.remove("active");
+    $("#appView").classList.add("active");
+    $("#appTitle").textContent = "📖 回顾 · " + q.title;
+
+    const sb = $("#appSettingsBtn");
+    sb.style.display = "block";
+    sb.textContent = "‹ 返回列表";
+    sb.onclick = () => {
+      currentApp = "Theater";
+      $("#appTitle").textContent = "小剧场";
+      sb.style.display = "none";
+      sb.onclick = null;
+      apps.Theater.render($("#appBody"));
+    };
+
+    const body = $("#appBody");
+    const universe = WORLD.parallelUniverses?.find(u => u.key === q.universe);
+    const universeBadge = universe
+      ? `<div class="th-quest-universe" style="--u-color:${universe.color};">${esc(universe.title)} · ${esc(universe.year)}</div>`
+      : "";
+
+    body.innerHTML = `
+      <div class="th-wrap">
+        <div class="th-quest-header">
+          <div class="th-quest-title">
+            ${esc(q.title)}
+            <span style="display:inline-block;margin-left:8px;font-size:11px;font-weight:600;color:#4caf50;background:rgba(76,175,80,.15);padding:2px 10px;border-radius:8px;vertical-align:middle;">✅ 已完结</span>
+          </div>
+          ${universeBadge}
+          <div class="th-quest-meta">
+            <span>${esc(q.date)}</span>
+            <span class="dot">·</span>
+            <span>共 ${(q.history || []).length + (q.story ? 1 : 0)} 段</span>
+          </div>
+          <div class="th-quest-bg">${esc((q.background || "").slice(0, 100))}...</div>
+        </div>
+
+        <div class="th-quest-actions">
+          <button class="th-btn ghost small" id="reviewMemBtn">📜 全部剧情</button>
+          <button class="th-btn ghost small" id="reviewReopenBtn">🔄 重新开始</button>
+        </div>
+
+        <div id="reviewContent"></div>
+      </div>`;
+
+    const renderReview = () => {
+      const c = body.querySelector("#reviewContent");
+      const history = q.history || [];
+      let html = "";
+      history.forEach((h, i) => {
+        html += `
+          <div style="background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:12px;margin-bottom:12px;border-left:3px solid var(--accent-2);">
+            <div style="color:var(--muted);font-size:11px;margin-bottom:8px;">— 第 ${i + 1} 轮 —</div>
+            <div style="white-space:pre-wrap;color:var(--text);font-size:13px;line-height:1.75;">${formatDialogue(h.story)}</div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);color:var(--accent-2);font-size:12px;">
+              ➤ 你的选择：<span style="color:var(--text);">${esc(h.choice || "")}</span>
+            </div>
+          </div>`;
+      });
+      if (q.story) {
+        html += `
+          <div style="background:var(--panel);border:1px solid #4caf50;padding:14px;border-radius:12px;margin-bottom:12px;border-left:3px solid #4caf50;">
+            <div style="color:#4caf50;font-size:11px;margin-bottom:8px;">🏁 结局</div>
+            <div style="white-space:pre-wrap;color:var(--text);font-size:13px;line-height:1.75;">${formatDialogue(q.story)}</div>
+          </div>`;
+      }
+      if (!html) html = `<div class="th-empty">没有剧情记录</div>`;
+      c.innerHTML = html;
+    };
+    renderReview();
+
+    body.querySelector("#reviewMemBtn").onclick = () => this.showTheaterMemory(q);
+
+    body.querySelector("#reviewReopenBtn").onclick = () => {
+      if (!confirm("重新开始会把剧场回到开场，且重置本轮进度（历史清空），确认？")) return;
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      const idx = all.findIndex(x => x.id === q.id);
+      if (idx === -1) return;
+      all[idx].story = all[idx].openingStory || all[idx].story;
+      all[idx].options = all[idx].openingOptions || all[idx].options;
+      all[idx].history = [];
+      all[idx].closed = false;
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
+      toast("已重置剧场");
+      this.openQuest(q.id);
+    };
+  },
 },
 
 Diary: {
   title: "双人日记",
   currentTab: "peter",   // peter | mine
 
-  async render(body) {
+async render(body) {
+    // ===== 数据加载 =====
     const peterDiary = JSON.parse(localStorage.getItem("sv_diary") || "[]");
     const myDiary = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
+// ===== 数据迁移：旧日记补 timestamp / timeSource =====
+    let _migrated = false;
+    [peterDiary, myDiary].forEach(arr => {
+      arr.forEach(d => {
+        if (!d.timestamp) {
+          d.timestamp = d.createdAt || (() => {
+            const m = String(d.date || "").match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+            return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : Date.now();
+          })();
+          _migrated = true;
+        }
+        if (!d.timeSource) {
+          d.timeSource = "world";
+          _migrated = true;
+        }
+      });
+    });
+    if (_migrated) {
+      localStorage.setItem("sv_diary", JSON.stringify(peterDiary));
+      localStorage.setItem("sv_diary_me", JSON.stringify(myDiary));
+    }
     const s = store.getState();
     const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
 
+    // ===== 排序：按 timestamp 升序（旧 → 新），旧数据用 createdAt / date 兜底 =====
+    const tsOf = (d) => d.timestamp || d.createdAt || (() => {
+      // 兜底：从 "2024年7月1日" 解析出毫秒
+      const m = String(d.date || "").match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3]).getTime();
+      return 0;
+    })();
+    peterDiary.sort((a, b) => tsOf(a) - tsOf(b));
+    myDiary.sort((a, b) => tsOf(a) - tsOf(b));
+
+    // ===== 当前 tab 数据 =====
+    const list = this.currentTab === "peter" ? peterDiary : myDiary;
+    const isPeter = this.currentTab === "peter";
+
+    // ===== 结构 =====
     body.innerHTML = `
       <div class="diary-wrap">
         <div class="diary-header">
@@ -6450,29 +7185,31 @@ Diary: {
         </div>
 
         <div class="diary-actions">
-          ${this.currentTab === 'peter'
+          ${isPeter
             ? `<button class="diary-action-btn primary" id="genPeterBtn">✨ 让彼得写一篇</button>
                <button class="diary-action-btn subtle" id="resetPeterBtn">🗑️ 删除最新</button>`
-            : `<button class="diary-action-btn primary" id="genMineBtn">✍️ 写一篇日记</button>
-               <button class="diary-action-btn subtle" id="resetMineBtn">🗑️ 删除最新</button>`}
+            : `<button class="diary-action-btn primary" id="genMineBtn">✍️ 写一篇日记</button>`}
         </div>
 
         <div class="diary-list" id="diaryList"></div>
       </div>`;
 
+    // ===== 列表渲染 =====
     const listEl = body.querySelector("#diaryList");
-    const list = this.currentTab === "peter" ? peterDiary : myDiary;
-
     if (!list.length) {
-      listEl.innerHTML = `<div class="diary-empty">${this.currentTab === 'peter' ? '彼得还没有写过日记。' : '你还没有写过日记。'}</div>`;
+      listEl.innerHTML = `<div class="diary-empty">${isPeter ? '彼得还没有写过日记。' : '你还没有写过日记。点击上方「写一篇日记」开始吧。'}</div>`;
     } else {
-      listEl.innerHTML = list.slice().reverse().map((d, i) => {
-        const realIdx = list.length - 1 - i;
+      listEl.innerHTML = list.map((d, idx) => {
         const preview = (d.content || "").slice(0, 60).replace(/\n/g, " ");
+        const paper = d.paperStyle || "paper-blank";
+        const badge = d.timeSource === "real"
+          ? `<span class="diary-time-badge real">现实</span>`
+          : `<span class="diary-time-badge world">世界线</span>`;
         return `
-          <div class="diary-card" data-idx="${realIdx}">
+          <div class="diary-card ${paper}" data-idx="${idx}" style="padding:16px;">
+            ${!isPeter ? `<button class="diary-card-del" data-del="${idx}" title="删除这篇">✕</button>` : ""}
             <div class="diary-card-meta">
-              <span class="diary-card-date">${esc(d.date)}</span>
+              <span class="diary-card-date">${esc(d.date)}${badge}</span>
               ${d.stage ? `<span class="diary-card-stage">${esc(d.stage)}</span>` : ""}
             </div>
             <div class="diary-card-title">${esc(d.title)}</div>
@@ -6482,7 +7219,7 @@ Diary: {
       }).join("");
     }
 
-    // 事件绑定
+    // ===== 事件绑定 =====
     body.querySelectorAll(".diary-tab").forEach(el => {
       el.onclick = () => {
         this.currentTab = el.dataset.tab;
@@ -6491,14 +7228,24 @@ Diary: {
     });
 
     body.querySelectorAll(".diary-card").forEach(el => {
-      el.onclick = () => {
+      el.onclick = (e) => {
+        if (e.target.closest(".diary-card-del")) return;  // 点删除不进详情
         const idx = parseInt(el.dataset.idx);
         const d = list[idx];
         if (d) this.showDiary(d, this.currentTab);
       };
     });
 
-    if (this.currentTab === "peter") {
+    // 删除任一篇（仅我的日记）
+    body.querySelectorAll(".diary-card-del").forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        const idx = parseInt(el.dataset.del);
+        this.deleteMine(idx);
+      };
+    });
+
+    if (isPeter) {
       body.querySelector("#genPeterBtn").onclick = () => this.generatePeter(body);
       body.querySelector("#resetPeterBtn").onclick = () => {
         if (!peterDiary.length) return toast("没有可删除的日记");
@@ -6509,14 +7256,23 @@ Diary: {
       };
     } else {
       body.querySelector("#genMineBtn").onclick = () => this.writeMine(body);
-      body.querySelector("#resetMineBtn").onclick = () => {
-        if (!myDiary.length) return toast("没有可删除的日记");
-        if (!confirm("确定删除你最新一篇日记？")) return;
-        myDiary.pop();
-        localStorage.setItem("sv_diary_me", JSON.stringify(myDiary));
-        this.render(body);
-      };
     }
+  },
+
+  /* 删除「我的日记」任意一篇 */
+  deleteMine(idx) {
+    const myDiary = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
+    // 注意：列表是按 timestamp 排序过的，idx 是排序后索引，需要找到真实对象
+    const tsOf = (d) => d.timestamp || d.createdAt || 0;
+    myDiary.sort((a, b) => tsOf(a) - tsOf(b));
+    const target = myDiary[idx];
+    if (!target) return;
+    const title = target.title || "无题";
+    if (!confirm(`确定删除这篇日记「${title}」吗？此操作不可恢复。`)) return;
+    myDiary.splice(idx, 1);
+    localStorage.setItem("sv_diary_me", JSON.stringify(myDiary));
+    toast("已删除");
+    this.render(document.getElementById("appBody"));
   },
 
   async generatePeter(body) {
@@ -6653,7 +7409,9 @@ ${lastDiaryHint}
       diaries.push({
         date, title, content,
         stage: phase.name,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        timestamp: Date.now(),
+        timeSource: "world"   // 彼得日记默认用世界线时间
       });
       localStorage.setItem("sv_diary", JSON.stringify(diaries));
       toast("彼得写了一篇日记：" + title);
@@ -6664,13 +7422,64 @@ ${lastDiaryHint}
   },
 
   async writeMine(body) {
+    // ===== 读取当前世界线日期 =====
+    const s = store.getState();
+    const worldDate = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+    const realNow = new Date();
+    const realDate = `${realNow.getFullYear()}年${realNow.getMonth()+1}月${realNow.getDate()}日`;
+
     const div = document.createElement("div");
-    div.style.cssText = "position:absolute;inset:0;background:#000d;z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;";
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;";
     div.innerHTML = `
-      <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;display:flex;flex-direction:column;">
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:85vh;display:flex;flex-direction:column;">
         <h3 style="margin:0 0 12px;color:var(--text);font-size:16px;">✍️ 写一篇日记</h3>
+
+        <!-- 时间来源切换 -->
+        <div class="field" style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">时间来源</label>
+          <div style="display:flex;gap:8px;">
+            <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--panel-2);border:2px solid var(--accent-2);border-radius:10px;padding:10px;cursor:pointer;font-size:13px;color:var(--text);" class="time-opt" data-val="world">
+              <input type="radio" name="md_time" value="world" checked style="accent-color:var(--accent-2);">
+              <span>🌐 世界线</span>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--panel-2);border:2px solid transparent;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;color:var(--text);" class="time-opt" data-val="real">
+              <input type="radio" name="md_time" value="real" style="accent-color:var(--accent-2);">
+              <span>📅 现实</span>
+            </label>
+          </div>
+          <div id="md_time_preview" style="font-size:11px;color:var(--muted);margin-top:6px;">当前选择：${worldDate}</div>
+        </div>
+
+        <!-- 纸张背景选择 -->
+        <div class="field" style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">纸张背景</label>
+          <div class="paper-picker" id="md_paper_picker">
+            <button type="button" class="paper-picker-item active" data-paper="paper-blank">
+              <div class="pp-preview pp-blank"></div>
+              <span class="paper-picker-label">空白</span>
+            </button>
+            <button type="button" class="paper-picker-item" data-paper="paper-kraft">
+              <div class="pp-preview pp-kraft"></div>
+              <span class="paper-picker-label">牛皮纸</span>
+            </button>
+            <button type="button" class="paper-picker-item" data-paper="paper-notebook">
+              <div class="pp-preview pp-notebook"></div>
+              <span class="paper-picker-label">笔记本</span>
+            </button>
+            <button type="button" class="paper-picker-item" data-paper="paper-scroll">
+              <div class="pp-preview pp-scroll"></div>
+              <span class="paper-picker-label">书轴</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 标题 -->
         <input id="md_title" placeholder="标题（6字以内）" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;">
-        <textarea id="md_content" placeholder="今天发生了什么..." style="width:100%;flex:1;min-height:200px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;line-height:1.6;resize:none;box-sizing:border-box;"></textarea>
+
+        <!-- 正文 -->
+        <textarea id="md_content" placeholder="今天发生了什么..." style="width:100%;flex:1;min-height:180px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;line-height:1.6;resize:none;box-sizing:border-box;"></textarea>
+
+        <!-- 操作 -->
         <div style="display:flex;gap:8px;margin-top:12px;">
           <button id="md_cancel" class="btn ghost" style="flex:1;">取消</button>
           <button id="md_ok" class="btn" style="flex:1;">保存并让彼得回应</button>
@@ -6678,33 +7487,67 @@ ${lastDiaryHint}
       </div>`;
     document.querySelector(".device").appendChild(div);
 
+    // ===== 时间源切换 =====
+    let timeSource = "world";
+    const timePreview = div.querySelector("#md_time_preview");
+    div.querySelectorAll(".time-opt").forEach(el => {
+      el.onclick = () => {
+        const val = el.dataset.val;
+        timeSource = val;
+        div.querySelectorAll(".time-opt").forEach(x => {
+          x.style.borderColor = x.dataset.val === val ? "var(--accent-2)" : "transparent";
+          x.querySelector("input").checked = x.dataset.val === val;
+        });
+        timePreview.textContent = "当前选择：" + (val === "real" ? realDate + "（现实）" : worldDate + "（世界线）");
+      };
+    });
+
+   // ===== 纸张选择 =====
+    let paperStyle = "paper-blank";
+    div.querySelectorAll(".paper-picker-item").forEach(el => {
+      el.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        paperStyle = el.dataset.paper;
+        div.querySelectorAll(".paper-picker-item").forEach(x => x.classList.remove("active"));
+        el.classList.add("active");
+      });
+    });
+
     div.querySelector("#md_cancel").onclick = () => div.remove();
+
+    // ===== 保存 =====
     div.querySelector("#md_ok").onclick = async () => {
       const title = div.querySelector("#md_title").value.trim() || "无题";
       const content = div.querySelector("#md_content").value.trim();
       if (!content) return toast("请写点内容");
 
-      const s = store.getState();
-      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
       const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+      const dateToUse = timeSource === "real" ? realDate : worldDate;
+
       const entry = {
-        date, title: title.slice(0, 12), content,
+        date: dateToUse,
+        title: title.slice(0, 12),
+        content,
         stage: phase.name,
         createdAt: Date.now(),
+        timestamp: Date.now(),
+        timeSource,            // "world" | "real"
+        paperStyle,            // "paper-blank" | "paper-kraft" | "paper-notebook" | "paper-scroll"
         response: ""
       };
-      // ★ 修复：先从本地读取已有的日记数组，再 push
-const myDiaries = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
-myDiaries.push(entry);
-localStorage.setItem("sv_diary_me", JSON.stringify(myDiaries));
+
+      const myDiaries = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
+      myDiaries.push(entry);
+      localStorage.setItem("sv_diary_me", JSON.stringify(myDiaries));
       div.remove();
       toast("日记已保存，正在让彼得回应...");
 
-      // 让彼得回应
+      // ===== 让彼得回应 =====
       try {
         const sysPrompt = `你是漫威的彼得·帕克。玩家刚写了一篇日记，你"无意中"看到了（或者玩家主动给你看）。
 
-【当前日期】${date}
+【当前日期】${dateToUse}
 【玩家日记标题】${title}
 【玩家日记内容】
 ${content}
@@ -6714,20 +7557,15 @@ ${content}
 
 【彼得的语气 · 极其重要】
 1. 话痨 + 自嘲 + 偶尔跑题 + 真诚。
-2. 不要写得像 AI 一样工整，要像真人发消息一样碎碎念。
+2.一样碎碎念。
 3. 可以用"老实说"、"怎么说呢"、"反正"、"其实吧"、"天哪"等口语。
 4. **可以加少量 emoji 和颜文字**表达情绪：
    - 尴尬：😅 🤦‍♂️
    - 开心：😄 ✨
-   - 担心：😰
-   - 无奈：🤷‍♂️
+   - 担心🤷‍♂️
    - 认真：💭
-   一段里加 1-2 个就够，不要堆砌。
-5. 不要复述日记内容，要**回应它**——比如：
-   - 玩家写了心事 → 彼得会认真安慰，但可能用自嘲的方式
-   - 玩家写了开心的事 → 彼得会跟着高兴，可能说"我也开心了"
-   - 玩家提到彼得自己 → 彼得会有点不好意思，可能岔开话题
-6. 严禁括号、星号标注动作（不要写"（挠头）"、"*笑了*"）。
+   一段里加 1-2 个就够，回应它**。
+6.**"）。
 7. 严禁"英文原句（中文翻译）"格式。
 8. 全部中文。
 
@@ -6735,8 +7573,16 @@ ${content}
 
         const res = await callAI([{ role: "user", content: "回应" }], sysPrompt);
         entry.response = res.trim();
-        myDiaries[myDiaries.length - 1] = entry;
-        localStorage.setItem("sv_diary_me", JSON.stringify(myDiaries));
+        const arr = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
+        // 找最新一条（timestamp 最大）来写入回应
+        let maxIdx = -1, maxTs = -1;
+        arr.forEach((d, i) => {
+          if ((d.timestamp || 0) > maxTs) { maxTs = d.timestamp || 0; maxIdx = i; }
+        });
+        if (maxIdx !== -1) {
+          arr[maxIdx].response = entry.response;
+          localStorage.setItem("sv_diary_me", JSON.stringify(arr));
+        }
         toast("彼得回应了你的日记");
       } catch (e) {
         toast("彼得回应失败：" + e.message);
@@ -6746,18 +7592,24 @@ ${content}
     };
   },
 
-  showDiary(d, who) {
+ showDiary(d, who) {
     const div = document.createElement("div");
-    div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
     const isPeter = who === "peter";
+    // 我的日记用自定义纸张；彼得日记默认卡片（或也可以给彼得配纸）
+    const paper = (!isPeter && d.paperStyle) ? d.paperStyle : "";
+    const badge = d.timeSource === "real"
+      ? `<span class="diary-time-badge real">现实</span>`
+      : (d.timeSource === "world" ? `<span class="diary-time-badge world">世界线</span>` : "");
+
     div.innerHTML = `
       <div style="max-width:520px;margin:20px auto;">
-        <div class="diary-detail">
-          <div class="diary-detail-meta">${esc(d.date)} · ${esc(d.stage || "")} · ${isPeter ? "🕷️ 彼得" : "✍️ 我"}</div>
+        <div class="diary-detail ${paper}" style="padding:24px;">
+          <div class="diary-detail-meta">${esc(d.date)}${badge} · ${esc(d.stage || "")} · ${isPeter ? "🕷️ 彼得" : "✍️ 我"}</div>
           <div class="diary-detail-title">${esc(d.title)}</div>
           <div class="diary-detail-content">${esc(d.content)}</div>
           ${d.response ? `
-            <div class="diary-detail-response">
+            <div class="diary-detail-response" style="${paper ? 'background:rgba(255,255,255,.5);border-left:3px solid var(--accent-2);' : ''}">
               <div class="diary-detail-response-label">💬 彼得的回应</div>
               <div class="diary-detail-response-text">${esc(d.response)}</div>
             </div>
@@ -6768,21 +7620,389 @@ ${content}
     `;
     document.querySelector(".device").appendChild(div);
 
-    // ★ 正确绑定关闭：只删自己这一层遮罩
     div.querySelector("#diaryCloseBtn").onclick = () => div.remove();
-    // 点遮罩空白处也能关
     div.onclick = (e) => { if (e.target === div) div.remove(); };
   }
 },
 
   contacts: {
-    title: "通讯录",
-    render(body){
-      body.innerHTML=`<div style="padding:14px"><div class="card">
-        <h3>通讯录</h3>
-        <p style="font-size:13px;color:var(--muted);line-height:1.6">联系人与群聊功能已整合到 <b>信息</b> App 内。</p>
-        <button class="btn" style="margin-top:12px" onclick="openApp('messages')">前往信息</button>
-      </div></div>`;
+    title: "社交圈",
+    currentTab: "people",
+
+    render(body) {
+      const self = this;
+      const contacts = store.getContacts();
+const isGroupContact = (c) => c.isGroup === true || /^群聊\s*·/.test(c.name || "");
+const people = contacts.filter(c => !isGroupContact(c));
+const groups = contacts.filter(c => isGroupContact(c));
+    const savedNews = JSON.parse(localStorage.getItem("sv_daily_news") || "[]");
+
+      body.innerHTML = `
+        <div style="padding:14px">
+          <div class="sc-tabs">
+            <div class="sc-tab ${this.currentTab==='people'?'active':''}" data-tab="people">
+              👤 联系人 <span class="sc-tab-count">${people.length}</span>
+            </div>
+            <div class="sc-tab ${this.currentTab==='groups'?'active':''}" data-tab="groups">
+              👥 群聊 <span class="sc-tab-count">${groups.length}</span>
+            </div>
+            <div class="sc-tab ${this.currentTab==='daily'?'active':''}" data-tab="daily">
+              📰 号角日报
+            </div>
+          </div>
+          <div id="scContent" style="margin-top:14px;"></div>
+        </div>`;
+
+      const content = body.querySelector("#scContent");
+
+      // ===== Tab 1：联系人 =====
+      if (this.currentTab === "people") {
+        content.innerHTML = `
+          <button class="btn" id="scAddContactBtn" style="margin-bottom:12px;">➕ 添加联系人</button>
+          <div class="sc-list">
+            ${people.length ? people.map(c => self.renderContactRow(c)).join("") : `<div class="sc-empty">还没有联系人，点击上方按钮添加。</div>`}
+          </div>`;
+        body.querySelector("#scAddContactBtn").onclick = () => self.addContactFlow(body);
+        content.querySelectorAll(".sc-person-row").forEach(el => {
+          el.onclick = (e) => {
+            if (e.target.closest(".sc-del-btn")) return;
+            const name = el.dataset.name;
+            apps.messages.currentUser = name;
+            apps.messages.view = "chat";
+            openApp("messages");
+          };
+        });
+        content.querySelectorAll(".sc-del-btn").forEach(el => {
+          el.onclick = (e) => {
+            e.stopPropagation();
+            const name = el.dataset.name;
+            if (!confirm(`确定删除联系人「${name}」及其聊天记录吗？`)) return;
+            const list = store.getContacts().filter(c => c.name !== name);
+            store.setContacts(list);
+            const chats = store.getChats();
+            delete chats[name];
+            store.setChats(chats);
+            toast("已删除");
+            self.render(body);
+          };
+        });
+      }
+
+      // ===== Tab 2：群聊 =====
+      else if (this.currentTab === "groups") {
+        content.innerHTML = `
+          <button class="btn" id="scGroupBtn" style="margin-bottom:12px;">👥 发起群聊</button>
+          <div class="sc-list">
+            ${groups.length ? groups.map(g => self.renderGroupRow(g)).join("") : `<div class="sc-empty">还没有群聊，点击上方按钮创建。</div>`}
+          </div>`;
+        body.querySelector("#scGroupBtn").onclick = () => self.createGroupFlow(body);
+        content.querySelectorAll(".sc-group-row").forEach(el => {
+          el.onclick = (e) => {
+            if (e.target.closest(".sc-del-btn")) return;
+            const name = el.dataset.name;
+            apps.messages.currentUser = name;
+            apps.messages.view = "chat";
+            openApp("messages");
+          };
+        });
+        content.querySelectorAll(".sc-del-btn").forEach(el => {
+          el.onclick = (e) => {
+            e.stopPropagation();
+            const name = el.dataset.name;
+            if (!confirm(`确定解散群聊「${name}」吗？`)) return;
+            const list = store.getContacts().filter(c => c.name !== name);
+            store.setContacts(list);
+            const chats = store.getChats();
+            delete chats[name];
+            store.setChats(chats);
+            toast("群聊已解散");
+            self.render(body);
+          };
+        });
+      }
+
+      // ===== Tab 3：号角日报 =====
+      else if (this.currentTab === "daily") {
+        content.innerHTML = `
+          <div class="daily-card">
+            <div class="daily-logo">📰</div>
+            <div class="daily-title">号角日报</div>
+            <div class="daily-subtitle">THE DAILY BUGLE · NEW YORK</div>
+            <div class="daily-desc">一份关于蜘蛛侠和这座城市的小报。点击下方按钮，让编辑部为你出一期今日头条。</div>
+            <button class="btn primary daily-btn" id="dailyGenBtn">🗞️ 生成今日号角日报</button>
+          </div>
+          ${savedNews.length ? `
+          <div style="margin-top:20px;">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:600;">📂 往期报纸</div>
+            <div class="daily-saved-list">
+              ${savedNews.map((n, i) => `
+                <div class="daily-saved-item" data-idx="${i}">
+                  <div class="daily-saved-info">
+                    <div class="daily-saved-title">${esc(n.data.headline.title)}</div>
+                    <div class="daily-saved-date">${esc(n.date)}</div>
+                  </div>
+                  <button class="daily-saved-del" data-del="${i}" title="删除">🗑️</button>
+                </div>
+              `).join("")}
+            </div>
+          </div>` : ""}`;
+        content.querySelector("#dailyGenBtn").onclick = () => self.generateDaily(body);
+        content.querySelectorAll(".daily-saved-item").forEach(el => {
+          el.onclick = (e) => {
+            if (e.target.closest(".daily-saved-del")) return;
+            const idx = parseInt(el.dataset.idx);
+            self.viewSavedDaily(body, savedNews[idx]);
+          };
+        });
+        content.querySelectorAll(".daily-saved-del").forEach(el => {
+          el.onclick = (e) => {
+            e.stopPropagation();
+            const idx = parseInt(el.dataset.del);
+            if (!confirm("确定删除这期报纸吗？")) return;
+            savedNews.splice(idx, 1);
+            localStorage.setItem("sv_daily_news", JSON.stringify(savedNews));
+            toast("已删除");
+            self.render(body);
+          };
+        });
+      }
+
+      body.querySelectorAll(".sc-tab").forEach(el => {
+        el.onclick = () => {
+          self.currentTab = el.dataset.tab;
+          self.render(body);
+        };
+      });
+    },
+
+    renderContactRow(c) {
+      const note = c.note || "";
+      const displayName = note || c.name;
+      const avatar = c.avatar
+        ? `<img src="${c.avatar}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">`
+        : `<div class="sc-avatar">${esc((c.name || "?")[0].toUpperCase())}</div>`;
+      const aff = typeof c.affinity === "number" ? c.affinity : 0;
+      const affCap = c.name === "彼得·帕克" ? 200 : 100;
+      const affPct = Math.min(100, (aff / affCap) * 100);
+
+      return `
+        <div class="sc-row sc-person-row" data-name="${esc(c.name)}">
+          ${avatar}
+          <div style="flex:1;min-width:0;">
+            <div class="sc-name">${esc(displayName)}</div>
+            <div class="sc-desc">${esc((c.desc || "").slice(0, 40))}</div>
+            <div class="sc-aff-bar"><div class="sc-aff-fill" style="width:${affPct}%;"></div></div>
+            <div class="sc-aff-text">好感度 ${aff}/${affCap}</div>
+          </div>
+          <button class="sc-del-btn" data-name="${esc(c.name)}" title="删除联系人">✕</button>
+        </div>`;
+    },
+
+    renderGroupRow(g) {
+      const members = g.members || [];
+      const avatars = members.slice(0, 3).map(m => {
+        const mc = store.getContacts().find(x => x.name === m);
+        if (mc && mc.avatar) return `<img src="${mc.avatar}" class="sc-group-mini-av">`;
+        return `<div class="sc-group-mini-av sc-group-mini-av-letter">${esc((m || "?")[0].toUpperCase())}</div>`;
+      }).join("");
+      return `
+        <div class="sc-row sc-group-row" data-name="${esc(g.name)}">
+          <div class="sc-group-avatar">${avatars}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="sc-name">${esc(g.name)}</div>
+            <div class="sc-desc">${members.length} 位成员：${esc(members.slice(0, 3).join("、"))}${members.length > 3 ? "…" : ""}</div>
+          </div>
+          <button class="sc-del-btn" data-name="${esc(g.name)}" title="解散群聊">✕</button>
+        </div>`;
+    },
+
+    async addContactFlow(body) {
+      const ans = prompt("添加联系人：\n\n可选：1 彼得·帕克  2 内德·利兹  3 米歇尔·琼斯  4 梅婶\n或直接输入自定义名字，或输入「随机」让AI生成");
+      if (!ans) return;
+      let name = ans.trim();
+      if (name === "1") name = "彼得·帕克";
+      else if (name === "2") name = "内德·利兹";
+      else if (name === "3") name = "米歇尔·琼斯";
+      else if (name === "4") name = "梅婶";
+      else if (name === "随机") {
+        try {
+          const res = await callAI([{ role: "user", content: "生成一个" }], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)"));
+          const [n, d] = res.split("|||").map(x => x.trim());
+          name = n || "神秘人";
+          const list = store.getContacts();
+          list.push({ name, desc: d || "未知", affinity: 0, heart: "暂无" });
+          store.setContacts(list);
+          this.render(body);
+          return toast("已添加：" + name);
+        } catch (e) {
+          return toast("生成失败：" + e.message);
+        }
+      }
+      if (!name) return;
+      const list = store.getContacts();
+      if (list.find(x => x.name === name)) return toast("已存在");
+      list.push({ name, desc: "自定义联系人", affinity: 0, heart: "暂无" });
+      store.setContacts(list);
+      this.render(body);
+      toast("已添加：" + name);
+    },
+
+    createGroupFlow(body) {
+      const self = this;
+      const all = store.getContacts().filter(c => !c.isGroup);
+      if (all.length < 2) return toast("至少需要 2 个联系人才可以建群");
+
+      const div = document.createElement("div");
+      div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;";
+      div.innerHTML = `
+        <h2 style="color:var(--text);margin-top:0">👥 发起群聊</h2>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 12px">勾选要拉进群的成员（至少 2 个）</p >
+        <div id="grpList"></div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn ghost" id="grpCancel" style="flex:1">取消</button>
+          <button class="btn" id="grpOk" style="flex:1">创建群聊</button>
+        </div>`;
+      const list = div.querySelector("#grpList");
+      all.forEach(c => {
+        const row = document.createElement("label");
+        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--text);font-size:13px;";
+        row.innerHTML = `<input type="checkbox" class="grp-check" data-name="${esc(c.name)}" style="width:18px;height:18px;"><span>${esc(c.note || c.name)}</span>`;
+        list.appendChild(row);
+      });
+      div.querySelector("#grpCancel").onclick = () => div.remove();
+      div.querySelector("#grpOk").onclick = () => {
+        const checked = Array.from(div.querySelectorAll(".grp-check:checked")).map(x => x.dataset.name);
+        if (checked.length < 2) return toast("至少选择 2 个成员");
+        const groupName = "群聊 · " + checked.join("、");
+        const contacts = store.getContacts();
+        if (contacts.find(c => c.name === groupName)) {
+          toast("该群聊已存在");
+        } else {
+          contacts.push({ name: groupName, desc: "群聊：" + checked.join("、"), affinity: 0, heart: "暂无", isGroup: true, members: checked, avatar: "" });
+          store.setContacts(contacts);
+        }
+        div.remove();
+// ★ 关键：创建完成后，强制让社交圈切回“群聊”标签，并刷新页面
+self.currentTab = "groups";
+self.render(body);
+toast("群聊已创建");
+
+// 如果你想建完后直接进聊天，把下面两行取消注释，否则就留在列表页
+// apps.messages.currentUser = groupName;
+// apps.messages.view = "chat";
+// openApp("messages");
+      };
+      document.querySelector(".device").appendChild(div);
+    },
+
+    async generateDaily(body) {
+      const self = this;
+      const s = store.getState();
+      const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const content = body.querySelector("#scContent");
+      content.innerHTML = `<div class="loader"><div class="spin"></div>编辑部正在排版...</div>`;
+
+      try {
+        const sysPrompt = `你是一个报纸主编，正在为「号角日报」编写今天的报纸。
+【游戏内日期】${date}
+【当前阶段】${phase.name}（${phase.year}年）
+【阶段背景】${phase.summary}
+【允许的角色】${phase.allowed.join("、")}
+【禁止的角色】${phase.forbidden.join("、")}
+
+【写作规则 · 铁律】
+1. 报纸的年代、事件、人物必须严格符合 ${date} 和当前阶段，禁止出现未来的角色和事件。
+2. 号角日报的风格：**夸张、耸动、爱黑蜘蛛侠**（编辑 J. Jonah Jameson 的口吻）。标题要大写的夸张感。
+3. 内容组合：1 条关于蜘蛛侠的头条 + 2 条全市要闻 + 3-4 条小新闻（可以是街头趣闻、气象、社区新闻、警方通报）。
+4. 如果当前阶段有大事件，头条必须与之相关。
+5. 每条新闻 100-200 字，要有记者的口吻和细节感，不要 AI 腔。
+
+【输出格式 · 严格 JSON，不要 markdown 代码块】
+{
+  "headline": { "title": "夸张的蜘蛛侠头条标题", "subtitle": "副标题或导语（一句话）", "body": "正文 100-200字" },
+  "cityNews": { "title": "全市要闻标题", "body": "关于纽约市的重要新闻，100-200字", "tag": "全市要闻" },
+  "entries": [
+    { "title": "小新闻标题1", "body": "正文 80-150字", "tag": "分类（如：趣闻/警方/天气）" },
+    { "title": "小新闻标题2", "body": "正文 80-150字", "tag": "分类" }
+  ]
+}
+只输出 JSON，不要任何解释。`;
+
+        const raw = await callAI([{ role: "user", content: "出今天的报纸" }], sysPrompt);
+        const cleaned = String(raw || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+        let data;
+        try {
+          const start = cleaned.indexOf("{");
+          const end = cleaned.lastIndexOf("}");
+          data = JSON.parse(cleaned.substring(start, end + 1));
+        } catch (e) {
+          throw new Error("报纸排版失败：AI 返回格式异常");
+        }
+        if (!data.headline || !data.headline.title) throw new Error("报纸缺少头条");
+
+        const savedNews = JSON.parse(localStorage.getItem("sv_daily_news") || "[]");
+        savedNews.unshift({ date, data });
+        localStorage.setItem("sv_daily_news", JSON.stringify(savedNews));
+
+        self.renderPaper(content, date, data, true);
+      } catch (e) {
+        content.innerHTML = `<div class="card" style="text-align:center;padding:24px;">
+            <div style="font-size:14px;color:var(--accent);margin-bottom:12px;">${esc(e.message)}</div>
+            <button class="btn ghost" id="dailyErrBack">返回</button>
+          </div>`;
+        content.querySelector("#dailyErrBack").onclick = () => self.render(body);
+      }
+    },
+
+    viewSavedDaily(body, newsItem) {
+      const content = body.querySelector("#scContent");
+      this.renderPaper(content, newsItem.date, newsItem.data, false);
+    },
+
+    renderPaper(container, date, data, isNew) {
+      const self = this;
+     container.innerHTML = `
+        <div class="daily-paper" id="dailyPaper">
+          <div class="daily-paper-header">
+            <div class="daily-paper-title">THE DAILY BUGLE</div>
+            <div class="daily-paper-cn">号角日报</div>
+            <div class="daily-paper-line"></div>
+            <div class="daily-paper-meta">
+              <span>${esc(date)}</span><span>·</span><span>纽约 · 皇后区专版</span><span>·</span><span>售价 5 美分</span>
+            </div>
+          </div>
+          <div class="daily-headline">
+            <h1 class="daily-h1">${esc(data.headline.title)}</h1>
+            ${data.headline.subtitle ? `<div class="daily-h1-sub">${esc(data.headline.subtitle)}</div>` : ""}
+            <p class="daily-h1-body">${esc(data.headline.body || "")}</p >
+          </div>
+          ${data.cityNews ? `
+<div class="daily-headline" style="border-top: 1px dashed #c9bb96; margin-top: 16px; padding-top: 16px;">
+  <h2 class="daily-h1" style="font-size: 18px;">${esc(data.cityNews.title)}</h2>
+  <p class="daily-h1-body">${esc(data.cityNews.body || "")}</p >
+</div>
+` : ""}
+<div class="daily-divider">◆ 其他要闻 ◆</div>
+${(data.entries || []).map(e => `
+            <div class="daily-entry">
+              <div class="daily-entry-head">
+                ${e.tag ? `<span class="daily-entry-tag">${esc(e.tag)}</span>` : ""}
+                <h3 class="daily-entry-title">${esc(e.title || "")}</h3>
+              </div>
+              <p class="daily-entry-body">${esc(e.body || "")}</p >
+            </div>
+          `).join("")}
+          <div class="daily-paper-footer">
+            <div class="daily-footer-line"></div>
+            <div class="daily-footer-text">© The Daily Bugle · "Spider-Man: Threat or Menace?"</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn ghost" id="dailyBackBtn" style="flex:1;">← 返回列表</button>
+        </div>`;
+
+      container.querySelector("#dailyBackBtn").onclick = () => self.render(document.getElementById("appBody"));
     }
   },
 
@@ -7089,16 +8309,20 @@ function setSlots(slots){localStorage.setItem("sv_slots",JSON.stringify(slots));
 
 window.openSlots=(mode)=>{
   const slots=getSlots();
-  const div=document.createElement("div");
-  div.style.cssText="position:absolute;inset:0;background:#000e;z-index:300;padding:20px;overflow-y:auto;";
+  const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;";
   div.innerHTML=`<h2 style="color:var(--text);margin-top:0">${mode==="save"?"💾 存档（共10格）":"📂 读档（共10格）"}</h2><div id="slotList"></div><button class="btn ghost" style="margin-top:12px" onclick="this.parentNode.remove()">关闭</button>`;
   const list=div.querySelector("#slotList");
   slots.forEach((snap,i)=>{
     const filled=!!snap;
     const label=filled?`${snap.label}<br><span style="color:var(--muted) ;font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`:"（空白档）";
-    const row=document.createElement("div");
-    row.style.cssText="background:#14141c;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-    row.innerHTML=`<div style="flex:1;color:${filled?'#fff':'#666'};font-size:13px"><b>存档位 ${i+1}</b><br>${label}</div><button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled?(mode==="save"?"覆盖":"读取"):(mode==="save"?"保存":"不可用")}</button>`;
+    const row = document.createElement("div");
+      row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+      row.innerHTML = `
+        <div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;">
+          <div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>
+          ${label}
+        </div><button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled?(mode==="save"?"覆盖":"读取"):(mode==="save"?"保存":"不可用")}</button>`;
     list.appendChild(row);
   });
   list.addEventListener("click",(e)=>{
