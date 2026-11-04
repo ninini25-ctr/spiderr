@@ -7787,8 +7787,8 @@ async render(body) {
       if (m) return new Date(+m[1], +m[2] - 1, +m[3]).getTime();
       return 0;
     })();
-    peterDiary.sort((a, b) => tsOf(a) - tsOf(b));
-    myDiary.sort((a, b) => tsOf(a) - tsOf(b));
+    peterDiary.sort((a, b) => tsOf(b) - tsOf(a));
+    myDiary.sort((a, b) => tsOf(b) - tsOf(a));
 
     // ===== 当前 tab 数据 =====
     const list = this.currentTab === "peter" ? peterDiary : myDiary;
@@ -7898,7 +7898,7 @@ ${(Array.isArray(d.replies) && d.replies.length) ? `<div style="margin-top:6px;f
     const myDiary = JSON.parse(localStorage.getItem("sv_diary_me") || "[]");
     // 注意：列表是按 timestamp 排序过的，idx 是排序后索引，需要找到真实对象
     const tsOf = (d) => d.timestamp || d.createdAt || 0;
-    myDiary.sort((a, b) => tsOf(a) - tsOf(b));
+    myDiary.sort((a, b) => tsOf(b) - tsOf(a));
     const target = myDiary[idx];
     if (!target) return;
     const title = target.title || "无题";
