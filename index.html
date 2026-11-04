@@ -836,6 +836,71 @@ body.theme-light .paper-picker-label {
 .diary-time-badge.world { background: rgba(45,107,255,.15); color: var(--accent-2); }
 .diary-time-badge.real  { background: rgba(76,175,80,.15); color: #4caf50; }
 
+/* ============================================================
+   📖 日记文字颜色修复 · 适配黑版/白版 + 纸张背景
+   ============================================================ */
+
+/* 1. 彼得回应框（.diary-detail-response）的文字 —— 无纸张时，用主题色 */
+.diary-detail-response-text {
+  color: var(--text) !important;
+}
+.diary-detail-response-label {
+  color: var(--accent-2) !important;
+}
+
+/* 2. 有纸张背景时，响应文字必须用纸张对应的深色（因为内联背景是半透明白） */
+.paper-blank .diary-detail-response-text,
+.paper-blank .diary-detail-response-label { color: #1d1d1f !important; }
+
+.paper-kraft .diary-detail-response-text,
+.paper-kraft .diary-detail-response-label { color: #3b2a1a !important; }
+
+.paper-notebook .diary-detail-response-text,
+.paper-notebook .diary-detail-response-label { color: #2b2b2b !important; }
+
+.paper-scroll .diary-detail-response-text,
+.paper-scroll .diary-detail-response-label { color: #4a3520 !important; }
+
+/* 纸张下 label 用稍深的色，避免跟正文混 */
+.paper-kraft .diary-detail-response-label  { color: #7a5a30 !important; }
+.paper-scroll .diary-detail-response-label { color: #8a6b40 !important; }
+
+/* 3. 卡片列表预览（.diary-card-response）的字体修复 */
+.diary-card-response {
+  color: var(--accent-2) !important;
+  font-weight: 500;
+}
+
+/* 纸张卡片上的预览文字 —— 用深色而不是蓝色（蓝字叠纸张不好看） */
+.paper-blank    .diary-card-response { color: #3a3a3f !important; font-style: italic; }
+.paper-kraft    .diary-card-response { color: #5a3f28 !important; font-style: italic; }
+.paper-notebook .diary-card-response { color: #3a3a3a !important; font-style: italic; }
+.paper-scroll   .diary-card-response { color: #6a4a2a !important; font-style: italic; }
+
+/* 4. 卡片列表的"有 N 条留言"小标签在纸张上也要对比度 */
+.paper-kraft .diary-card [style*="var(--accent-2)"],
+.paper-scroll .diary-card [style*="var(--accent-2)"] {
+  color: inherit !important;
+  opacity: 0.75;
+}
+
+/* 5. 留言往来气泡（彼得回复的灰色气泡）—— 修复白版对比度 */
+/* 彼得气泡在 showDiary 里是 background:var(--panel-2), color:var(--text) 的内联样式，
+   在白版下 panel-2=#f0f0f5 太浅，这里补一个边框和更深的文字色 */
+body.theme-light .diary-detail [style*="background:var(--panel-2)"][style*="color:var(--text)"] {
+  background: #eef1f5 !important;
+  color: #1d1d1f !important;
+  border-color: #d2d2d7 !important;
+}
+
+/* 6. 元信息（日期/阶段）在纸张卡片上也补一下 */
+.paper-blank    .diary-card-meta,
+.paper-kraft    .diary-card-meta,
+.paper-notebook .diary-card-meta,
+.paper-scroll   .diary-card-meta {
+  opacity: 0.85;
+}
+
 /* ===== 平行宇宙剧场 ===== */
 .th-wrap { padding: 16px; }
 .th-header { margin-bottom: 20px; }
