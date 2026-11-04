@@ -1068,6 +1068,311 @@ body.theme-light .bubble-trans {
   background: var(--panel-2) !important;
   border: 1px solid var(--line) !important;
 }
+/* ============================================================
+   ✨ 帮我起话题 · 弹窗样式
+   ============================================================ */
+.topic-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  overflow-y: auto;
+}
+.topic-modal-overlay.show {
+  opacity: 1;
+}
+
+.topic-modal-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  transform: translateY(20px) scale(0.96);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+.topic-modal-overlay.show .topic-modal-panel {
+  transform: translateY(0) scale(1);
+}
+
+/* 顶部 */
+.topic-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(45, 107, 255, 0.08), rgba(230, 36, 41, 0.06));
+}
+.topic-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.topic-modal-emoji {
+  font-size: 18px;
+  filter: drop-shadow(0 0 6px rgba(45, 107, 255, 0.5));
+}
+.topic-modal-close {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.topic-modal-close:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* 副标题 */
+.topic-modal-sub {
+  padding: 12px 18px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  border-bottom: 1px solid var(--line);
+}
+.topic-modal-sub b {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+/* 主体 */
+.topic-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 200px;
+}
+
+/* 加载中 */
+.topic-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 10px;
+}
+.topic-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent-2);
+  border-radius: 50%;
+  animation: topicSpin 0.9s linear infinite;
+}
+@keyframes topicSpin {
+  to { transform: rotate(360deg); }
+}
+.topic-loading-text {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 话题卡片 */
+.topic-card {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+.topic-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, var(--accent-2), var(--accent));
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.topic-card:hover {
+  border-color: var(--accent-2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(45, 107, 255, 0.15);
+}
+.topic-card:hover::before {
+  opacity: 1;
+}
+
+.topic-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.topic-card-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.topic-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.topic-card-bg {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+.topic-card-bg-label {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-2);
+  background: rgba(45, 107, 255, 0.12);
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.topic-card-opener {
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.65;
+  background: var(--bg);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-style: italic;
+  position: relative;
+  word-break: break-word;
+}
+.topic-card-opener-quote {
+  color: var(--accent-2);
+  font-weight: 700;
+  font-style: normal;
+}
+
+.topic-card-use {
+  margin-top: 10px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--accent-2);
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.topic-card:hover .topic-card-use {
+  opacity: 1;
+}
+
+/* 错误 */
+.topic-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px 16px;
+  text-align: center;
+}
+.topic-error-emoji {
+  font-size: 36px;
+}
+.topic-error-text {
+  font-size: 13px;
+  color: var(--accent);
+  line-height: 1.5;
+}
+.topic-retry-btn {
+  background: var(--accent-2);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+/* 底部 */
+.topic-modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.topic-modal-regen,
+.topic-modal-cancel {
+  flex: 1;
+  padding: 11px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--line);
+}
+.topic-modal-regen {
+  background: var(--panel);
+  color: var(--accent-2);
+}
+.topic-modal-regen:hover:not(:disabled) {
+  background: rgba(45, 107, 255, 0.1);
+  border-color: var(--accent-2);
+}
+.topic-modal-regen:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.topic-modal-cancel {
+  background: var(--panel);
+  color: var(--muted);
+}
+.topic-modal-cancel:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
 </style>
 </head>
 <body>
@@ -1664,7 +1969,16 @@ setContacts(c){
   getPeterBinding(){ return this.get("sv_peter_binding", null); },
   setPeterBinding(b){ this.set("sv_peter_binding", b); },
   getChatConfig(){return this.get("sv_chat_cfg",{bg:"",maxContext:10,lang:"zh"});},  
-  setChatConfig(c){this.set("sv_chat_cfg",c);}
+  setChatConfig(c){this.set("sv_chat_cfg",c);},
+// ★ 彼得主动发信配置
+getProactiveCfg(){
+  return this.get("sv_proactive_cfg", {
+    enabled: true,        // 默认开启
+    idleCount: 5,         // 连续几轮没回就主动发（默认 5）
+    idleMinutes: 30       // 或者累计多少分钟没互动（默认 30）
+  });
+},
+setProactiveCfg(c){ this.set("sv_proactive_cfg", c); },
 };
 const dbHelper = {
   db: null,
@@ -3177,8 +3491,7 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
               <button class="btn ghost" id="apiSlotSaveBtn" style="flex:1;font-size:12px;padding:6px 12px;">💾 存档</button>
               <button class="btn ghost" id="apiSlotLoadBtn" style="flex:1;font-size:12px;padding:6px 12px;">📂 读档</button>
             </div>
-          </div>
-        </div>
+           </div>
         </div>
         <div class="card"><h3>生图 AI 接入</h3>
           <div class="field">
@@ -3200,6 +3513,28 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
           <button class="btn ghost" id="importDataBtn" style="margin-bottom:8px;">📥 导入数据（JSON）</button>
           <input type="file" id="importFile" accept="application/json" style="display:none;">
           <button class="btn ghost" id="clearDataBtn" style="color:#e62429;border-color:#e62429;">🗑️ 清空全部数据</button>
+        </div>
+
+        <div class="card">
+          <h3>💌 彼得主动发信</h3>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">当玩家长时间不回复时，彼得会主动发消息过来。</p >
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <label style="font-size:13px;color:var(--text);">启用此功能</label>
+            <label class="switch">
+              <input type="checkbox" id="proac_enabled">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="field">
+            <label>连续未回复轮数</label>
+            <input id="proac_turns" type="number" min="1" max="50" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+          </div>
+          <div class="field">
+            <label>静默分钟数</label>
+            <input id="proac_minutes" type="number" min="1" max="1440" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">💡 两个条件任一满足即触发；好感度低于 21 不触发。</div>
+          <button class="btn" id="proac_save">保存主动发信设置</button>
         </div>
       </div>`;
 const themeSel = body.querySelector("#s_theme");
@@ -3236,6 +3571,25 @@ const themeSel = body.querySelector("#s_theme");
         store.setState(st);
         toast("已保存人称设置：" + { first: "第一人称", second: "第二人称", third: "第三人称" }[st.pov]);
       };
+// 💌 彼得主动发信设置
+const proacCfg = store.getProactiveCfg();
+const proacEnabled = body.querySelector("#proac_enabled");
+const proacTurns = body.querySelector("#proac_turns");
+const proacMinutes = body.querySelector("#proac_minutes");
+const proacSaveBtn = body.querySelector("#proac_save");
+if (proacEnabled && proacSaveBtn) {
+  proacEnabled.checked = !!proacCfg.enabled;
+  proacTurns.value = proacCfg.idleCount || 5;
+  proacMinutes.value = proacCfg.idleMinutes || 30;
+  proacSaveBtn.onclick = () => {
+    store.setProactiveCfg({
+      enabled: proacEnabled.checked,
+      idleCount: Math.max(1, parseInt(proacTurns.value) || 5),
+      idleMinutes: Math.max(1, parseInt(proacMinutes.value) || 30)
+    });
+    toast("已保存主动发信设置");
+  };
+}
       const sel = body.querySelector("#c_provider");
       sel.onchange = () => {
         if(sel.value==="openai"){body.querySelector("#c_url").value="https://api.openai.com/v1";body.querySelector("#c_model").value="gpt-4o-mini";}
@@ -3921,6 +4275,33 @@ if (curC && curC.isGroup) {
       <button class="btn" id="save_ctx">保存上下文设置</button>
     </div>
 
+<div class="card">
+  <h3>💌 彼得主动发信</h3>
+  <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">当玩家长时间不回复时，彼得会主动发消息过来。</p >
+
+  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <label style="font-size:13px;color:var(--text);">启用此功能</label>
+    <label class="switch">
+      <input type="checkbox" id="proac_enabled">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="field">
+    <label>连续未回复轮数（世界线推进几回合没回就触发）</label>
+    <input id="proac_turns" type="number" min="1" max="50" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+  </div>
+
+  <div class="field">
+    <label>静默分钟数（多少分钟没互动就触发）</label>
+    <input id="proac_minutes" type="number" min="1" max="1440" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+  </div>
+
+  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">💡 以上两个条件满足任一即触发；好感度低于 21 时不会主动发。</div>
+
+  <button class="btn" id="proac_save">保存主动发信设置</button>
+</div>
+
     <div class="card">
       <h3>ℹ️ 说明</h3>
       <p style="font-size:12px;color:var(--text);line-height:1.7;margin:0;opacity:0.85;">
@@ -3967,6 +4348,25 @@ if (curC && curC.isGroup) {
     store.setChatConfig(newCfg);
     toast("上下文长度已保存：" + newCfg.maxContext);
   };
+  // 💌 彼得主动发信设置（情况 C 专用）
+  const proacCfgM = store.getProactiveCfg();
+  const proacEnabledM = body.querySelector("#proac_enabled");
+  const proacTurnsM = body.querySelector("#proac_turns");
+  const proacMinutesM = body.querySelector("#proac_minutes");
+  const proacSaveBtnM = body.querySelector("#proac_save");
+  if (proacEnabledM && proacSaveBtnM) {
+    proacEnabledM.checked = !!proacCfgM.enabled;
+    proacTurnsM.value = proacCfgM.idleCount || 5;
+    proacMinutesM.value = proacCfgM.idleMinutes || 30;
+    proacSaveBtnM.onclick = () => {
+      store.setProactiveCfg({
+        enabled: proacEnabledM.checked,
+        idleCount: Math.max(1, parseInt(proacTurnsM.value) || 5),
+        idleMinutes: Math.max(1, parseInt(proacMinutesM.value) || 30)
+      });
+      toast("已保存主动发信设置");
+    };
+  }
 },
 
 async render(body) {
@@ -4049,9 +4449,10 @@ chatHtml += `<div id="chatThread">`;
   
   // 输入区
   chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
-    <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
-    <button id="sendBtn">发送</button>
-  </div>`;
+  <button id="topicBtn" title="帮我起个话题" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:0 12px;font-size:16px;cursor:pointer;flex-shrink:0;">✨</button>
+  <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
+  <button id="sendBtn">发送</button>
+</div>`;
   
   chatHtml += `</div>`;
   body.innerHTML = chatHtml;
@@ -4116,6 +4517,11 @@ chatHtml += `<div id="chatThread">`;
   body.querySelector("#msgInput").addEventListener("keydown", e => {
     if (e.key === "Enter") { e.preventDefault(); body.querySelector("#sendBtn").click(); }
   });
+// ✨ 帮我起话题（单人聊天页绑定）
+    const topicBtn = body.querySelector("#topicBtn");
+    if (topicBtn) {
+      topicBtn.onclick = () => self.showTopicModal(body);
+    }
   // ★ 关键修复：群聊界面必须重新绑定设置按钮，指向 self.renderSettings
  const sbG = $("#appSettingsBtn");
 sbG.style.display = "flex";
@@ -4165,7 +4571,7 @@ sbG.querySelector("#retryBtn").onclick = () => {
       body.querySelectorAll(".chat-row").forEach(el => {
         el.onclick = () => { self.currentUser = el.dataset.user; self.view = "chat"; self.render(body); };
       });
-      
+
       body.querySelector("#addContactBtn").onclick = async () => {
         const ans = prompt("添加联系人：\n\n可选：1 彼得·帕克  2 内德·利兹  3 米歇尔·琼斯  4 梅婶\n或直接输入自定义名字，或输入「随机」让AI生成");
         if (!ans) return;
@@ -4370,7 +4776,11 @@ chatHtml += `</div>`;  // 关闭 #chatThread
 chatHtml += `<div id="quotePreview" style="display:none;padding:8px 14px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-shrink:0;"><div style="display:flex;justify-content:space-between;align-items:center;"><span id="quoteText"></span><span id="cancelQuote" style="cursor:pointer;color:var(--accent)">✕</span></div></div>`;
 
 // --- 输入区 ---
-chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));"><input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}..."><button id="sendBtn">发送</button></div>`;
+chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
+  <button id="topicBtn" title="帮我起个话题" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:0 12px;font-size:16px;cursor:pointer;flex-shrink:0;line-height:1;">✨</button>
+  <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
+  <button id="sendBtn">发送</button>
+</div>`;
 
 chatHtml += `</div>`;  // 关闭 #chatPage
 
@@ -4625,7 +5035,232 @@ body.querySelector("#backToListBtn").onclick = () => {
       self.sendMessage(body, text, false);
     };
     body.querySelector("#msgInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();body.querySelector("#sendBtn").click();}});
-  },
+// ✨ 帮我起话题（单人聊天页绑定）
+    const topicBtn = body.querySelector("#topicBtn");
+    if (topicBtn) {
+      topicBtn.onclick = () => self.showTopicModal(body);
+    }  
+},
+// ============================================================
+// ★ 新增：生成"用户可主动发起的话题"
+//   返回 [{ topic: "话题标题", background: "背景故事", opener: "第一人称开场白" }]
+// ============================================================
+async generateTopics(contactName) {
+  const s = store.getState();
+  const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+  const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+  const profile = store.getProfile();
+  const playerName = profile.name || "玩家";
+  const playerGender = profile.gender === "male" ? "男" : "女";
+  const playerPronoun = playerGender === "男" ? "他" : "她";
+  const aff = getAffinityOf(contactName);
+
+  // 取最近聊天上下文（最后 6 条）
+  const chats = store.getChats();
+  const arr = chats[contactName] || [];
+  const recentChat = arr.slice(-6).map(m =>
+    (m.role === "me" ? `${playerName}：` : `${contactName}：`) + (m.content || "")
+  ).join("\n");
+
+  // 联系人的人设
+  const contact = store.getContacts().find(c => c.name === contactName);
+  const contactDesc = contact ? (contact.desc || "") : "";
+  const affBehavior = buildAffinityBehaviorBlock(contactName, aff);
+
+  // 彼得特殊处理（蜘蛛侠秘密身份 + 话痨风格）
+  const isPeter = (contactName === "彼得·帕克");
+  const peterHint = isPeter ? `
+【彼得·帕克专属约束】
+1. 话题必须符合彼得"高中生 + 蜘蛛侠秘密身份 + 话痨 + 焦虑"的日常感。
+2. 彼得喜欢聊：作业、内德、梅婶、便利店、地铁、抓小偷、蛛丝配方、神秘事件。
+3. 严禁话题涉及"彼得主动承认自己是蜘蛛侠"（除非好感度 ≥101 且身份已公开）。
+4. 彼得的话题风格要"接地气"，不要写成偶像剧。
+` : "";
+
+  const sysPrompt = `你是蜘蛛侠世界的 DM，现在要帮玩家设计"主动发起聊天的话题"。
+
+【当前游戏内日期】${date}
+【当前阶段】${phase.name}
+【玩家信息】姓名：${playerName}，性别：${playerGender}（用「${playerPronoun}」指代）
+【玩家性格】${profile.personality || "（未填）"}
+【玩家背景】${profile.background || "（未填）"}
+【玩家其他】${profile.identity || ""} ${profile.appearance || ""} ${profile.likes || ""} ${profile.notes || ""}
+
+【对话对象】${contactName}
+【对方简介】${contactDesc || "（无）"}
+【当前好感度】${aff}/200
+${affBehavior}
+${peterHint}
+
+【最近聊天】
+${recentChat || "（暂无聊天记录，这是刚认识或还没聊过）"}
+
+【你的任务】
+根据以上信息，设计 **3 个**玩家可以第一人称发起的聊天话题。
+
+【每个话题必须包含】
+1. **topic**：话题标题（8-15字，简短概括）
+2. **background**：话题背景故事（50-100字，说明"为什么玩家会突然想聊这个"——比如
+   - 玩家今天路过某地看到某物
+   - 玩家刚看完一部电影/一本书
+   - 玩家刷手机看到一条新闻
+   - 玩家遇到/听说了某件小事
+   - 玩家最近在纠结某个问题
+   **背景必须是玩家视角能自然产生的**，不能是凭空捏造）
+3. **opener**：第一人称开场白（30-80字，第一句就直接抛出话题，不要寒暄）
+   - 用「我」自称
+   - 符合玩家性格（话多/话少/幽默/内敛等）
+   - 符合与 ${contactName} 的当前关系（好感度低→客气；好感度高→随意）
+   - 禁止"你好""在吗""有空吗"这种废话开场
+
+【铁律 · 违反即失败】
+1. 三个话题必须**风格不同**：
+   - 一个偏日常闲聊（轻松）
+   - 一个偏情感/关系（更走心）
+   - 一个偏事件/外部刺激（有具体触发点）
+2. 严禁话题涉及当前阶段禁止的角色或事件。
+3. 严禁话题让玩家今晚必须来"）。
+4. 严禁话题写成小说，只能是一句自然的开场。
+5. 背景故事必须是**玩家可以自然想到的**，不能是"我知道你在想什么"。
+
+【输出格式 · 严格 JSON，不要 markdown 代码块】
+{
+  "topics": [
+    { "topic": "...", "background": "...", "opener": "..." },
+    { "topic": "...", "background": "...", "opener": "..." },
+    { "topic": "...", "background": "...", "opener": "..." }
+  ]
+}
+只输出 JSON，不要任何解释。`;
+
+  const raw = await callAI([{ role: "user", content: "生成话题" }], sysPrompt);
+  const cleaned = String(raw || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("AI 未按格式返回");
+  const data = JSON.parse(cleaned.substring(start, end + 1));
+  if (!Array.isArray(data.topics) || data.topics.length === 0) throw new Error("AI 未返回话题");
+  return data.topics.slice(0, 3);
+},
+// ============================================================
+// ★ 美化弹窗：帮我起话题
+// ============================================================
+showTopicModal(body) {
+  const self = this;
+  const contactName = self.currentUser || "对方";
+
+  // ===== 遮罩 + 弹窗容器 =====
+  const overlay = document.createElement("div");
+  overlay.className = "topic-modal-overlay";
+  overlay.innerHTML = `
+    <div class="topic-modal-panel">
+      <div class="topic-modal-header">
+        <div class="topic-modal-title">
+          <span class="topic-modal-emoji">✨</span>
+          <span>帮我起个话题</span>
+        </div>
+        <button class="topic-modal-close" id="topicModalClose" aria-label="关闭">✕</button>
+      </div>
+
+      <div class="topic-modal-sub">
+        和 <b>${esc(contactName)}</b> 不知道聊什么？<br>
+        AI 会根据你们的关系、性格、当前剧情，为你设计 3 个开场。
+      </div>
+
+      <div class="topic-modal-body" id="topicModalBody">
+        <div class="topic-loading">
+          <div class="topic-loading-spinner"></div>
+          <div class="topic-loading-text">正在为你思考话题...</div>
+        </div>
+      </div>
+
+      <div class="topic-modal-footer">
+        <button class="topic-modal-regen" id="topicModalRegen" disabled>🔄 换一批</button>
+        <button class="topic-modal-cancel" id="topicModalCancel">取消</button>
+      </div>
+    </div>
+  `;
+  document.querySelector(".device").appendChild(overlay);
+
+  // ===== 关闭 =====
+  const close = () => {
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.remove(), 200);
+  };
+  overlay.querySelector("#topicModalClose").onclick = close;
+  overlay.querySelector("#topicModalCancel").onclick = close;
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+  // 入场动画
+  requestAnimationFrame(() => overlay.classList.add("show"));
+
+  // ===== 加载话题 =====
+  const loadTopics = async () => {
+    const bodyEl = overlay.querySelector("#topicModalBody");
+    const regenBtn = overlay.querySelector("#topicModalRegen");
+
+    bodyEl.innerHTML = `
+      <div class="topic-loading">
+        <div class="topic-loading-spinner"></div>
+        <div class="topic-loading-text">正在为你思考话题...</div>
+      </div>`;
+    regenBtn.disabled = true;
+
+    try {
+      const topics = await self.generateTopics(contactName);
+      if (!topics || !topics.length) throw new Error("AI 没返回话题");
+
+      bodyEl.innerHTML = topics.map((t, i) => `
+        <div class="topic-card" data-idx="${i}">
+          <div class="topic-card-head">
+            <span class="topic-card-num">${i + 1}</span>
+            <span class="topic-card-title">${esc(t.topic || "未命名话题")}</span>
+          </div>
+          <div class="topic-card-bg">
+            <span class="topic-card-bg-label">背景</span>
+            <span>${esc(t.background || "")}</span>
+          </div>
+          <div class="topic-card-opener">
+            <span class="topic-card-opener-quote">「</span>${esc(t.opener || "")}<span class="topic-card-opener-quote">」</span>
+          </div>
+          <div class="topic-card-use">使用这段开场 →</div>
+        </div>
+      `).join("");
+
+      // 点击卡片 → 填入输入框
+      bodyEl.querySelectorAll(".topic-card").forEach(el => {
+        el.onclick = () => {
+          const idx = parseInt(el.dataset.idx);
+          const t = topics[idx];
+          if (!t) return;
+          const input = body.querySelector("#msgInput");
+          if (input) {
+            input.value = t.opener || "";
+            input.focus();
+          }
+          close();
+          toast("已填入开场白，可修改后发送");
+        };
+      });
+
+      regenBtn.disabled = false;
+      regenBtn.onclick = loadTopics;
+    } catch (e) {
+      bodyEl.innerHTML = `
+        <div class="topic-error">
+          <div class="topic-error-emoji">😵</div>
+          <div class="topic-error-text">生成失败：${esc(e.message)}</div>
+          <button class="topic-retry-btn" id="topicRetryBtn">重试</button>
+        </div>`;
+      const retryBtn = bodyEl.querySelector("#topicRetryBtn");
+      if (retryBtn) retryBtn.onclick = loadTopics;
+      regenBtn.disabled = false;
+      regenBtn.onclick = loadTopics;
+    }
+  };
+
+  loadTopics();
+},
   async sendMessage(body, text, isRetry) {
   const self = this;
   // 识别群聊，直接走独立发送逻辑
@@ -4650,14 +5285,19 @@ body.querySelector("#backToListBtn").onclick = () => {
     self.quoteData = null;
     body.querySelector("#quotePreview").style.display = "none";
     
-    if (!isRetry) {
-  self.lastUserText = text;
+   if (!isRetry) {
+self.lastUserText = text;
+// ★ 记录玩家最后一次主动发信的时间（用于彼得主动发信判定）
+if (self.currentUser === "彼得·帕克") {
+  localStorage.setItem("sv_peter_last_user_act", String(Date.now()));
+  localStorage.setItem("sv_peter_idle_turns", "0"); // 重置连续未计数
+}
 
-  // 用户发的是普通文字，正常存入
-  arr.push({role:"me", content:text, quote: quoteContent});
-  chatsNow[self.currentUser] = arr;
-  store.setChats(chatsNow);
-  self.render(body);
+// 用户发的是普通文字，正常存入
+arr.push({role:"me", content:text, quote: quoteContent});
+chatsNow[self.currentUser] = arr;
+store.setChats(chatsNow);
+self.render(body);
 
   // ===== 关键词触发彼得回复语音（仅限彼得·帕克）=====
   let voiceKey = null;
@@ -6034,53 +6674,175 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
       });
     },
 
-    async newPost() {
-      const text = prompt("发布推文内容：");
-      if (!text) return;
-      const all = store.getPosts();
-      all.twitter = all.twitter || [];
+// ============================================================
+// ★ 新增：混合生成评论（联系人必出 + 陌生人 5 条）
+//   参数：
+//     postText   -- 帖子正文
+//     postName   -- 发帖人名字
+//   返回：Array<{user, text, replies}>
+// ============================================================
+async generateMixedComments(postText, postName) {
+  const sNow = store.getState();
+  const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有评论必须符合这个时间点。\n\n`;
+  const contactsList = store.getContacts()
+    .filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || ""))
+    .map(c => c.name);
 
-      let myName = store.getProfile().name || "Me";
-      if (/[\u4e00-\u9fa5]/.test(myName)) myName = "Me";
+  // ===== 第一步：联系人评论（强约束，逐个点名）=====
+  let contactComments = [];
+  if (contactsList.length > 0) {
+    const contactPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
 
-      const newPost = {
-        id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-        name: myName,
-        handle: "@me",
-        text,
-        feed: "foryou",
-        comments: [],
-        likes: Math.floor(Math.random() * 20) + 2,
-        retweetCount: 0
+【任务】
+这条推文下面，以下联系人**每一个人都必须留下一条评论**，一个都不能少：
+${contactsList.map(n => `- ${n}`).join("\n")}
+
+【铁律 · 违反即失败】
+1. 发帖人如果是 "${postName}"，禁止 ta 自己在评论区用"${postName}"这个名字出现。
+2. 每条评论必须符合该联系人的性格、与发帖人的关系亲疏。
+3. 评论要短（15-60字），有生活感，像真实社交平台。
+4. 必须**同时生成**，不能分批。
+
+【格式 · 严格 · 每行一条】
+姓名 ||| 评论内容
+
+注意：只输出 ${contactsList.length} 行，不多不少。`);
+
+    try {
+      const res = await callAI([{ role: "user", content: "生成联系人评论" }], contactPrompt);
+      const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
+      const clean = (s) => {
+        const m = s.match(/^(.+?)（(.+)）$/);
+        if (m && isChinese(m[1]) && isChinese(m[2])) return m[1].trim();
+        return s;
       };
-      all.twitter.unshift(newPost);
-      store.setPosts(all);
-      this.render($("#appBody"));
+      res.split('\n').filter(l => l.includes('|||')).forEach(line => {
+        const [u, t] = line.split('|||').map(x => x.trim());
+        if (u && t) contactComments.push({ user: u, text: clean(t), replies: [] });
+      });
+    } catch (e) {
+      console.warn("联系人评论生成失败:", e);
+    }
 
+    // ★ 代码层强校验：AI 漏掉谁，手动补一条
+    const gotNames = new Set(contactComments.map(c => c.user));
+    const missing = contactsList.filter(n => !gotNames.has(n));
+    for (const missName of missing) {
       try {
-        const sNow = store.getState();
-        const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有推文、评论必须符合这个时间点。\n\n`;
-        const contactsList = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || "")).map(c => c.name).join("、");
+        const missPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
 
-        const sysPrompt = buildSystem(`${dateHint}用户发了推特，发帖人名字是："${myName}"，内容是："${text}"。
-【绝对铁律】
-1. 严禁让任何网友使用 "${myName}" 这个名字。
-2. 评论区必须包含以下所有联系人：${contactsList}。
-3. 再额外生成 3-5 条来自世界各地的随机网友评论。
-4. 外语 → 原文（中文翻译）；中文 → 只写中文原文。
-【格式】
-姓名(国家/语言) ||| 评论内容
-每行一条。`);
+请**只生成**「${missName}」一个人的评论。
+要求：15-60字，符合 ta 的性格，真实感。
 
-        const res = await callAI([{ role: "user", content: "生成评论" }], sysPrompt);
-        const all2 = store.getPosts();
-        all2.twitter = all2.twitter.map(p =>
-          (p.text === text && p.name === newPost.name) ? { ...p, comments: this.parseComments(res) } : p
-        );
-        store.setPosts(all2);
-        this.render($("#appBody"));
-      } catch (e) { toast(e.message); }
-    },
+只输出一行，不要任何前缀：
+评论内容`);
+
+        const missRes = await callAI([{ role: "user", content: "生成" }], missPrompt);
+        let text = String(missRes || "").replace(/^.*?\|\|\|/, "").trim();
+        text = text.split('\n')[0].trim();
+        // 如果 AI 还是带名字前缀，去掉
+        text = text.replace(new RegExp("^" + missName + "\\s*[:：]\\s*"), "").trim();
+        if (text) {
+          contactComments.push({ user: missName, text, replies: [] });
+        }
+      } catch (_) {}
+    }
+  }
+
+  // ===== 第二步：陌生人评论（5 条）=====
+  let strangerComments = [];
+  try {
+    const strangerPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
+
+【任务】
+生成 5 条来自**世界各地陌生网友**的评论。
+
+【铁律 · 违反即失败】
+1. 发帖人必须**不是**以下任何人：${contactsList.join("、")}、${postName}。
+2. 网名用"英文网名(国家/语言)"的格式，如 queen_kate(美)、tokyo_ya(日)。
+3. 评论要有网感，可以互怼、抢热评、玩梗。
+4. **外语评论 → 原文（中文翻译）**；**中文评论 → 只写中文原文，不加任何括号翻译**。
+
+【格式 · 严格 · 每行一条】
+网名(国家) ||| 评论内容
+
+只输出 5 行，不多不少。`);
+
+    const res = await callAI([{ role: "user", content: "生成陌生人评论" }], strangerPrompt);
+    const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
+    const clean = (s) => {
+      const m = s.match(/^(.+?)（(.+)）$/);
+      if (m && isChinese(m[1]) && isChinese(m[2])) return m[1].trim();
+      return s;
+    };
+    res.split('\n').filter(l => l.includes('|||')).forEach(line => {
+      const [u, t] = line.split('|||').map(x => x.trim());
+      if (u && t) strangerComments.push({ user: u, text: clean(t), replies: [] });
+    });
+  } catch (e) {
+    console.warn("陌生人评论生成失败:", e);
+  }
+
+  // ★ 陌生人不够 5 条，补足
+  const fillerPool = [
+    { user: "queens_boy(美)", text: "😂这是真的吗？" },
+    { user: "nyc_gossip(美)", text: "纽约人路过，笑死" },
+    { user: "tokyo_ya(日)", text: "🤔これ本当？（这是真的吗？）" },
+    { user: "paris_chic(法)", text: "😏Oh là là（哎呀）" },
+    { user: "london_fog(英)", text: "Typical.（典型。）🍵" },
+    { user: "seoul_night(韩)", text: "대박（厉害）🔥" },
+    { user: "midtown_kid(美)", text: "我同学也这样说 🤣" },
+    { user: "brooklyn_vibes(美)", text: "楼主是懂什么梗的 💯" }
+  ];
+  if (strangerComments.length < 5) {
+    const need = 5 - strangerComments.length;
+    const picked = fillerPool.sort(() => Math.random() - 0.5).slice(0, need);
+    strangerComments = strangerComments.concat(picked);
+  }
+
+  // 只保留前 5 条陌生人
+  strangerComments = strangerComments.slice(0, 5);
+
+  // ===== 合并：联系人全放前面，陌生人放后面 =====
+  return [...contactComments, ...strangerComments];
+},
+
+    async newPost() {
+  const text = prompt("发布推文内容：");
+  if (!text) return;
+  const all = store.getPosts();
+  all.twitter = all.twitter || [];
+
+  let myName = store.getProfile().name || "Me";
+  if (/[\u4e00-\u9fa5]/.test(myName)) myName = "Me";
+
+  const newPost = {
+    id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+    name: myName,
+    handle: "@me",
+    text,
+    feed: "foryou",
+    comments: [],
+    likes: Math.floor(Math.random() * 20) + 2,
+    retweetCount: 0
+  };
+  all.twitter.unshift(newPost);
+  store.setPosts(all);
+  this.render($("#appBody"));
+
+  // ★ 改用公共函数生成评论：联系人必出 + 陌生人 5 条
+  try {
+    const comments = await this.generateMixedComments(text, myName);
+    const all2 = store.getPosts();
+    all2.twitter = all2.twitter.map(p =>
+      (p.id === newPost.id) ? { ...p, comments } : p
+    );
+    store.setPosts(all2);
+    this.render($("#appBody"));
+  } catch (e) {
+    toast("评论生成失败：" + e.message);
+  }
+},
 
    async refresh(body) {
       const isFollowing = this.currentTab === "following";
@@ -6203,26 +6965,66 @@ ${followingPrompt}
             .replace(/^\s*[-•·]\s*/, "")             // 去掉开头的 "- " "• "
             .trim();
 
-        res.split('\n').filter(l => l.includes('|||')).forEach(line => {
-          const parts = line.split('|||').map(s => s.trim());
-          const [rawName, handle, text, likes, commentsStr] = parts;
-          const name = cleanName(rawName);
-          if (!name || !text) return;
+       res.split('\n').filter(l => l.includes('|||')).forEach(line => {
+  const parts = line.split('|||').map(s => s.trim());
+  const [rawName, handle, text, likes, commentsStr] = parts;
+  const name = cleanName(rawName);
+  if (!name || !text) return;
 
-          all.twitter.unshift({
-            id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-            name,
-            handle: handle || "@user",
-            text,
-            likes: parseInt(likes) || 0,
-            retweetCount: 0,
-            feed: isFollowing ? "following" : "foryou",
-            comments: this.parseComments(`x ||| ${commentsStr || ""}`)
-          });
-        });
+  all.twitter.unshift({
+    id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+    name,
+    handle: handle || "@user",
+    text,
+    likes: parseInt(likes) || 0,
+    retweetCount: 0,
+    feed: isFollowing ? "following" : "foryou",
+    comments: this.parseComments(`x ||| ${commentsStr || ""}`)  // 先用 AI 返回的
+  });
+});
 
-        store.setPosts(all);
-        this.render(body);
+store.setPosts(all);
+this.render(body);
+
+// ★ 后处理：给刚才生成的每条推文，补齐"联系人全出 + 陌生人 5 条"
+const newPosts = all.twitter.filter(p => p.feed === (isFollowing ? "following" : "foryou")).slice(0, 8);
+for (const p of newPosts) {
+  try {
+    const mixed = await this.generateMixedComments(p.text, p.name);
+    // ★ 合并去重：优先保留 AI 原本生成的（如果有），补足联系人
+    const existingUsers = new Set((p.comments || []).map(c => c.user));
+    const contactNames = store.getContacts()
+      .filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || ""))
+      .map(c => c.name)
+      .filter(n => n !== p.name);  // 发帖人自己不出现在自己评论区
+
+    const finalComments = [];
+    // 先放联系人（走 mixed 里联系人部分）
+    const mixedContacts = mixed.filter(c => contactNames.includes(c.user));
+    const mixedStrangers = mixed.filter(c => !contactNames.includes(c.user));
+
+    // 联系人必出：以 mixedContacts 为准
+    finalComments.push(...mixedContacts);
+    // 陌生人：优先用原 AI 生成的，不足 5 条用 mixedStrangers 补
+    const origStrangers = (p.comments || []).filter(c => !contactNames.includes(c.user));
+    const mergedStrangers = [...origStrangers];
+    for (const s of mixedStrangers) {
+      if (mergedStrangers.length >= 5) break;
+      if (!mergedStrangers.find(x => x.user === s.user)) mergedStrangers.push(s);
+    }
+    finalComments.push(...mergedStrangers.slice(0, 5));
+
+    // 写回
+    const allNow = store.getPosts();
+    const idx = allNow.twitter.findIndex(x => x.id === p.id);
+    if (idx !== -1) {
+      allNow.twitter[idx].comments = finalComments;
+      store.setPosts(allNow);
+    }
+  } catch (_) {}
+}
+
+this.render(body);
       } catch (e) {
         toast(e.message);
       }
@@ -6529,7 +7331,14 @@ if (res.includes("【阶段完成】")) {
         }
 
         store.setState(s);
-        triggerNpcMessage(s.currentStory);
+
+// ★ 世界线推进 1 回合，彼得未回计数 +1
+{
+  const t = parseInt(localStorage.getItem("sv_peter_idle_turns") || "0") || 0;
+  localStorage.setItem("sv_peter_idle_turns", String(t + 1));
+}
+
+triggerNpcMessage(s.currentStory);
       } catch(e) {
         return body.innerHTML = `<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;
       }
@@ -9476,6 +10285,12 @@ console.log("openApp 尝试:", id, "→ 存在:", !!(id && apps[id]));
   if (!id) { console.warn("openApp 收到空 id"); return; }
   if (!apps[id]) { console.warn("未定义的 app:", id); return toast("开发中"); }
   currentApp=id;
+// ★ 打开任意 App 时顺便延迟检查一次彼得主动发信
+if (typeof window.peterProactiveCheck === "function") {
+  setTimeout(() => {
+    try { window.peterProactiveCheck(); } catch (e) { console.warn(e); }
+  }, 1500);
+}
   $("#desktop").classList.remove("active");
   $("#appView").classList.add("active");
   $("#appTitle").textContent=apps[id].title;
@@ -9679,8 +10494,126 @@ window.showMsgBanner = (sender, preview) => {
   openApp("messages");
   // 如果用户想返回，可以点「返回」回到列表（不影响之前彼得那边）
   // 不再额外覆盖 previousUser
+ };
 };
+// ============================================================
+// ★ 彼得主动发信检查
+// ============================================================
+window.peterProactiveCheck = async function() {
+  const cfg = store.getProactiveCfg();
+  if (!cfg.enabled) return;
+
+  const lastAct = parseInt(localStorage.getItem("sv_peter_last_user_act") || "0") || 0;
+  const idleTurns = parseInt(localStorage.getItem("sv_peter_idle_turns") || "0") || 0;
+  const now = Date.now();
+  const idleMinutes = lastAct ? Math.floor((now - lastAct) / 60000) : 0;
+
+  // 判定是否满足触发条件（两个条件任一即可）
+  const triggerByTurns = idleTurns >= (cfg.idleCount || 5);
+  const triggerByMinutes = lastAct && idleMinutes >= (cfg.idleMinutes || 30);
+  if (!triggerByTurns && !triggerByMinutes) return;
+
+  // 防止短时间内重复触发：5 分钟内只主动发一次
+  const lastProactive = parseInt(localStorage.getItem("sv_peter_last_proactive") || "0") || 0;
+  if (now - lastProactive < 5 * 60 * 1000) return;
+
+  // 检查彼得是否已经是联系人
+  const contacts = store.getContacts();
+  const peter = contacts.find(c => c.name === "彼得·帕克");
+  if (!peter) return;
+
+  // 检查好感度
+  const aff = getAffinityOf("彼得·帕克");
+  if (aff < 21) return; // 陌生人/点头之交不会主动发
+
+  // 打标记，防止并发
+  localStorage.setItem("sv_peter_last_proactive", String(now));
+  localStorage.setItem("sv_peter_idle_turns", "0");
+
+  try {
+    const s = store.getState();
+    const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+    const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+    const isEn = store.getChatConfig().lang === "en";
+    const playerName = store.getProfile().name || "玩家";
+    const playerGender = store.getProfile().gender === "male" ? "男" : "女";
+    const playerPronoun = playerGender === "男" ? "他" : "她";
+
+    // 取最近几条聊天上下文
+    const chats = store.getChats();
+    const arr = chats["彼得·帕克"] || [];
+    const recent = arr.slice(-6).map(m => ({
+      role: m.role === "me" ? "user" : "assistant",
+      content: (m.content || "").replace(/HEART\s*[:：][\s\S]*/i, "").trim()
+    })).filter(m => m.content);
+
+    const affBehavior = buildAffinityBehaviorBlock("彼得·帕克", aff);
+    const idleReason = triggerByMinutes
+      ? `${playerName}已经 ${idleMinutes} 分钟没回你的消息了`
+      : `你已经连续 ${idleTurns} 回合没跟${playerName}联系了`;
+
+    const sysPrompt = `你是漫威的「彼得·帕克」，正在用手机给「${playerName}」（${playerGender}，用「${playerPronoun}」指代）发短信。
+你和${playerName}的关系见下方好感度设定。
+
+【当前日期】${date}
+【当前阶段】${phase.name}
+【好感度】${aff}/200
+${affBehavior}
+
+【情境】
+${idleReason}。你此刻突然想起了${playerName}，于是主动发来一条消息。
+
+【发送规则 · 违反即失败】
+1. 这是**手机短信**。严禁动作描写、括号、星号。
+2. 生成 1 到 3 条消息。
+3. 用 || 分隔每条消息。
+4. 内容要符合好感度和彼得的话痨+跑题+突然认真的风格。
+5. **不要**一上来就问"你怎么不回我" —— 太直白。要通过别的话题切入（比如突然分享今天遇到的事、突然想起什么、突然想问 ta 个问题）。
+6. 如果好感度 ≥101，可以略带想念、关心。
+7. ${isEn ? "全部用英文。" : "全部用纯中文，可夹少量英文口语。"}
+
+【输出格式】
+只输出消息本身，多条用 || 分隔。不要任何前缀、编号、解释。`;
+
+    const res = await callAI(
+      recent.length ? recent : [{ role: "user", content: "……" }],
+      sysPrompt
+    );
+
+    const msgs = res.split("||").map(x => x.trim()).filter(Boolean);
+    if (!msgs.length) return;
+
+    // 存入聊天记录
+    const chatsNow = store.getChats();
+    const arrNow = chatsNow["彼得·帕克"] || [];
+    msgs.forEach(m => arrNow.push({ role: "them", content: m }));
+    chatsNow["彼得·帕克"] = arrNow;
+    store.setChats(chatsNow);
+
+    // 弹出横幅
+    if (typeof showMsgBanner === "function") {
+      showMsgBanner("彼得·帕克", msgs[0] || "");
+    } else {
+      toast("💬 彼得：" + (msgs[0] || ""));
+    }
+
+    // 如果当前正在和彼得聊天，刷新界面
+    if (apps.messages.currentUser === "彼得·帕克" && apps.messages.view === "chat") {
+      apps.messages.render(document.getElementById("appBody"));
+    }
+  } catch (e) {
+    console.warn("彼得主动发信失败:", e);
+    // 失败时把标记还原，方便下次重试
+    localStorage.setItem("sv_peter_last_proactive", "0");
+  }
 };
+
+// ★ 定时检查（每 60 秒一次）
+if (!window._peterProactiveTimer) {
+  window._peterProactiveTimer = setInterval(() => {
+    try { window.peterProactiveCheck(); } catch (e) { console.warn(e); }
+  }, 60 * 1000);
+}
 // 自动识别剧情中的英语或中文对话，并应用仿宋斜体
 function formatDialogue(text) {
   if (!text) return "";
