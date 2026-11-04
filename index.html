@@ -1398,6 +1398,28 @@ avengersSocialPersona: {
   "奇异博士": "高冷、神秘、用词文绉绉。经常会发一些别人看不懂的魔法术语，或者警告人类不要打破现实。",
   "夜魔侠": "律师身份，充满正义感，发帖经常和地狱厨房的治安有关，偶尔吐槽夜巡太累。"
 },
+// ===== 复联成员状态（按 anchor 阶段）=====
+// alive: 在世并活跃；dead: 已去世不发帖；retired: 退隐但仍可能发帖；unknown: 下落不明
+avengersStatusByPhase: {
+  0: { /* phase1 · 2015.9-12 */ active: [], note: "复联成员尚未与彼得产生交集，但世界层面复联已公开存在（2012纽约大战后）。" },
+  1: { /* phase2 · 2016.1-6 华盛顿 */ active: [], note: "复联刚经历索科维亚事件（2015），正在重组。" },
+  2: { /* phase2_5 · 2016.6-7 柏林 */ active: ["托尼·斯塔克", "美国队长", "娜塔莎·罗曼诺夫", "战争机器", "黑豹", "蚁人", "绯红女巫", "鹰眼", "猎鹰", "冬兵"], note: "索科维亚协议签署后，复联分裂为两派，柏林机场内战。罗德在机场受重伤，可能瘫痪。" },
+  3: { /* phase3 · 2016.7-9 秃鹫 */ active: ["托尼·斯塔克"], note: "美队一方成为通缉犯，托尼在纽约。罗德正在复健，战争机器暂时不能出战。彼得是托尼的秘密项目。" },
+  4: { /* phase4 · 2018.4-5 复联大厦 */ active: ["托尼·斯塔克", "奇异博士", "绿巨人", "王"], note: "灭霸的黑暗教团入侵纽约，奇异博士被绑架。此时美队一方仍通缉中，尚未归队。" },
+  5: { /* phase5 · 2018.5-6 泰坦星 */ active: [], note: "响指已发生，宇宙一半生命化灰。在地球上，托尼和彼得下落不明。复联成员生死未卜。" },
+  6: { /* phase6 · 2024.6+ 多元宇宙 */ active: ["奇异博士", "夜魔侠"], note: "2023年灭霸被击败、托尼·斯塔克牺牲（化灰再复活后打响指牺牲自己）。娜塔莎·罗曼诺夫在沃米尔星牺牲。幻视已死。5年大消失的受害者已回归。彼得复活后参加托尼葬礼。" }
+},
+
+// ===== MCU 世界大事记（供 AI 生成陌生人帖时提及）=====
+mcuWorldEvents: [
+  { year: 2012, event: "纽约大战：洛基率齐塔瑞人入侵纽约，复联首次集结，托尼·斯塔克差点牺牲。" },
+  { year: 2014, event: "神盾局被九头蛇渗透，'洞察计划'事件后神盾局解散。" },
+  { year: 2015, event: "索科维亚事件：奥创将整座索科维亚城升空，复联被迫摧毁，大量平民伤亡。托尼·斯塔克因此陷入愧疚。" },
+  { year: 2016, event: "索科维亚协议签署，复联分裂为托尼派和美队派。柏林机场内战爆发。罗德上校受重伤，可能永久瘫痪。" },
+  { year: 2018, event: "灭霸入侵地球，泰坦星和瓦坎达两线战斗失利。响指打响，宇宙一半生命化灰（'The Snap'）。" },
+  { year: 2023, event: "5年大消失结束后，复联在托尼·斯塔克和绿巨人的带领下逆转响指。托尼·斯塔克打响响指牺牲自己。娜塔莎·罗曼诺夫在沃米尔星牺牲。" },
+  { year: 2024, event: "大消失受害者复活后归家。托尼·斯塔克葬礼在纽约举行，全球哀悼。幻视已死未复活。" }
+],
 // ===== 平行宇宙模板 =====
   parallelUniverses: [
     {
@@ -1508,6 +1530,37 @@ const store = {
   set(k,v){localStorage.setItem(k,JSON.stringify(v));},
   getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3"});},
   setConfig(c){this.set("sv_config",c);},
+// ===== API 档位（可保存多套 URL / Key / 模型）=====
+  getApiSlots() {
+    let slots = this.get("sv_api_slots", null);
+    if (!Array.isArray(slots) || slots.length !== 10) {
+      slots = Array(10).fill(null);
+      this.set("sv_api_slots", slots);
+    }
+    return slots;
+  },
+  setApiSlots(slots) {
+    this.set("sv_api_slots", slots);
+  },
+
+  // ===== API 预设（快速切换，内置常见服务商）=====
+  getApiPresets() {
+    let presets = this.get("sv_api_presets", null);
+    if (!Array.isArray(presets)) {
+      presets = [
+        { name: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini", imgBaseUrl: "https://api.openai.com/v1", imgModel: "dall-e-3" },
+        { name: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat", imgBaseUrl: "", imgModel: "" },
+        { name: "Google Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-1.5-flash", imgBaseUrl: "", imgModel: "" },
+        { name: "通义千问", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus", imgBaseUrl: "", imgModel: "" },
+        { name: "Moonshot", baseUrl: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k", imgBaseUrl: "", imgModel: "" }
+      ];
+      this.set("sv_api_presets", presets);
+    }
+    return presets;
+  },
+  setApiPresets(presets) {
+    this.set("sv_api_presets", presets);
+  },
   getProfile(){
   const p = this.get("sv_profile", {name:"你", identity:"同学", gender:"female"});
   if (!p.gender) p.gender = "female";  // 老数据补默认值
@@ -3062,15 +3115,44 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
             <option value="deepseek" ${cfg.provider==='deepseek'?'selected':''}>DeepSeek</option>
             <option value="custom" ${cfg.provider==='custom'?'selected':''}>自定义</option>
           </select></div>
-          <div class="field"><label>API Key</label><input id="c_key" type="password" value="${esc(cfg.apiKey)}"></div>
+         <div class="field">
+            <label>API Key</label>
+            <div style="display:flex;gap:6px;">
+              <input id="c_key" type="text" value="${esc(cfg.apiKey)}" style="flex:1;" autocomplete="off" spellcheck="false">
+              <button type="button" id="c_key_toggle" class="btn ghost" style="width:auto;padding:0 12px;font-size:12px;">👁️ 隐藏</button>
+            </div>
+          </div>
           <div class="field"><label>Base URL</label><input id="c_url" value="${esc(cfg.baseUrl)}"></div>
           <div class="field"><label>模型</label>
             <div class="row"><input id="c_model" value="${esc(cfg.model)}" style="flex:1"><button class="btn ghost" id="fetchModel" style="width:auto;padding:0 12px">拉取</button></div>
           </div>
-          <button class="btn" id="saveC">保存配置</button>
+         <button class="btn" id="saveC">保存配置</button>
+
+          <!-- ===== API 预设 ===== -->
+          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">⚡ 快速预设</div>
+            <div id="apiPresetList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+            <button class="btn ghost" id="apiPresetAddBtn" style="font-size:12px;padding:6px 12px;">＋ 添加自定义预设</button>
+          </div>
+
+          <!-- ===== API 档位 ===== -->
+          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">💾 API 档位（保留 10 套）</div>
+            <div class="row" style="gap:8px;">
+              <button class="btn ghost" id="apiSlotSaveBtn" style="flex:1;font-size:12px;padding:6px 12px;">💾 存档</button>
+              <button class="btn ghost" id="apiSlotLoadBtn" style="flex:1;font-size:12px;padding:6px 12px;">📂 读档</button>
+            </div>
+          </div>
+        </div>
         </div>
         <div class="card"><h3>生图 AI 接入</h3>
-          <div class="field"><label>生图 Key（留空同上）</label><input id="i_key" type="password" value="${esc(cfg.imgApiKey)}"></div>
+          <div class="field">
+            <label>生图 Key（留空同上）</label>
+            <div style="display:flex;gap:6px;">
+              <input id="i_key" type="text" value="${esc(cfg.imgApiKey)}" style="flex:1;" autocomplete="off" spellcheck="false">
+              <button type="button" id="i_key_toggle" class="btn ghost" style="width:auto;padding:0 12px;font-size:12px;">👁️ 隐藏</button>
+            </div>
+          </div>
           <div class="field"><label>生图 URL</label><input id="i_url" value="${esc(cfg.imgBaseUrl)}"></div>
           <div class="field"><label>生图模型</label>
             <div class="row"><input id="i_model" value="${esc(cfg.imgModel)}" style="flex:1"><button class="btn ghost" id="fetchImgModel" style="width:auto;padding:0 12px">拉取</button></div>
@@ -3086,6 +3168,25 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
         </div>
       </div>`;
 const themeSel = body.querySelector("#s_theme");
+// 👁️ API Key 显示/隐藏切换
+      const cKeyInput = body.querySelector("#c_key");
+      const cKeyToggle = body.querySelector("#c_key_toggle");
+      if (cKeyInput && cKeyToggle) {
+        cKeyToggle.onclick = () => {
+          const isPwd = cKeyInput.type === "password";
+          cKeyInput.type = isPwd ? "text" : "password";
+          cKeyToggle.textContent = isPwd ? "👁️ 隐藏" : "👁️ 显示";
+        };
+      }
+      const iKeyInput = body.querySelector("#i_key");
+      const iKeyToggle = body.querySelector("#i_key_toggle");
+      if (iKeyInput && iKeyToggle) {
+        iKeyToggle.onclick = () => {
+          const isPwd = iKeyInput.type === "password";
+          iKeyInput.type = isPwd ? "text" : "password";
+          iKeyToggle.textContent = isPwd ? "👁️ 隐藏" : "👁️ 显示";
+        };
+      }
       body.querySelector("#saveTheme").onclick = () => {
         const t = themeSel.value;
         localStorage.setItem("sv_theme", t);
@@ -3205,8 +3306,8 @@ slots.forEach((snap, i) => {
     : "（空白档）";
   const row = document.createElement("div");
   row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-  row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
-    <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled ? "覆盖" : "保存"}</button>`;
+  row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;" ${filled ? "" : "disabled"}>读取</button>`;
   list.appendChild(row);
 });
 
@@ -3345,6 +3446,135 @@ slots.forEach((snap, i) => {
 
         toast("已清空全部数据，即将刷新");
         setTimeout(() => location.reload(), 800);
+      };
+// ===== 快速预设 =====
+      const presetListEl = body.querySelector("#apiPresetList");
+      const renderPresets = () => {
+        const presets = store.getApiPresets();
+        presetListEl.innerHTML = presets.map((p, i) => `
+          <button class="btn ghost api-preset-chip" data-idx="${i}" style="width:auto;padding:6px 12px;font-size:12px;border-radius:20px;">
+            ${esc(p.name)}
+          </button>
+        `).join("");
+        presetListEl.querySelectorAll(".api-preset-chip").forEach(el => {
+          el.onclick = () => {
+            const idx = parseInt(el.dataset.idx);
+            const preset = presets[idx];
+            if (!preset) return;
+            // 把预设填进输入框（不保存，等用户点保存配置）
+            const cUrl = body.querySelector("#c_url");
+            const cModel = body.querySelector("#c_model");
+            const iUrl = body.querySelector("#i_url");
+            const iModel = body.querySelector("#i_model");
+            if (cUrl && preset.baseUrl) cUrl.value = preset.baseUrl;
+            if (cModel && preset.model) cModel.value = preset.model;
+            if (iUrl && preset.imgBaseUrl) iUrl.value = preset.imgBaseUrl;
+            if (iModel && preset.imgModel) iModel.value = preset.imgModel;
+            toast("已填入预设：" + preset.name + "（记得点保存配置）");
+          };
+        });
+      };
+      renderPresets();
+
+      body.querySelector("#apiPresetAddBtn").onclick = () => {
+        const name = prompt("预设名称（如：我的中转站）");
+        if (!name || !name.trim()) return;
+        const presets = store.getApiPresets();
+        presets.push({
+          name: name.trim(),
+          baseUrl: body.querySelector("#c_url").value.trim(),
+          model: body.querySelector("#c_model").value.trim(),
+          imgBaseUrl: body.querySelector("#i_url").value.trim(),
+          imgModel: body.querySelector("#i_model").value.trim()
+        });
+        store.setApiPresets(presets);
+        renderPresets();
+        toast("预设已添加");
+      };
+// ===== API 档位存档 =====
+      body.querySelector("#apiSlotSaveBtn").onclick = () => {
+        const slots = store.getApiSlots();
+        const div = document.createElement("div");
+        div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+        div.innerHTML = `<h2 style="color:var(--text);margin-top:0;font-size:17px;">💾 API 档位存档（共10格）</h2><div id="apiSlotList"></div><button class="btn ghost" style="margin-top:12px" id="apiSlotClose">关闭</button>`;
+        const list = div.querySelector("#apiSlotList");
+        slots.forEach((snap, i) => {
+          const filled = !!snap;
+          const label = filled
+            ? `<b>${esc(snap.name || "未命名")}</b><br><span style="color:var(--muted);font-size:11px;">${esc(snap.model || "")} · ${esc(snap.baseUrl || "")}</span><br><span style="color:var(--muted);font-size:11px;">${new Date(snap.timestamp).toLocaleString()}</span>`
+            : "（空白档）";
+          const row = document.createElement("div");
+          row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+          row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
+          list.appendChild(row);
+        });
+        list.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-idx]");
+          if (!btn) return;
+          const idx = parseInt(btn.dataset.idx);
+          if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+          const cfg = store.getConfig();
+          slots[idx] = {
+            name: (cfg.model || "API") + " @ " + (cfg.baseUrl || "").replace(/^https?:\/\//, "").slice(0, 20),
+            timestamp: Date.now(),
+            baseUrl: cfg.baseUrl,
+            apiKey: cfg.apiKey,
+            model: cfg.model,
+            provider: cfg.provider,
+            imgBaseUrl: cfg.imgBaseUrl,
+            imgApiKey: cfg.imgApiKey,
+            imgModel: cfg.imgModel
+          };
+          store.setApiSlots(slots);
+          toast(`已保存到档位 ${idx + 1}`);
+          div.remove();
+        });
+        div.querySelector("#apiSlotClose").onclick = () => div.remove();
+        document.querySelector(".device").appendChild(div);
+      };
+
+      // ===== API 档位读档 =====
+      body.querySelector("#apiSlotLoadBtn").onclick = () => {
+        const slots = store.getApiSlots();
+        if (!slots.some(s => s)) return toast("还没有任何 API 存档");
+        const div = document.createElement("div");
+        div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+        div.innerHTML = `<h2 style="color:var(--text);margin-top:0;font-size:17px;">📂 API 档位读档（共10格）</h2><div id="apiSlotList"></div><button class="btn ghost" style="margin-top:12px" id="apiSlotClose">关闭</button>`;
+        const list = div.querySelector("#apiSlotList");
+        slots.forEach((snap, i) => {
+          const filled = !!snap;
+          const label = filled
+            ? `<b>${esc(snap.name || "未命名")}</b><br><span style="color:var(--muted);font-size:11px;">${esc(snap.model || "")} · ${esc(snap.baseUrl || "")}</span><br><span style="color:var(--muted);font-size:11px;">${new Date(snap.timestamp).toLocaleString()}</span>`
+            : "（空白档）";
+          const row = document.createElement("div");
+          row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+          row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;" ${filled ? "" : "disabled"}>读取</button>`;
+          list.appendChild(row);
+        });
+        list.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-idx]");
+          if (!btn || btn.disabled) return;
+          const idx = parseInt(btn.dataset.idx);
+          const snap = slots[idx];
+          if (!snap) return toast("该档位为空");
+          if (!confirm("读档会覆盖当前 API 配置，确定继续？")) return;
+          const cfg = store.getConfig();
+          cfg.baseUrl = snap.baseUrl || cfg.baseUrl;
+          cfg.apiKey = snap.apiKey || cfg.apiKey;
+          cfg.model = snap.model || cfg.model;
+          cfg.provider = snap.provider || cfg.provider;
+          cfg.imgBaseUrl = snap.imgBaseUrl || cfg.imgBaseUrl;
+          cfg.imgApiKey = snap.imgApiKey || cfg.imgApiKey;
+          cfg.imgModel = snap.imgModel || cfg.imgModel;
+          store.setConfig(cfg);
+          toast("已读取档位 " + (idx + 1));
+          div.remove();
+          apps.settings.render(document.getElementById("appBody"));
+        });
+        div.querySelector("#apiSlotClose").onclick = () => div.remove();
+        document.querySelector(".device").appendChild(div);
       };
  body.querySelector("#saveC").onclick = () => { store.setConfig({...cfg,enabled:body.querySelector("#c_enabled").checked,provider:sel.value,apiKey:body.querySelector("#c_key").value,baseUrl:body.querySelector("#c_url").value,model:body.querySelector("#c_model").value}); toast("已保存"); };
       body.querySelector("#saveI").onclick = () => { store.setConfig({...cfg,imgApiKey:body.querySelector("#i_key").value,imgBaseUrl:body.querySelector("#i_url").value,imgModel:body.querySelector("#i_model").value}); toast("已保存"); };
@@ -4596,6 +4826,11 @@ ${missName}：消息内容`;
    REPLIES: 等等 || 你刚才说的那个我好像在哪见过 || 啊不对我想起来了是内德昨天跟我扯的 || 算了不重要哈哈哈
 7. 严禁写成"客服腔"：不许"请问有什么可以帮您"、"我理解你的感受"、"希望能帮到你"这种。
 8. 严禁每回合都说"我正在忙蜘蛛侠的事"——你还有正常的高中生活。
+
+【彼得心声 · 与好感度挂钩】
+- 好感度 ≥101：心声必须是"想太多、紧张、翻江倒海"的风格，不能是客观描述。
+- 好感度 ≥151：心声必须直白地表达"在乎、想见、想保护"，不要含蓄。
+- 严禁写"（微笑）""（点头）"这种动作。心声是**想的**，不是**做的**。
 `
         : "";
 
@@ -4646,6 +4881,15 @@ ${langRule}
 - **禁止写成**："我感受到了她话语中的关心，这让我心中涌起一阵暖意"这种AI腔。
 - 第一人称，纯中文（即使回复是英文，心声也用中文）。
 - 缺了 HEART 字段，这次回复作废。
+
+【HEART 与好感度匹配 · 铁律 · 违反即失败】
+当前好感度 ${contactAff}/200。你的心声必须严格匹配这个好感度：
+- 0-50：客气、平淡、公事公办。例：「她问这个干嘛……回一下就行。」
+- 51-100：朋友式的随意、吐槽、放松。例：「行吧，去呗，反正我也没事。」
+- 101-150：会紧张、会多想、会有小心思。例：「她这么问我心跳怎么变快了……冷静冷静，别多想。」
+- 151-200：直白、坦率、在乎、想见。例：「唉，她一句话我就想跑过去。这算怎么回事啊。」
+
+${(self.currentUser === "彼得·帕克" && contactAff >= 101) ? `【彼得专属 · 好感度 ≥101 时】\n你的心声不能冷漠、不能礼貌、不能像客服。你要：\n- 反复琢磨她的话，想太多\n- 自己吐槽自己"我在想什么啊""完了完了"\n- 冒出"想见她""刚才那句话是不是在撩我"的念头\n- 心里翻江倒海，但嘴上不说\n` : ""}
 `;
 
       // ★★★ 真正调用 AI ★★★
@@ -4759,24 +5003,54 @@ if (parsed.needRetry) {
   } catch (_) {}
 }
       
-      const isFallbackHeart = [
-        "（盯着屏幕看了两秒，琢磨着该怎么回）",
-        "（嘴角抽了一下，感觉有点好笑）",
-        "（手指悬在键盘上，犹豫了一下）",
-        "（看完之后，深吸了一口气）"
-      ].includes(heartText);
+      // ★ 判断心声是否需要重生成：兜底占位符 / 过短 / 冷漠腔 / 与好感度不匹配
+const fallbackPool = [
+  "（盯着屏幕看了两秒，琢磨着该怎么回）",
+  "（嘴角抽了一下，感觉有点好笑）",
+  "（手指悬在键盘上，犹豫了一下）",
+  "（看完之后，深吸了一口气）"
+];
+const heartAffForCheck = getAffinityOf(self.currentUser);
+const isPeterHeartCheck = (self.currentUser === "彼得·帕克");
+const coldHeartPatterns = [
+  /^\s*[（(][^）)]*[）)]\s*$/,           // 纯括号动作描写
+  /我(理解|感受到|明白)了?[她你]/,      // AI 分析腔
+  /这让我(感到|觉得)/,                   // AI 分析腔
+  /^(嗯|哦|好|行|知道了|知道了。)\s*$/  // 敷衍
+];
+const isColdHeart = coldHeartPatterns.some(p => p.test(heartText));
+const isTooShort = heartText.trim().length < 15;
+const isFallbackHeart = fallbackPool.includes(heartText) || isColdHeart || isTooShort;
 
       if (isFallbackHeart && !window.__skipHeartForThisChat) {
         try {
-          const heartPrompt = `你是「${self.currentUser}」。刚才玩家发了这条消息："${text}"。
-你（${self.currentUser}）心里的真实想法是什么？
+          // ★ 心声也要拿好感度和亲密规则，否则 AI 会写冷漠
+          const heartAff = getAffinityOf(self.currentUser);
+          const heartAffRule = buildAffinityBehaviorBlock(self.currentUser, heartAff);
+          const isPeterHeart = (self.currentUser === "彼得·帕克");
 
-【绝对铁律 · 违反即失败】
-1. 玩家是**女性**，必须用「她」指代，严禁使用「他」、「兄弟」、「这家伙」等男性词汇。
-2. 第一人称，40-80字。
-3. 纯中文，口语化，碎碎念，符合对应的人设。要体现出思考的过程，不要无脑直出想法。
+          const heartPrompt = `你是「${self.currentUser}」（${self.currentUser === "彼得·帕克" ? "蜘蛛侠秘密身份，中城高中学生" : "玩家认识的人"}）。
+刚才玩家（女性，用「她」指代）发了这条消息："${text}"
+
+【当前你对玩家的好感度：${heartAff}/200】
+${heartAffRule}
+
+${isPeterHeart && heartAff >= 101 ? `【彼得心动时的心声 · 铁律】\n好感度 ≥101 时，你的心声不能冷漠、不能礼貌、不能像 AI。应该是：\n- 有点紧张、有点慌、心跳乱的那种\n- 会反复琢磨她的话，想太多\n- 会自我吐槽"我在想什么啊""完了完了"\n- 会冒出"想见她""刚才那句话是不是在撩我"这种念头\n- 但嘴上不会说，只会心里翻江倒海\n` : ""}
+
+${isPeterHeart && heartAff >= 151 ? `【彼得深爱时的心声 · 铁律】\n好感度 ≥151 时，你的心声很直接、很坦白：\n- 会想"她是我最重要的人"\n- 会担心她、想保护她\n- 会想立刻见到她\n- 会有点占有欲（但不会说出来）\n` : ""}
+
+【心声铁律 · 违反即失败】
+1. 玩家是**女性**，必须用「她」指代。严禁「他」「兄弟」「这家伙」。
+2. 第一人称，40-100 字。
+3. 纯中文，口语化，碎碎念，**要符合好感度**：好感度低 → 客气；好感度高 → 亲密、紧张、坦率。
 4. 只输出想法本身，不要任何前缀、括号、引号。
-5. 例如："她这么问肯定有事，但又不好意思直说……算了先问清楚吧。"`;
+5. 例如（好感度 51）：「她这话说的……行吧反正也没事，回一下就行。」
+6. 例如（好感度 120）：「她这么晚了还找我……啊不对我是不是想多了。」
+7. 例如（好感度 180）：「她一说我就想马上见到她。冷静，彼得，冷静。但是……真的想。」
+8. 严禁写成 AI 分析："我理解她此刻的心情"、"这让我感到温暖"。
+
+直接输出心声本身。`;
+
           const heartRes = await callAI([{ role: "user", content: "写内心想法" }], heartPrompt);
           if (heartRes && heartRes.trim().length > 5) {
             heartText = heartRes.trim();
@@ -5211,20 +5485,32 @@ REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
 
     getTimelineAvengers() {
   const s = store.getState();
-  const y = s.gameYear, m = s.gameMonth;
-  // 美队3：柏林机场阶段（2016年6月-7月）
-  if (y === 2016 && m >= 6 && m <= 7) {
-    return ["托尼·斯塔克", "美国队长", "娜塔莎·罗曼诺夫", "战争机器", "黑豹", "蚁人", "绯红女巫", "鹰眼", "猎鹰", "冬兵"];
+  const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+  const key = phase.key;
+  const map = {
+    phase1: [],
+    phase2: [],
+    phase2_5: ["托尼·斯塔克", "美国队长", "娜塔莎·罗曼诺夫", "战争机器", "黑豹", "蚁人", "绯红女巫", "鹰眼", "猎鹰", "冬兵"],
+    phase3: ["托尼·斯塔克"],
+    phase4: ["托尼·斯塔克", "奇异博士", "绿巨人", "王"],
+    phase5: [],
+    phase6: ["奇异博士", "夜魔侠"]
+  };
+  return map[key] || [];
+},
+
+isAvengerDeceasedInPhase(name) {
+  const s = store.getState();
+  const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+  const key = phase.key;
+  // 2023 年后（phase6）娜塔莎·罗曼诺夫、托尼·斯塔克已牺牲
+  if (key === "phase6") {
+    if (name === "娜塔莎·罗曼诺夫") return true;
+    if (name === "托尼·斯塔克") return true;
   }
-  // 复联3：纽约之战阶段（2018年4月-6月）
-  if (y === 2018 && m >= 4 && m <= 6) {
-    return ["托尼·斯塔克", "奇异博士", "绿巨人", "王"];
-  }
-  // 英雄无归：多元宇宙阶段（2024年6月后）
-  if (y === 2024 && m >= 6) {
-    return ["奇异博士", "夜魔侠"];
-  }
-  return [];
+  if (name === "幻视") return true;
+  if (name === "洛基") return true;
+  return false;
 },
 
     async render(body) {
@@ -5624,7 +5910,7 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
       try {
         const sNow = store.getState();
         const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有推文、评论必须符合这个时间点。\n\n`;
-        const contactsList = store.getContacts().map(c => c.name).join("、");
+        const contactsList = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || "")).map(c => c.name).join("、");
 
         const sysPrompt = buildSystem(`${dateHint}用户发了推特，发帖人名字是："${myName}"，内容是："${text}"。
 【绝对铁律】
@@ -5652,41 +5938,82 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
         const sNow = store.getState();
         const phase = WORLD.timeline[sNow.anchor] || WORLD.timeline[0];
         const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
-        const contactsList = store.getContacts().map(c => c.name).join("、");
+        const contactsList = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || "")).map(c => c.name).join("、");
         const myName = store.getProfile().name || "Me";
 
         let followingPrompt = "";
         if (isFollowing) {
           const avengers = this.getTimelineAvengers();
+          const phase = WORLD.timeline[sNow.anchor] || WORLD.timeline[0];
+          const status = WORLD.avengersStatusByPhase[phase.key];
+
+          // 过滤去世成员
+          const aliveAvengers = avengers.filter(n => !this.isAvengerDeceasedInPhase(n));
+
+          // 世界大事提示（只挑该阶段及之前的）
+          const worldEventsHint = `\n【本时间点的世界大事记（供发帖氛围参考，可隐晦提及）】\n- ${WORLD.mcuWorldEvents.filter(e => e.year <= sNow.gameYear).map(e => `${e.year}：${e.event}`).join("\n- ")}\n`;
+
           let avengersHint = "";
-          if (avengers.length > 0) {
-            const avatarPersona = avengers.map(name => {
+          if (aliveAvengers.length > 0) {
+            const avatarPersona = aliveAvengers.map(name => {
               const persona = WORLD.avengersSocialPersona[name];
               return persona ? `- ${name}：${persona}` : "";
             }).filter(Boolean).join("\n");
-            avengersHint = `\n【可选的复联成员（本时间点可能发帖）】\n${avengers.join("、")}\n\n【复联成员的社交媒体人设（极其重要，必须严格遵守）】\n${avatarPersona}`;
+            avengersHint = `\n【可选的复联成员（本时间点活着且活跃，可以发帖）】\n${aliveAvengers.join("、")}\n\n【复联成员的社交媒体人设（极其重要，必须严格遵守）】\n${avatarPersona}`;
           } else {
-            avengersHint = "\n【本时间点无复联成员活跃，不要生成他们】";
+            avengersHint = "\n【本时间点无复联成员可发帖——他们要么还没跟彼得有交集、要么已牺牲、要么处于通缉/失踪状态。绝对不要让他们出现在发帖人里。】";
           }
-          
+
+          // 去世/退场成员提示
+          let deceasedHint = "";
+          if (status && status.note) {
+            deceasedHint = `\n【本时间点复联成员状态说明】\n${status.note}\n`;
+          }
+          const deceasedNames = ["托尼·斯塔克", "娜塔莎·罗曼诺夫", "幻视", "洛基"].filter(n => this.isAvengerDeceasedInPhase(n));
+          if (deceasedNames.length) {
+            deceasedHint += `\n【已牺牲/已死成员 · 绝对禁止发帖】\n以下成员在本时间点已经去世，**绝对不能**作为发帖人出现：${deceasedNames.join("、")}。他们只能在网友的评论或转发里被提及（比如"RIP 托尼"、"想念娜塔莎"）。\n`;
+          }
+
           followingPrompt = `
 【正在关注 · 严格规则】
-1. 发帖人**只能**是以下联系人：${contactsList}，以及活跃的复联成员。
+1. 发帖人**只能**是以下联系人（非群聊）：${contactsList}，以及下面列出的活跃复联成员。
 2. ${avengersHint}
+${deceasedHint}
+${worldEventsHint}
 3. 共生成 6-8 条，每个发帖人最多 2 条。
 4. **绝对不要生成任何随机网友作为发帖人**！
 5. 发帖内容必须严格符合角色性格、人设和当前时间点。复联成员的语气要完全符合上面的人设设定（比如托尼的阴阳怪气、美队的老派）。
 6. 发帖人名字**必须保留原样**（复联成员用中文名），不要翻译成英文。
 7. 复联成员之间可以在推文里隔空互动（比如托尼发一条，美队在评论区回怼）。
+8. 如果本时间点发生了世界大事（见上方大事记），复联发帖要隐晦地反映这个氛围（比如索科维亚协议后托尼的沉重、响指后幸存者的悲悼）。
 `;
         } else {
+          const phase = WORLD.timeline[sNow.anchor] || WORLD.timeline[0];
+          const status = WORLD.avengersStatusByPhase[phase.key];
+
+          const worldEventsHint = `\n【本时间点的世界大事记（陌生网友可能会讨论）】\n- ${WORLD.mcuWorldEvents.filter(e => e.year <= sNow.gameYear).map(e => `${e.year}：${e.event}`).join("\n- ")}\n`;
+
+          const deceasedNames = ["托尼·斯塔克", "娜塔莎·罗曼诺夫", "幻视", "洛基"].filter(n => this.isAvengerDeceasedInPhase(n));
+          const deceasedHint = deceasedNames.length
+            ? `\n【已牺牲成员（网友可以悼念，但不能作为发帖人出现）】\n以下复联成员在本时间点已去世：${deceasedNames.join("、")}。陌生网友可以在推文/评论里提及、悼念、怀念他们（比如"Still miss Tony"、"RIP Natasha"），但要作为"普通人谈及已故英雄"的口吻。\n`
+            : "";
+
+          let eventMoodHint = "";
+          if (status && status.note) {
+            eventMoodHint = `\n【本时间点世界氛围】\n${status.note}\n`;
+          }
+
           followingPrompt = `
 【为你推荐 · 严格规则】
 1. 发帖人：**必须是纯随机 NPC**（如纽约路人、国外网友、知名大V、无名小号等）。
 2. **绝对禁止**将以下联系人作为发帖人或评论者出现：${contactsList}。
 3. **绝对禁止**把"彼得·帕克"或"Peter Parker"作为发帖人。
 4. **绝对禁止**使用 "${myName}"。
+${deceasedHint}
+${eventMoodHint}
+${worldEventsHint}
 5. 共生成 6 条，不要编号，直接从第 1 行开始写。
+6. 如果本时间点发生了世界大事（比如响指、复联分裂、英雄牺牲），至少 2 条推文要**自然地**反映这个氛围——比如响指后的悼念帖、索科维亚协议后的站队争吵、复联内战后的分裂讨论。不要生硬，要像真实普通人的推文。
 `;
         }
 
@@ -5884,7 +6211,9 @@ if (window._worldlineMode === "main") {
           : pov === "third"
           ? `【叙事人称 · 第三人称 · 铁律】\n全程用「${playerNameForPov}」或「她」称呼玩家（玩家=第三人称视角下的${playerNameForPov}）。不要用"我/你"指代玩家本人。`
           : `【叙事人称 · 第二人称 · 铁律】\n全程用「你」称呼玩家（玩家=你）。不要用"我/她/玩家"指代玩家本人。`;
-       const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
+          const worldlineLangRule = `【叙事语言 · 铁律 · 再次强调】\n所有叙事文字（描写、心理、动作、环境、旁白）必须用中文。对白可用英文，格式为 *"English"*（中文翻译）。这条优先级最高，高于任何"英文模式"设定。`;
+          const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
+${worldlineLangRule}
 ${povRule}
 ${transitionHint}
 【硬性时间锚点】${timeLabel}
@@ -6268,7 +6597,7 @@ instagram: {
       body.innerHTML = `<div class="loader"><div class="spin"></div>生成配图与评论...</div>`;
       try {
       const myName = store.getProfile().name || "Me";
-        const contactsList = store.getContacts().map(c => c.name).join("、");
+        const contactsList = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || "")).map(c => c.name).join("、");
 
         const sysPrompt = buildSystem(`用户发了 IG 动态，发帖人名字是："${myName}"，文案："${text}"。
 【要求】
@@ -6327,7 +6656,7 @@ instagram: {
         const sNow = store.getState();
         const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有 IG 帖子必须符合这个时间点。\n\n`;
         const myName = store.getProfile().name || "Me";
-        const contactsList = store.getContacts().map(c => c.name).join("、");
+        const contactsList = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || "")).map(c => c.name).join("、");
         const cfgA = store.get("sv_appearance", {});
         const pPrompts = cfgA.prompts || {};
         const promptHint = `
@@ -6339,7 +6668,8 @@ instagram: {
 `;
 
         // ★ 获取复联成员
-        const avengers = apps.twitter.getTimelineAvengers();
+        const avengers = apps.twitter.getTimelineAvengers()
+          .filter(n => !apps.twitter.isAvengerDeceasedInPhase(n));
         let avengersIGHint = "";
         if (avengers.length > 0) {
           const avatarPersona = avengers.map(name => {
@@ -6347,12 +6677,23 @@ instagram: {
             return persona ? `- ${name}：${persona}` : "";
           }).filter(Boolean).join("\n");
           avengersIGHint = `
-【复联成员 IG 发帖（本时间点活跃）】
+【复联成员 IG 发帖（本时间点活着且活跃）】
 本阶段活跃的复联成员有：${avengers.join("、")}。
 其中 2~3 条帖子必须由这些复联成员发布（发帖人写中文名，但生图Prompt写英文）。
 复联成员的 Instagram 人设：
 ${avatarPersona}
 `;
+        } else {
+          avengersIGHint = `
+【复联成员 IG 发帖 · 禁止】
+本时间点没有复联成员活跃（要么还没跟彼得有交集、要么已牺牲、要么通缉/失踪）。**绝对不要**让复联成员出现在发帖人里。
+`;
+        }
+
+        // 已牺牲成员提示
+        const deceasedNamesIG = ["托尼·斯塔克", "娜塔莎·罗曼诺夫", "幻视", "洛基"].filter(n => apps.twitter.isAvengerDeceasedInPhase(n));
+        if (deceasedNamesIG.length) {
+          avengersIGHint += `\n【已牺牲成员 · 绝对禁止发帖】${deceasedNamesIG.join("、")} 在本时间点已经去世，不要作为发帖人出现。网友可以在评论里悼念。\n`;
         }
 
         const sysPrompt = buildSystem(`${dateHint}请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
