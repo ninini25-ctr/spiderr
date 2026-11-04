@@ -1164,7 +1164,7 @@ pacing: "本阶段是日常启蒙期，大事件稀疏。要求：玩家每推�
     name: "阶段二：华盛顿纪念碑事件",
     year: 2016,
     monthRange: [1, 6],
-    summary: "彼得随学术十项全能队去华盛顿纪念碑，战衣内的追踪器误触发。彼得还是个'不成熟的高一/高二学生'。",
+    summary: "2016年5月，彼得随学术十项全能队去华盛顿纪念碑，战衣内的追踪器误触发。彼得还是个'不成熟的高一/高二学生'。此时距离他被托尼·斯塔克招募还有约一个月。",
     allowed: ["彼得·帕克", "内德·利兹", "米歇尔·琼斯(MJ)", "梅·帕克", "Flash Thompson", "Liz Allan"],
     forbidden: ["托尼·斯塔克真人出场", "秃鹫登场(只能影子)", "灭霸", "钢铁蜘蛛战衣", "复联"],
     events: ["华盛顿纪念碑", "酒店", "十项全能比赛", "战衣故障"],
@@ -1180,6 +1180,31 @@ smallEvents: [
 ],
 pacing: "本阶段核心是'华盛顿纪念碑事件'，但大事件前必须有铺垫。要求：大事件发生前至少 3 个日常/铺垫小事件回合，让玩家熟悉团队氛围、建立关系，再进入纪念碑。纪念碑事件后仍需 2 回合善后（受伤、被问话、同学态度变化），才能推进到下一阶段。"
   },
+{
+  key: "phase2_5",
+  name: "阶段二点五：柏林机场（内战）",
+  year: 2016,
+  monthRange: [6, 7],
+  summary: "2016年6月，华盛顿事件后不久，托尼·斯塔克突然出现在彼得家，招募他前往柏林机场拦截美国队长。彼得第一次见到其他复仇者，并初次与巨型化蚁人、冬兵交手。这是他第一次真正踏入复联的世界。",
+  allowed: ["彼得·帕克", "托尼·斯塔克", "梅·帕克", "内德·利兹", "美国队长", "冬兵", "猎鹰", "绯红女巫", "鹰眼", "蚁人", "黑豹", "战争机器", "娜塔莎·罗曼诺夫"],
+  forbidden: ["灭霸", "神秘客", "秃鹫(只能影子)", "复联大厦决战", "泰坦星"],
+  events: ["皇后区彼得卧室", "私人飞机", "柏林机场停机坪", "机场大战", "被美国队长打倒", "返回纽约"],
+  forcedEvent: "柏林机场大战必然发生：彼得会被托尼招募，穿上新战衣，在机场与美队阵营交手。彼得会被蚁人巨大化吓到，最终被美队击倒。",
+  mutableOutcomes: [
+    "彼得在机场是否受伤（可以受轻伤，增加真实感）",
+    "彼得和托尼的互动（彼得是否因为紧张说错话）",
+    "彼得在机场的具体表现（救下谁，或者被谁打倒）"
+  ],
+  mjRelation: "无（彼得在柏林，MJ 在纽约）",
+  smallEvents: [
+    "彼得在卧室收到托尼的短信/电话",
+    "第一次坐上私人飞机，对内饰感到震惊",
+    "在德国酒店里紧张地试穿新战衣",
+    "机场大巴上的战前准备",
+    "被美队击倒后，托尼的责备或关心"
+  ],
+  pacing: "本阶段是罕见的“快节奏”大事件，玩家一旦进入，必须连续推进，不允许插入日常。如果玩家在华盛顿事件后，且时间到达 2016 年 6 月，可自然推进；或者玩家在自定义行动里输入“推进至下一个大事件”，直接触发此阶段。"
+},
   {
     key: "phase3",
     name: "阶段三：斯塔克渡轮事件",
@@ -1275,70 +1300,104 @@ pacing: "本阶段跨度长、事件多（游学→神秘客→身份暴露→�
   // ===== 开局时间节点 =====
   // 每个节点对应 timeline 里的 anchor 索引 + 精确日期
   startNodes: [
-    {
-      key: "start_phase1",
-      anchor: 0,
-      year: 2015, month: 9, day: 1,
-      label: "2015年9月 · 刚被蜘蛛咬伤",
-      event: "彼得刚获得能力，自制连帽衫战衣，在皇后区做友好邻居。托尼还没联系他。"
-    },
-    {
-      key: "start_phase2",
-      anchor: 1,
-      year: 2016, month: 3, day: 15,
-      label: "2016年3月 · 华盛顿纪念碑前夕",
-      event: "十项全能队即将前往华盛顿，战衣追踪器即将误触发。"
-    },
-    {
-      key: "start_phase2_after",
-      anchor: 1,
-      year: 2016, month: 5, day: 1,
-      label: "2016年5月 · 华盛顿事件之后",
-      event: "华盛顿事件已结束，彼得回到日常，秃鹫的阴影正在靠近。"
-    },
-    {
-      key: "start_phase3",
-      anchor: 2,
-      year: 2016, month: 7, day: 15,
-      label: "2016年7月 · 秃鹫追查",
-      event: "彼得正在追查秃鹫团伙，渡轮事件即将爆发。"
-    },
-    {
-      key: "start_phase3_homecoming",
-      anchor: 2,
-      year: 2016, month: 9, day: 20,
-      label: "2016年9月 · 返校节前夕",
-      event: "斯塔克渡轮事件已发生，托尼没收了战衣，彼得在低谷期。返校节舞会即将到来。"
-    },
-    {
-      key: "start_phase4",
-      anchor: 3,
-      year: 2018, month: 4, day: 25,
-      label: "2018年4月 · 复联大厦前夕",
-      event: "灭霸的黑暗教团即将入侵纽约，钢铁蜘蛛战衣即将登场。"
-    },
-    {
-      key: "start_phase5",
-      anchor: 4,
-      year: 2018, month: 5, day: 5,
-      label: "2018年5月 · 泰坦星",
-      event: "彼得随钢铁侠前往泰坦星，即将与灭霸正面交锋。响指即将发生。"
-    },
-    {
-      key: "start_phase6_europe",
-      anchor: 5,
-      year: 2024, month: 7, day: 1,
-      label: "2024年7月 · 欧洲游学",
-      event: "彼得复活后参加欧洲游学，即将遇到神秘客。身份即将暴露。"
-    },
-    {
-      key: "start_phase6_multiverse",
-      anchor: 5,
-      year: 2024, month: 10, day: 15,
-      label: "2024年10月 · 多元宇宙撕裂",
-      event: "神秘客事件已结束，身份暴露，奇异博士的咒语撕裂了多元宇宙。"
-    }
-  ],
+  {
+    key: "start_phase1",
+    anchor: 0,
+    year: 2015, month: 9, day: 1,
+    label: "2015年9月 · 刚被蜘蛛咬伤",
+    event: "彼得刚获得能力，自制连帽衫战衣，在皇后区做友好邻居。托尼还没联系他。",
+    pastEvents: []
+  },
+  {
+    key: "start_phase2",
+    anchor: 1,
+    year: 2016, month: 3, day: 15,
+    label: "2016年3月 · 华盛顿纪念碑前夕",
+    event: "十项全能队即将前往华盛顿，战衣追踪器即将误触发。",
+    pastEvents: []
+  },
+  {
+    key: "start_phase2_after",
+    anchor: 1,
+    year: 2016, month: 5, day: 1,
+    label: "2016年5月 · 华盛顿事件之后",
+    event: "华盛顿事件已结束，彼得回到日常，秃鹫的阴影正在靠近。",
+    pastEvents: ["华盛顿纪念碑事件已经发生过。彼得已经救过同学，战衣追踪器故障也已经被他知晓。"]
+  },
+  {
+    key: "start_phase2_5",
+    anchor: 2,
+    year: 2016, month: 6, day: 15,
+    label: "2016年6月 · 柏林机场前夕",
+    event: "托尼·斯塔克即将出现在彼得家门口，招募他参与复仇者内战。",
+    pastEvents: ["华盛顿纪念碑事件已经发生过。彼得已经救过同学。"]
+  },
+  {
+    key: "start_phase3",
+    anchor: 3,
+    year: 2016, month: 7, day: 15,
+    label: "2016年7月 · 秃鹫追查",
+    event: "彼得正在追查秃鹫团伙，渡轮事件即将爆发。",
+    pastEvents: ["华盛顿纪念碑事件已经发生过。", "柏林机场内战（美队3）已经发生过。彼得已经见过托尼、美队等人，并拿回了新战衣。"]
+  },
+  {
+    key: "start_phase3_homecoming",
+    anchor: 3,
+    year: 2016, month: 9, day: 20,
+    label: "2016年9月 · 返校节前夕",
+    event: "斯塔克渡轮事件已发生，托尼没收了战衣，彼得在低谷期。返校节舞会即将到来。",
+    pastEvents: ["华盛顿纪念碑事件已经发生过。", "柏林机场内战已经发生过。", "斯塔克渡轮事件已经发生过，托尼已经没收了彼得的战衣。"]
+  },
+  {
+    key: "start_phase4",
+    anchor: 4,
+    year: 2018, month: 4, day: 25,
+    label: "2018年4月 · 复联大厦前夕",
+    event: "灭霸的黑暗教团即将入侵纽约，钢铁蜘蛛战衣即将登场。",
+    pastEvents: ["华盛顿纪念碑事件、柏林机场内战、秃鹫事件均已经发生过。", "彼得已经经历过被没收战衣的低谷，并重新获得了托尼的信任。"]
+  },
+  {
+    key: "start_phase5",
+    anchor: 5,
+    year: 2018, month: 5, day: 5,
+    label: "2018年5月 · 泰坦星",
+    event: "彼得随钢铁侠前往泰坦星，即将与灭霸正面交锋。响指即将发生。",
+    pastEvents: ["复联大厦决战（纽约街头战）已经发生过，奇异博士已被抓走。"]
+  },
+  {
+    key: "start_phase6_europe",
+    anchor: 6,
+    year: 2024, month: 7, day: 1,
+    label: "2024年7月 · 欧洲游学",
+    event: "彼得复活后参加欧洲游学，即将遇到神秘客。身份即将暴露。",
+    pastEvents: ["灭霸响指已经发生过，彼得化灰又复活。", "托尼·斯塔克的葬礼已经结束。"]
+  },
+  {
+    key: "start_phase6_multiverse",
+    anchor: 6,
+    year: 2024, month: 10, day: 15,
+    label: "2024年10月 · 多元宇宙撕裂",
+    event: "神秘客事件已结束，身份暴露，奇异博士的咒语撕裂了多元宇宙。",
+    pastEvents: ["神秘客（昆汀·贝克）事件已经结束。", "彼得的蜘蛛侠身份已经彻底暴露。"]
+  }
+],
+// ===== 复联成员的社交媒体人设 =====
+avengersSocialPersona: {
+  "托尼·斯塔克": "自大、炫富、科技狂人、偶尔真情流露。喜欢发高科技产品、阴阳怪气地讽刺别人（尤其是美队）、或者突然发一段充满哲理的感慨。发推特喜欢用 emoji 嘲讽。",
+  "美国队长": "正直、老派、有点跟不上时代（经常发错标签）。充满正能量，热爱自由，偶尔发一些 40 年代的怀旧事物（比如老式汽车、棒球），或者在推特上和托尼公开互呛。",
+  "娜塔莎·罗曼诺夫": "简短、神秘、冷酷中带点黑色幽默。很少发自拍，经常发一些意义不明的黑白照片、芭蕾舞、或者风景。文字极简。",
+  "雷神": "大写字母狂魔、拼写错误（比如把 brother 拼成 broter）、极度自恋、对地球事物充满好奇。喜欢发自拍（尤其是锤子和肌肉）、炫耀新武器，或者感叹地球的啤酒好喝。",
+  "绿巨人": "平时不发，或者只发一些科学文献。如果班纳主导，会发一些拘谨、礼貌、学术的内容，并拼命道歉。",
+  "鹰眼": "家庭主男、喜欢吐槽、晒娃、抱怨自己又受伤了。非常接地气，经常在推特上和娜塔莎·罗曼诺夫互动。",
+  "绯红女巫": "感性、神秘、偶尔发一些带点魔法感或复古风的照片，文字带着忧郁或力量感。",
+  "冬兵": "几乎不发，或者只发一些极度简短的词（比如 'Fine.' 'No.'）。偶尔发一些旧时代的黑白照片。",
+  "猎鹰": "阳光、幽默、经常吐槽美队太老派，喜欢发自己训练的照片、或者跟红翼（无人机）的日常。",
+  "蚁人": "逗比、女儿奴、经常分享生活趣事，或者在推特上吐槽当超级英雄太累。",
+  "黑豹": "王室风范、文字优雅、充满瓦坎达的骄傲。喜欢发瓦坎达的高科技、传统服饰和风景。",
+  "战争机器": "军人作风、严肃、偶尔开玩笑，发帖多与军方、复联任务有关。",
+  "奇异博士": "高冷、神秘、用词文绉绉。经常会发一些别人看不懂的魔法术语，或者警告人类不要打破现实。",
+  "夜魔侠": "律师身份，充满正义感，发帖经常和地狱厨房的治安有关，偶尔吐槽夜巡太累。"
+},
 // ===== 平行宇宙模板 =====
   parallelUniverses: [
     {
@@ -1458,25 +1517,27 @@ const store = {
   getState(){
   const chosen = this.get("sv_start_node", null);
   let init = {
-    turn: 1,
-    affinity: 0,
-    anchor: 0,
-    gameYear: WORLD.startYear,
-    gameMonth: WORLD.startMonth,
-    gameDay: WORLD.startDay,
-    sceneTurns: 0,
-    currentStory: "",
-    currentOptions: "",
-    history: [],
-    outcomes: {},
-    pov: "third"
-  };
+  turn: 1,
+  affinity: 0,
+  anchor: 0,
+  gameYear: WORLD.startYear,
+  gameMonth: WORLD.startMonth,
+  gameDay: WORLD.startDay,
+  sceneTurns: 0,
+  currentStory: "",
+  currentOptions: "",
+  history: [],
+  outcomes: {},
+  pov: "second",
+  pastEvents: [] // ★ 新增：记录已经发生过的前置大事件
+};
   if (chosen) {
-    init.anchor = chosen.anchor ?? 0;
-    init.gameYear = chosen.year ?? WORLD.startYear;
-    init.gameMonth = chosen.month ?? WORLD.startMonth;
-    init.gameDay = chosen.day ?? WORLD.startDay;
-  }
+  init.anchor = chosen.anchor ?? 0;
+  init.gameYear = chosen.year ?? WORLD.startYear;
+  init.gameMonth = chosen.month ?? WORLD.startMonth;
+  init.gameDay = chosen.day ?? WORLD.startDay;
+  init.pastEvents = chosen.pastEvents || []; // ★ 读取节点自带的 pastEvents
+}
   const s = this.get("sv_state", init);
 
   // ★ 关键：每次 getState 都强制用 contacts 里的彼得 affinity 覆盖，
@@ -1987,14 +2048,24 @@ const day = s.gameDay || WORLD.startDay;
 const timeStr = `${year}年${month}月${day}日`;
 
   let worldbookPrompt = "";
-  try {
-    const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
-    const activeBooks = books.filter(b => b.enabled);
-    if (activeBooks.length > 0) {
-      worldbookPrompt = "\n\n【世界书设定】" + activeBooks.map(b => `[${b.name}]\n${b.content}`).join("\n\n");
-    }
-  } catch(e) {}
+try {
+  const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
+  const activeBooks = books.filter(b => b.enabled);
+  if (activeBooks.length > 0) {
+    const movieAnchor = activeBooks.find(b => (b.name || "").includes("电影原剧情锚点"));
+    const otherBooks = activeBooks.filter(b => !(b.name || "").includes("电影原剧情锚点"));
 
+    if (movieAnchor) {
+      worldbookPrompt += `\n\n【🎬 电影原剧情锚点 · 强制执行 · 违反即失败】\n你生成的所有剧情、小事件、日常，必须严格贴合原电影剧情锚点里对应阶段的内容。\n- 不得提前发生后面阶段的事件。\n- 不得让前面阶段已经发生过的事再发生一次。\n- 小事件必须与大事件自然衔接，让日常成为通往大事件的铺垫。\n- 以下锚点内容与当前阶段匹配的部分，必须被遵守：\n${movieAnchor.content}\n`;
+    }
+    if (otherBooks.length > 0) {
+      worldbookPrompt += "\n\n【世界书设定】" + otherBooks.map(b => `[${b.name}]\n${b.content}`).join("\n\n");
+    }
+  }
+} catch(e) {}
+const pastEventsStr = (s.pastEvents && s.pastEvents.length)
+  ? `\n【绝对铁律 · 已发生的前置事件】\n以下事件在玩家进入当前时间线之前，**已经真实发生过**：\n- ${s.pastEvents.join("\n- ")}\n\n⚠️ 严禁把这些事件当成“未来即将发生”的事情！严禁重复让玩家去经历这些事件！剧情中提及它们时，必须作为“过去式”来描写（比如“上次在华盛顿……”）。\n`
+  : "";
  const forcedStr = phase.forcedEvent
   ? `\n【本阶段必然发生的大事件 · 不可改变】\n${phase.forcedEvent}\n【可改变的结局变量】\n- ${(phase.mutableOutcomes || []).join("\n- ")}\n⚠️ 注意：大事件本身必然发生，但"谁来承担后果""谁受伤谁活着""如何善后"可以被玩家的选择改变。`
   : "";
@@ -2024,6 +2095,7 @@ ${globalLangRule}
 【当前阶段】${phase.name}（${phase.year}年${phase.monthRange[0]}-${phase.monthRange[1]}月）
 
 【阶段说明】${phase.summary}
+${pastEventsStr}
 ${forcedStr}
 ${smallEventsStr}
 ${pacingStr}
@@ -2448,9 +2520,45 @@ window.selectOption = (optText) => {
   if (!optText || !optText.trim()) return toast("请输入内容");
   const s = store.getState();
   if (!s.currentStory) return;
+
+  // ★ 核心拦截：检测是否要求推进至下一个大事件
+  const isJumpEvent = /推进至下一个大事件|推进至大事件|快进|跳过日常|直接去柏林/.test(optText);
+
   s.history = s.history || [];
   s.history.push({ story: s.currentStory, choice: optText });
   s.currentStory = ""; s.currentOptions = ""; s.turn += 1;
+
+ if (isJumpEvent) {
+  if (s.anchor < WORLD.timeline.length - 1) {
+    // 1. 记录当前阶段的大事件为“已发生”
+    const currentPhase = WORLD.timeline[s.anchor];
+    if (currentPhase.forcedEvent) {
+      s.pastEvents = s.pastEvents || [];
+      if (!s.pastEvents.includes(currentPhase.forcedEvent)) {
+        s.pastEvents.push(currentPhase.forcedEvent);
+      }
+    }
+
+    // 2. 强制推进到下一个阶段
+    s.anchor += 1;
+    const np = WORLD.timeline[s.anchor];
+    
+    // 3. 时间对齐到新阶段
+    s.gameYear = np.year;
+    s.gameMonth = np.monthRange[0];
+    s.gameDay = 1;
+    
+    // 4. 如果进入复联大厦或之后，彼得身份公开
+    const currentPhaseKey = np.key;
+    if (["phase3", "phase4", "phase5", "phase6"].includes(currentPhaseKey)) {
+      localStorage.setItem("sv_peter_identity_revealed", "1");
+    }
+    
+    toast(`⏭️ 时间飞逝，已推进至：${np.name}`);
+  } else {
+    toast("🎉 已经到达最终阶段了");
+  }
+}
 
   store.setState(s);
   openApp('worldline');
@@ -5102,16 +5210,22 @@ REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
     currentTab: "foryou",
 
     getTimelineAvengers() {
-      const s = store.getState();
-      const y = s.gameYear, m = s.gameMonth;
-      if (y === 2018 && m >= 4 && m <= 6) {
-        return ["Tony Stark", "Doctor Strange", "Bruce Banner", "Wong"];
-      }
-      if (y === 2024 && m >= 6) {
-        return ["Doctor Strange", "Daredevil", "Matt Murdock"];
-      }
-      return [];
-    },
+  const s = store.getState();
+  const y = s.gameYear, m = s.gameMonth;
+  // 美队3：柏林机场阶段（2016年6月-7月）
+  if (y === 2016 && m >= 6 && m <= 7) {
+    return ["托尼·斯塔克", "美国队长", "娜塔莎·罗曼诺夫", "战争机器", "黑豹", "蚁人", "绯红女巫", "鹰眼", "猎鹰", "冬兵"];
+  }
+  // 复联3：纽约之战阶段（2018年4月-6月）
+  if (y === 2018 && m >= 4 && m <= 6) {
+    return ["托尼·斯塔克", "奇异博士", "绿巨人", "王"];
+  }
+  // 英雄无归：多元宇宙阶段（2024年6月后）
+  if (y === 2024 && m >= 6) {
+    return ["奇异博士", "夜魔侠"];
+  }
+  return [];
+},
 
     async render(body) {
       const all = store.getPosts();
@@ -5126,6 +5240,9 @@ const isContactName = (rawName) => {
   if (!n) return false;
   // 中文名精确匹配
   if (contactNames.some(cn => cn === n)) return true;
+  // 复联成员匹配
+  const avengers = apps.twitter.getTimelineAvengers();
+  if (avengers.includes(n)) return true;
   // 英文别名兜底（AI 可能用英文原名）
   const aliases = {
     "Peter Parker": "彼得·帕克",
@@ -5135,10 +5252,40 @@ const isContactName = (rawName) => {
     "Michelle Jones": "米歇尔·琼斯",
     "MJ": "米歇尔·琼斯",
     "Aunt May": "梅婶",
-    "May Parker": "梅婶"
+    "May Parker": "梅婶",
+    "Tony Stark": "托尼·斯塔克",
+    "Iron Man": "托尼·斯塔克",
+    "Steve Rogers": "美国队长",
+    "Captain America": "美国队长",
+    "Natasha Romanoff": "娜塔莎·罗曼诺夫",
+    "Black Widow": "娜塔莎·罗曼诺夫",
+    "Thor": "雷神",
+    "Bruce Banner": "绿巨人",
+    "Hulk": "绿巨人",
+    "Clint Barton": "鹰眼",
+    "Hawkeye": "鹰眼",
+    "Wanda Maximoff": "绯红女巫",
+    "Scarlet Witch": "绯红女巫",
+    "Bucky Barnes": "冬兵",
+    "Winter Soldier": "冬兵",
+    "Sam Wilson": "猎鹰",
+    "Falcon": "猎鹰",
+    "Scott Lang": "蚁人",
+    "Ant-Man": "蚁人",
+    "T'Challa": "黑豹",
+    "Black Panther": "黑豹",
+    "James Rhodes": "战争机器",
+    "War Machine": "战争机器",
+    "Stephen Strange": "奇异博士",
+    "Doctor Strange": "奇异博士",
+    "Matt Murdock": "夜魔侠",
+    "Daredevil": "夜魔侠"
   };
-  if (aliases[n]) return contactNames.includes(aliases[n]);
-  return contactNames.some(cn => n.includes(cn));
+  if (aliases[n]) {
+    const zhName = aliases[n];
+    return contactNames.includes(zhName) || avengers.includes(zhName);
+  }
+  return contactNames.some(cn => n.includes(cn)) || avengers.some(av => n.includes(av));
 };
 
 posts.forEach(post => {
@@ -5511,17 +5658,26 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
         let followingPrompt = "";
         if (isFollowing) {
           const avengers = this.getTimelineAvengers();
-          const avengersHint = avengers.length
-            ? `\n【可选的复联成员（本时间点可能发帖）】${avengers.join("、")}`
-            : "\n【本时间点无复联成员活跃，不要生成他们】";
+          let avengersHint = "";
+          if (avengers.length > 0) {
+            const avatarPersona = avengers.map(name => {
+              const persona = WORLD.avengersSocialPersona[name];
+              return persona ? `- ${name}：${persona}` : "";
+            }).filter(Boolean).join("\n");
+            avengersHint = `\n【可选的复联成员（本时间点可能发帖）】\n${avengers.join("、")}\n\n【复联成员的社交媒体人设（极其重要，必须严格遵守）】\n${avatarPersona}`;
+          } else {
+            avengersHint = "\n【本时间点无复联成员活跃，不要生成他们】";
+          }
+          
           followingPrompt = `
 【正在关注 · 严格规则】
-1. 发帖人**只能**是以下联系人：${contactsList}
+1. 发帖人**只能**是以下联系人：${contactsList}，以及活跃的复联成员。
 2. ${avengersHint}
-3. 共生成 5-6 条，每个发帖人最多 2 条。
+3. 共生成 6-8 条，每个发帖人最多 2 条。
 4. **绝对不要生成任何随机网友作为发帖人**！
-5. 发帖内容必须符合角色性格和当前时间点。
-6. 发帖人名字**必须与联系人名字完全一致**（保留原样，不要翻译成英文）。
+5. 发帖内容必须严格符合角色性格、人设和当前时间点。复联成员的语气要完全符合上面的人设设定（比如托尼的阴阳怪气、美队的老派）。
+6. 发帖人名字**必须保留原样**（复联成员用中文名），不要翻译成英文。
+7. 复联成员之间可以在推文里隔空互动（比如托尼发一条，美队在评论区回怼）。
 `;
         } else {
           followingPrompt = `
@@ -5800,6 +5956,12 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
       2. 大事件后的善后/过渡已经写了至少 2 回合；
       3. 玩家的当前选择会让剧情自然走出当前阶段的时间范围。
     - **不要为了清空阶段而硬塞大事件，也不要一回合打包多个大事件。**
+
+12. **【玩家越权指令 · 极重要】**
+    - 如果玩家在【上一轮的选择】或【自定义行动】中输入了类似“（推进至下一个大事件）”、“（时间快进）”、“（跳过日常）”、“（直接去柏林）”等要求快进的指令。
+    - 你**必须**立刻执行时间跳跃，直接在剧情末尾输出：【时间推进: +N天】（N为你估算的跳跃天数，至少是 +10 天以上，确保跨入下一个大事件）。
+    - 同时，你可以在剧情末尾输出：【阶段完成】。
+    - 你的本回合剧情，必须直接切入下一个大事件的开头。
 ${contextStr}`);
 
         const res = await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
@@ -5830,8 +5992,18 @@ if (timeAdvance !== 0) {
 // ★ 解析【阶段完成】并自动跳转
 if (res.includes("【阶段完成】")) {
   if (s.anchor < WORLD.timeline.length - 1) {
-    // ★ 主线阶段推进到 phase4（复联大厦）后，彼得身份默认公开
-    if (s.anchor >= 3) {
+    // ★ 记录当前阶段的大事件为“已发生”
+    const currentPhase = WORLD.timeline[s.anchor];
+    if (currentPhase.forcedEvent) {
+      s.pastEvents = s.pastEvents || [];
+      if (!s.pastEvents.includes(currentPhase.forcedEvent)) {
+        s.pastEvents.push(currentPhase.forcedEvent);
+      }
+    }
+
+    // ★ 主线阶段推进（复联大厦及之后），彼得身份默认公开
+    const currentPhaseKey = WORLD.timeline[s.anchor].key;
+    if (currentPhaseKey === "phase3" || currentPhaseKey === "phase4" || currentPhaseKey === "phase5" || currentPhaseKey === "phase6") {
       localStorage.setItem("sv_peter_identity_revealed", "1");
     }
     s.anchor += 1;
@@ -5903,6 +6075,18 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
     <button id="twTimeBtn" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">⏱️ 时间</button>
   </div>
 </div>
+${(() => {
+  try {
+    const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
+    const anchor = books.find(b => (b.name || "").includes("电影原剧情锚点"));
+    if (!anchor) return "";
+    const on = anchor.enabled;
+    return `<div class="card" style="padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:12px;color:var(--muted);">🎬 电影原剧情锚点：<span style="color:${on?'var(--accent-2)':'var(--muted)'};font-weight:600;">${on?'已启用（AI 会遵循原片剧情）':'已关闭（AI 自由发挥）'}</span></div>
+      <button id="twAnchorJumpBtn" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;">查看/编辑</button>
+    </div>`;
+  } catch(e) { return ""; }
+})()}
   <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
     <div>
       <div style="font-weight:bold;color:#e62429;font-size:16px">彼得好感度: ${s.affinity}/200</div>
@@ -5918,9 +6102,12 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
       <div class="story-content" style="word-break:break-word;">${formatDialogue(s.currentStory)}</div>
       ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
       <div class="card">
-        <input id="customAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
-        <button class="btn" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
-      </div>
+  <input id="customAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
+  <div style="display:flex;gap:8px;">
+    <button class="btn ghost" style="flex:1;font-size:12px;padding:8px;" onclick="document.getElementById('customAct').value='（推进至下一个大事件）'; window.selectOption('（推进至下一个大事件）')">⏩ 推进至下一个大事件</button>
+    <button class="btn" style="flex:1;" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
+  </div>
+</div>
     </div>`;
 // 👁️ 人称切换
     body.querySelector("#twPovBtn").onclick = () => {
@@ -5970,6 +6157,11 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
       });
     };
 
+// 🎬 电影原剧情锚点跳转
+    const anchorJumpBtn = body.querySelector("#twAnchorJumpBtn");
+    if (anchorJumpBtn) {
+      anchorJumpBtn.onclick = () => openApp("worldbook");
+    }
 // ⏱️ 手动变更时间
     body.querySelector("#twTimeBtn").onclick = () => {
       const st = store.getState();
@@ -6146,9 +6338,27 @@ instagram: {
 如果是 Aunt May，生图Prompt 用：${pPrompts.may || ""}
 `;
 
+        // ★ 获取复联成员
+        const avengers = apps.twitter.getTimelineAvengers();
+        let avengersIGHint = "";
+        if (avengers.length > 0) {
+          const avatarPersona = avengers.map(name => {
+            const persona = WORLD.avengersSocialPersona[name];
+            return persona ? `- ${name}：${persona}` : "";
+          }).filter(Boolean).join("\n");
+          avengersIGHint = `
+【复联成员 IG 发帖（本时间点活跃）】
+本阶段活跃的复联成员有：${avengers.join("、")}。
+其中 2~3 条帖子必须由这些复联成员发布（发帖人写中文名，但生图Prompt写英文）。
+复联成员的 Instagram 人设：
+${avatarPersona}
+`;
+        }
+
         const sysPrompt = buildSystem(`${dateHint}请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
+${avengersIGHint}
 【要求】
-1. 每条发帖人都不同：可以是彼得·帕克(Peter Parker)、内德·利兹(Ned Leeds)、MJ(Michelle Jones)、Flash Thompson、随机NPC，名字必须英文。
+1. 其余发帖人可以是：彼得·帕克(Peter Parker)、内德·利兹(Ned Leeds)、MJ(Michelle Jones)、Flash Thompson、随机NPC，名字必须英文。
 2. **严禁使用 "${myName}" 或任何中文字符串作为发帖人名称！**
 3. 每条文案符合 IG 风格，可包含 emoji、话题标签 #xxx。
 4. 每条评论 3-5 条，至少包含 1 条外语评论（英文/日文/韩文/法文/西班牙文等）。
@@ -8225,6 +8435,251 @@ worldbook: {
     title: "世界书",
     render(body) {
       const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
+// ★ 首次加载时自动注入"电影原剧情锚点"世界书（用户可编辑内容）
+      const MOVIE_ANCHOR_NAME = "🎬 电影原剧情锚点（可编辑）";
+      if (!books.find(b => b.name === MOVIE_ANCHOR_NAME)) {
+        books.push({
+          name: MOVIE_ANCHOR_NAME,
+          enabled: true,
+          content: `【使用说明】
+这是一条给"想走原电影剧情"的用户使用的锚点设定。它按时间详细描述每个阶段电影里具体发生了什么（不含感情线），包含具体场景、地点、人物、对话片段和动作细节。AI 生成日常剧情、小事件时，必须参考对应阶段的内容，让小事件成为大事件的铺垫。用户可以自由修改下面每个阶段的细节。
+
+==============================
+【阶段一 · 2015 年 9 月 - 12 月 · 初遇与日常】
+==============================
+
+【开篇状态】
+彼得 15 岁，中城科学技术高中（Midtown School of Science and Technology）高二学生。约一个月前在学校组织的科学展参观中被一只放射性蜘蛛咬伤。他现在能爬墙、力气变大、反应变快，但蜘蛛丝是他自己用化学配方做的，装在手腕处自制的小发射器里，经常卡壳。战衣是深蓝色连帽卫衣配红色手套、红色面罩加自制护目镜。
+
+【日常场景锚点】
+· 化学课：老师点名让彼得回答有机分子结构问题，彼得满脑子在想蛛丝配方能不能再优化，站起来愣了三秒，全班哄笑。内德在最后一排憋笑憋到咳嗽。
+· 走廊：Flash Thompson 把彼得的书包撞到地上，喊他 "Penis Parker"，彼得低头捡书，内德在旁边小声骂 Flash，但不敢大声。
+· 机房午休：彼得和内德在机房吃三明治，内德兴奋地帮彼得分析"蜘蛛侠的视频在油管上播放量破万了"，彼得一边吃一边担心"会不会被认出来"，内德说"你戴了面罩谁认得出来啊"。
+· 家里的厨房：梅婶在算这个月的房租和水电费，彼得偷偷在旁边算战衣升级要花多少钱（发射器零件、新的护目镜镜片），梅婶问"彼得你在算什么"，彼得赶紧把纸揉成一团说"没什么没什么"。
+· 皇后区地铁他把书包地上准备出手，。下一站他又跳回来，从蛛丝把小混混的手粘在扶手上，然后迅速从另一节车厢逃走，结果被一个老太太拍下来发到了推特。
+
+【蜘蛛侠日常锚点】
+· 第一次尝试荡蛛丝：彼得从一栋三层小楼顶跳下去，蛛丝没粘住墙，他直接摔进了垃圾桶。爬起来拍拍灰，对着手机录像说"这条不算，重来"。
+· 便利店：彼得穿着战衣进去买饮料，店员吓得以为抢劫，彼得赶紧掏钱解释"我只是来买东西的"，结果因为穿着战衣没有口袋，硬币撒了一地。
+· 战衣破洞：彼得在追一个小偷时被划破肩膀，回家后偷偷在房间里缝补，被梅婶敲门问"彼得你在干什么"，彼得说"没什么我在做作业"。
+
+【结尾衔接到下一阶段】
+彼得在皇后区慢慢有了点小名气，推特上开始有人发"皇后区那个穿连帽衫的家伙"的短视频。某天晚上，彼得在巡逻时发现一个可疑的货车，车厢上印着"Department of Damage Control"（损害控制部），他偷偷跟着，结果发现货车开进一个废弃仓库。仓库里堆着一堆外星武器残骸——这是秃鹫故事线的第一个伏笔。彼得想靠近，被巡逻保安发现，只能撤退。
+
+==============================
+【阶段二 · 2016 年 1 月 - 6 月 · 华盛顿纪念碑事件】
+==============================
+
+【阶段开头状态】
+十项全能队（Academic Decathlon Team）正在备战全国比赛。彼得、内德、MJ、Liz Allan、Flash 都在队里。彼得偷偷把战衣塞进了行李箱的夹层。
+
+【训练期场景锚点】
+· 图书馆讨论室：Liz 在讲解题目，彼得在笔记本背面偷偷画战衣改进草图，被 MJ 从旁边看了一眼，MJ 什么也没说，只是挑了挑眉。
+· 出发前夜，彼得房间：彼得把战衣一件件叠好塞进行李箱，内德在旁边紧张地念叨"兄弟你确定要带这个去？万一被老师发现怎么办"，彼得一边塞一边说"我藏得好，绝对没事"。
+· 大巴上：Flash 在炫耀他爸给他买的新手表，彼得戴着耳机假装听歌，实际上在偷偷调试手腕发射器。MJ 坐在最后排，一边看书一边偶尔抬眼看他。
+· 酒店分房：彼得和内德分到一间，彼得一进房间就把战衣摊在床上检查，内德趴在床上问"你今晚真的要穿着这个出去？"。
+
+【华盛顿纪念碑事件（高潮场景）】
+· 白天参观：团队在华盛顿纪念碑参观，彼得脖子上挂着耳机。他偷偷打开战衣里的追踪器（他自己加的，想记录自己的行踪），结果追踪器信号干扰了纪念碑的电梯系统。
+· 电梯故障：纪念碑顶部观景台的电梯突然停运，几个游客和同学被困在电梯里，包括 Liz 和另一个同学。
+· 彼得的选择：彼得没有战衣，只穿 T 恤和外套——他刚才把战衣藏在了酒店。他必须徒手爬进电梯井，用蛮力撬开电梯门，把被困的人一个个拖出来。
+· 受伤：彼得在救人时一脚踩空，从电梯井摔下两层，右臂擦伤，肋骨被撞到，走路一瘸一拐。
+· 事后：彼得被老师问"你怎么受伤的"，他撒谎说"我摔倒了"。内德在旁边帮他圆谎，MJ 盯着他的胳膊看，什么也没说。
+
+【事件后场景锚点】
+· 回纽约的大巴上：彼得靠在窗边，胳膊上裹着临时包扎的绷带，内德在旁边小声说"你刚才真的太猛了"，彼得说"我差点没撑住"。
+· 梅婶在家：梅婶看到彼得胳膊上的伤，担心地问怎么回事，彼得说"体育课摔的"，梅婶不太信，但没继续追问。
+· 学校走廊：Flash 开始到处说"彼得在华盛顿那天怂在储藏室"，彼得懒得解释，MJ 在旁边冷不丁来一句"我看到的版本跟你说的不太一样"，Flash 噎住。
+
+【结尾衔接】
+彼得开始意识到自己的能力不只是"玩票"——他救过人，受过伤，也瞒过家人。他决定更认真地对待蜘蛛侠这件事。同时，那个"损害控制部"仓库的事他还记着，某天放学后他决定再去调查一次。
+
+==============================
+【阶段二点五 · 2016 年 6 月 - 7 月 · 柏林机场（美队3）】
+==============================
+
+【阶段开头状态】
+彼得正在皇后区做日常巡逻，某天晚上回到家，发现客厅里坐着一个他从没想过会见到的人——托尼·斯塔克。
+
+【彼得家客厅（招募场景）】
+· 托尼坐在沙发上，梅婶在旁边紧张地端茶，托尼一边喝一边夸"这茶不错，梅女士"。彼得进门看到托尼，整个人僵住，结巴着说"斯……斯塔克先生？"
+· 托尼说明来意：需要彼得帮忙，去德国打一场"友谊赛"。彼得第一反应是"我？为什么是我？"，托尼说"因为你够拼，而且你没什么可失去的"。
+· 梅婶的反应：梅婶不同意，但托尼用"奖学金""实习机会"之类的说法糊弄过去。彼得在门口偷偷给内德发短信"我要跟托尼·斯塔克走了"。
+· 内德收到短信后疯狂回复"什么？？？斯什么？？？斯塔克？？？"
+
+【私人飞机上】
+· 彼得第一次坐私人飞机，紧张地到处看，问托尼"这飞机能飞多快""我们能看个电影吗"，托尼一脸无奈。
+· 托尼给彼得看了新战衣的初步设计图，彼得眼睛发光，说"这……这太酷了"，托尼说"别摸，还没做完"。
+
+【柏林酒店（战前夜）】
+· 彼得在酒店房间里试穿新战衣，战衣里有早期版本的 AI（还没叫 Karen），声音机械，彼得对着它说"你好？"，AI 回答"你好，彼得"，彼得兴奋地跳起来。
+· 晚上彼得睡不着，站在窗边看柏林夜景，给梅婶发短信"我很好，别担心"，梅婶回复"早点睡，别熬夜"。
+
+【柏林机场停机坪（大战场景）】
+· 彼得被托尼带到机场停机坪，第一次看到美国队长、冬兵、猎鹰、绯红女巫、鹰眼、蚁人、黑豹——他紧张得话都说不利索，对美队说"我是你的超级粉丝，队长"。
+· 战斗开始：彼得用蛛丝缠住冬兵的机械臂，被冬兵一甩甩飞；绯红女巫用魔法把彼得举到空中，彼得吓得大喊"这什么情况"。
+· 蚁人巨大化：斯科特·朗突然变大成巨人，彼得仰头看到，整个人愣住，说"这……这不合物理定律啊"。
+· 被美队击倒：美队一盾把彼得打倒，彼得躺在地上看着天空，说"我……我没事"。美队低头看他，说"你是个好孩子，回家吧"。
+· 战后：托尼把彼得扶起来，说"你做得不错，但你还太嫩"。彼得想说什么，托尼打断"先回去休息"。
+
+【结尾衔接】
+彼得被送回纽约，新战衣被托尼收回去"升级"。彼得回到学校，内德一见到他就疯狂追问"到底发生了什么"，彼得一边走一边说"我不能说，我签了保密协议"，内德急得跟在后面。
+
+==============================
+【阶段三 · 2016 年 7 月 - 9 月 · 秃鹫与渡轮事件】
+==============================
+
+【阶段开头状态】
+彼得穿着旧连帽衫战衣继续巡逻。他开始认真追查"损害控制部"仓库里那些外星武器残骸的去向。
+
+【追查线索的场景锚点】
+· ATM 抢劫：彼得在皇后区一家银行附近巡逻，遇到几个戴面具的人用外星武器炸 ATM。彼得用蛛丝缠住他们，但武器失控爆炸，彼得被冲击波震得耳鸣，回家后偷偷用棉签掏耳朵。
+· 邮车抢劫：一辆邮政车被劫，彼得追上去，发现劫匪用的是同款外星武器。他把其中一个劫匪吊在路灯上，逼问"武器从哪来的"，劫匪说"图姆斯，阿德里安·图姆斯"。
+· 黑市交易现场：彼得跟踪一辆货车到布鲁克林的一个废弃工厂，看到一群人在交易外星武器。他偷偷拍下视频发给内德，内德在电话那头激动地分析"这是齐塔瑞科技和斯塔克工业的结合体"。
+
+【校园与家庭线】
+· 学校：期末考试临近，彼得为了追线索翘了几节课，成绩下滑。老师在走廊上叫住他"帕克先生，你最近怎么回事"，彼得支支吾吾。
+· 家里的厨房：梅婶发现彼得最近总是半夜才回家，问他"你是不是在做什么危险的事"，彼得说"没有，我在内德家做作业"，梅婶盯着他看了很久。
+· 科尼岛：Liz Allan 邀请彼得一起去科尼岛玩，彼得答应了。在科尼岛的海滩上，他远远看到 Liz 和一个中年男人（秃鹫）在一起，Liz 介绍说"这是我爸"，彼得瞬间意识到——Liz 是秃鹫的女儿。
+
+【MJ 的观察】
+· MJ 在图书馆遇到彼得，说"你最近很不对劲"，彼得说"我没事"，MJ 说"我不信，但我不会追问，等你愿意说的时候再说"。彼得看了她一眼，第一次觉得 MJ 好像什么都看得出来。
+
+【渡轮事件（高潮场景）】
+· 斯塔克渡轮（Staten Island Ferry）：彼得跟踪秃鹫团伙上了一艘渡轮，发现他们正在进行武器交易。彼得试图阻止，但武器失控，一束能量把渡轮从中间切开。
+· 彼得的拼死救援：彼得用蛛丝把两半船体拼命拉在一起，手臂被拉得生疼，面罩下的脸憋得通红。乘客尖叫着往两边跑，彼得大喊"快走！我撑不住了！"
+· 托尼到场：托尼穿着钢铁侠战衣从天而降，用推进器稳住船体，把两半船体重新接合。彼得瘫坐在地上，托尼降落在他面前。
+· 托尼的责备："如果你没了战衣什么都不是，那你就不配拥有它。"托尼收回彼得的战衣，转身飞走。
+
+【低谷期彼得穿着旧连帽衫回到家，梅婶看到他一身狼狈，问"怎么了"，彼得说"没什么"，躲进房间。
+· 彼得和内德吵架：内德说"你为什么不告诉我你要去渡轮"，彼得说"我不想让你陷进来"，内德说"我以为我们是搭档"，两人冷战了三天。
+· 彼得独自查秃鹫：没有战衣，他只能用手机、地图、和内德留下的那点技术支援。他在科尼岛附近的一家废品回收站发现了秃鹫的巢穴。
+
+【结尾衔接】
+返校节舞会即将到来。彼得原本打算不去，但 Liz 邀请他，说"你答应过我的"。彼得犹豫了一下，答应了。当晚，他在舞会现场看到了远处的异常灯光——秃鹫要对托尼的飞机下手。
+
+==============================
+【阶段三点五 · 2016 年 9 月 · 返校节舞会（返校季收尾）】
+==============================
+
+【返校节舞会（开场）】
+· 中城高中体育馆，挂满气球和彩带。彼得穿着不合身的西装，站在角落紧张地摆弄袖口。Liz 走过来，笑着说"你看起来挺帅的"，彼得脸红了一下说"谢谢，我妈帮我挑的"。
+· MJ 坐在角落里看书，偶尔抬头看一眼彼得，嘴角微微上扬。
+
+【发现异常】
+· 彼得看到窗外有异常灯光，找了个借口"我去下洗手间"，跑出去。在停车场看到秃鹫的手下在搬东西，他意识到今晚就是秃鹫行动的时间。
+· 他跑回更衣室，穿回旧连帽衫战衣，对着镜子说"没有战衣我也是蜘蛛侠"。
+
+【秃鹫巢穴（关键场景）】
+· 彼得潜入科尼岛附近秃鹫的巢穴，被秃鹫的手下发现，双方激战。
+· 建筑被炸塌，彼得被压在水泥板下。他挣扎着，听着外面的声音——内德在电话里喊"彼得？彼得你在哪？"，MJ 在背景里说"他可能出事了"。
+· 彼得咬牙撑起水泥板，从废墟里爬出来，满脸灰尘，对着电话说"我没事……我没事"。
+
+【飞机上的决战】
+· 彼得追到秃鹫的飞机上，两人在机舱里缠斗。秃鹫的战衣有翅膀，彼得没有——他只能用蛛丝和身体。
+· 飞机失控，朝科尼岛海滩坠落。彼得用蛛丝把秃鹫从残骸里拖出来，把他交给赶来的警察。
+
+【战后】
+· 托尼出现在海滩上，说"你做得很好"，彼得说"我不需要战衣也能做到"。
+· 托尼邀请彼得加入复联，彼得犹豫了一下，说"我想做友好邻居蜘蛛侠"。托尼笑了，说"那就好好做"。
+· 彼得回到家，梅婶坐在客厅等他。梅婶说"我知道你就是蜘蛛侠"，彼得愣住。
+
+【结尾衔接】
+梅婶和彼得的关系因为谎言出现裂缝，但梅婶最终选择了接受。彼得回到学校，和内德和好，和内德一起重建战衣。MJ 在走廊上遇到彼得，说"你最近看起来好多了"，彼得说"是啊，感觉好多了"。
+
+==============================
+【阶段四 · 2018 年 4 月 - 5 月 · 复联大厦决战（复联3）】
+==============================
+
+【阶段开头状态】
+两年过去。彼得已经适应了"友好邻居蜘蛛侠"的生活。某天早上，他在校车上，突然感觉到一阵头皮发麻——这是他的"蜘蛛感应"。
+
+【校车上的预警】
+· 校车驶过皇后区街道，彼得突然坐直，看向窗外。远处天空出现一个巨大的环形飞船。
+· 彼得对内德说"我得下车"，内德说"什么？现在？"，彼得已经站起来，跟司机说"老师我肚子疼"，然后跳下车。
+
+【纽约街头战斗】
+· 彼得穿着钢铁蜘蛛战衣（托尼升级版）赶到现场。乌木喉和黑矮星正在攻击奇异博士。
+· 彼得用蛛丝缠住乌木喉的手，被乌木喉用念力甩飞，砸进一辆出租车。
+· 托尼赶到，喊"彼得，退后！"，彼得说"我可以帮忙！"，托尼说"这不是你的战斗！"，彼得说"这是我的城市！"
+
+【奇异博士被绑架】
+· 乌木喉把奇异博士抓上飞船，彼得偷偷用蛛丝粘在飞船上，跟着一起被带到高空。
+· 托尼在后面追，喊"彼得！回来！"，彼得说"我不能让他一个人被抓走"。
+
+【钢铁蜘蛛战衣登场】
+· 彼得在飞船上第一次见识到钢铁蜘蛛战衣的全部功能——四条机械臂、增强力量、飞行推进器。
+· 他和托尼一起在飞船里和乌木喉的手下战斗，最终被乌木喉的念力压制住。
+
+【结尾衔接】
+彼得和托尼一起被飞船带往泰坦星。彼得坐在飞船角落里，紧张地问"我们这是要去哪里？"，托尼说"去一个很远的地方"。
+
+==============================
+【阶段五 · 2018 年 5 月 - 6 月 · 泰坦星响指（复联3收尾）】
+==============================
+
+【泰坦星废墟】
+· 飞船坠毁在泰坦星，一片橙红色的荒芜。彼得和托尼走出飞船，看到远处坐着奇异博士。
+· 星爵、毁灭者、星云陆续出现，临时组队。
+
+【战斗前的准备】
+· 彼得和托尼在废墟里布置陷阱，彼得一边布置一边问"我们能赢吗？"，托尼说"我们得赢"。
+· 彼得偷偷给梅婶录了一条语音"如果我回不来……"，录到一半删掉，说"不行，太丧了"。
+
+【和灭霸的战斗】
+· 战斗开始，彼得用蛛丝缠住灭霸，被灭霸单手扯断。灭霸抓住彼得的脖子把他举起来，说"你被地球人抛弃了"。
+· 彼得挣扎着说"我……我还有托尼"，灭霸把他甩出去。
+
+【响指】
+· 灭霸打完响指，宇宙一半生命化为灰烬。彼得在托尼怀里，感觉到自己的身体在消散。
+· 彼得看着托尼，说："我不想死，先生，请，我不想死……对不起。"
+· 彼得在托尼怀里化为灰烬。托尼瘫坐在地上，满脸泪水。
+
+【结尾衔接】
+托尼独自返回地球，带着失去彼得的巨大创伤。地球上的梅婶、内德、MJ 都不知道彼得已经化灰——他们只知道彼得"失踪了"。
+
+==============================
+【阶段六 · 2024 年 6 月 - 12 月 · 身份曝光与多元宇宙（英雄远征+英雄无归）】
+==============================
+
+【复活后】
+· 五年后，彼得在奇异博士的帮助下复活。他回到学校，发现内德和 MJ 都长大了五岁，而他身体还停留在 17 岁。
+· 彼得参加托尼·斯塔克的葬礼，在葬礼上远远看到摩根·斯塔克（托尼的女儿），心里很难受。
+
+【欧洲游学（英雄远征）】
+· 游学团在威尼斯，彼得在内德和 MJ 的怂恿下准备在威尼斯向 MJ 告白，但被"水怪"打断。
+· 神秘客（昆汀·贝克）登场，自称来自平行宇宙，和彼得联手击败水怪。
+· 布拉格火怪事件，彼得把托尼留下的眼镜交给神秘客，结果发现神秘客是骗子。
+
+【伦敦塔桥决战】
+· 彼得在伦敦塔桥识破神秘客的幻术，激战中差点被火车撞到。MJ 知道了彼得的身份，两人在一起。
+· 神秘客死前录下视频，曝光彼得就是蜘蛛侠。
+
+【身份暴露】
+· 彼得被媒体围堵，梅婶经营的小餐馆被记者围住，内德和 MJ 也被记者骚扰。
+· 彼得找到奇异博士，请求施法"让所有人都忘记彼得·帕克"。
+
+【多元宇宙撕裂】
+· 奇异博士施法，但彼得不断改条件（"别忘了我女朋友""别忘了我朋友"），导致咒语失控，多元宇宙被撕裂。
+· 绿魔、章鱼博士、电光人、沙人、蜥蜴人陆续从其他宇宙穿越而来。
+
+【托比版、加菲版蜘蛛侠登场】
+· 彼得在梅婶家遇到托比版蜘蛛侠和加菲版蜘蛛侠，三人一起研究解药。
+· 三人在自由女神像上和反派激战。
+
+【梅婶之死】
+· 绿魔炸毁了梅婶所在的建筑，彼得冲进去，梅婶在废墟里对他说"能力越大，责任越大"。
+· 梅婶在彼得怀里去世。
+
+【最终选择】
+· 彼得让奇异博士完成咒语，所有人忘记彼得。
+· 彼得独自搬进一间小公寓，坐在窗边，穿上自己缝的新战衣，准备独自面对未来。
+
+【结尾衔接】
+一切归零。彼得·帕克不再存在于任何人的记忆里，但蜘蛛侠还在。他会在晚上继续巡逻皇后区，做一个"友好邻居"。`
+        });
+        localStorage.setItem("sv_worldbooks", JSON.stringify(books));
+      }
       body.innerHTML = `<div style="padding:14px">
         <div class="card">
           <h3>新增世界书条目</h3>
@@ -8233,20 +8688,28 @@ worldbook: {
           <button class="btn" id="add_wb">保存并启用</button>
         </div>
         <div class="card">
-          <h3>已保存条目 (${books.length})</h3>
-          ${books.map((b, i) => `
-            <div style="padding:12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
-              <div style="flex:1">
-                <div style="font-weight:bold;margin-bottom:4px">${esc(b.name)}</div>
-                <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${esc(b.content)}</div>
-              </div>
-              <div class="row">
-                <label class="switch"><input type="checkbox" class="wb-toggle" data-idx="${i}" ${b.enabled?'checked':''}><span class="slider"></span></label>
-                <button class="btn ghost wb-del" data-idx="${i}" style="width:auto;padding:4px 8px;font-size:12px;color:#e62429;border-color:#e62429">删除</button>
-              </div>
-            </div>
-          `).join("") || '<p style="color:var(--muted);font-size:13px">暂无世界书条目</p>'}
+  <h3>已保存条目 (${books.length})</h3>
+  ${books.map((b, i) => `
+    <div style="padding:12px;border-bottom:1px solid var(--line);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:bold;margin-bottom:4px;color:var(--text);">${esc(b.name)}</div>
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc((b.content || "").slice(0, 60))}${(b.content || "").length > 60 ? "..." : ""}</div>
         </div>
+      </div>
+      <div class="row" style="margin-top:10px;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label class="switch"><input type="checkbox" class="wb-toggle" data-idx="${i}" ${b.enabled?'checked':''}><span class="slider"></span></label>
+          <span style="font-size:12px;color:${b.enabled?'var(--accent-2)':'var(--muted)'};font-weight:600;">${b.enabled?'已启用':'已关闭'}</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn ghost wb-edit" data-idx="${i}" style="width:auto;padding:4px 10px;font-size:12px;">✏️ 编辑</button>
+          <button class="btn ghost wb-del" data-idx="${i}" style="width:auto;padding:4px 10px;font-size:12px;color:#e62429;border-color:#e62429">删除</button>
+        </div>
+      </div>
+    </div>
+  `).join("") || '<p style="color:var(--muted);font-size:13px">暂无世界书条目</p >'}
+</div>
       </div>`;
 
       body.querySelector("#add_wb").onclick = () => {
@@ -8268,15 +8731,56 @@ worldbook: {
       });
 
       body.querySelectorAll(".wb-del").forEach(el => {
-        el.onclick = () => {
-          if(!confirm("确定删除这条世界书吗？")) return;
-          books.splice(el.dataset.idx, 1);
+      el.onclick = () => {
+        if(!confirm("确定删除这条世界书吗？")) return;
+        books.splice(el.dataset.idx, 1);
+        localStorage.setItem("sv_worldbooks", JSON.stringify(books));
+        this.render(body);
+      };
+    });
+
+    // ★ 编辑按钮
+    body.querySelectorAll(".wb-edit").forEach(el => {
+      el.onclick = () => {
+        const idx = parseInt(el.dataset.idx);
+        const b = books[idx];
+        if (!b) return;
+
+        const div = document.createElement("div");
+        div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+        div.innerHTML = `
+          <div style="max-width:600px;margin:20px auto;">
+            <h2 style="color:var(--text);margin-top:0;font-size:17px;">✏️ 编辑世界书</h2>
+            <div class="field" style="margin-bottom:12px;">
+              <label style="font-size:12px;color:var(--muted);">名称</label>
+              <input id="wb_edit_name" value="${esc(b.name)}" style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;">
+            </div>
+            <div class="field" style="margin-bottom:12px;">
+              <label style="font-size:12px;color:var(--muted);">内容（可自由修改）</label>
+              <textarea id="wb_edit_content" rows="20" style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;line-height:1.6;font-family:inherit;resize:vertical;">${esc(b.content || "")}</textarea>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button id="wb_edit_cancel" class="btn ghost" style="flex:1;">取消</button>
+              <button id="wb_edit_save" class="btn" style="flex:1;">保存</button>
+            </div>
+          </div>`;
+        document.querySelector(".device").appendChild(div);
+        div.querySelector("#wb_edit_cancel").onclick = () => div.remove();
+        div.querySelector("#wb_edit_save").onclick = () => {
+          const newName = div.querySelector("#wb_edit_name").value.trim();
+          const newContent = div.querySelector("#wb_edit_content").value.trim();
+          if (!newName) return toast("名称不能为空");
+          books[idx].name = newName;
+          books[idx].content = newContent;
           localStorage.setItem("sv_worldbooks", JSON.stringify(books));
+          div.remove();
+          toast("已保存");
           this.render(body);
         };
-      });
-    }
-  },
+      };
+    });
+  }
+},
 
 music: {
   title: "音乐",
@@ -8595,14 +9099,23 @@ window.showMemory=()=>{
   try {
     const sNow = store.getState();
     const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。短信内容必须符合这个时间点，不能出现未来事物。\n\n`;
+    const playerName = store.getProfile().name || "玩家";
+    const playerGender = store.getProfile().gender === "male" ? "男" : "女";
+    const playerPronoun = playerGender === "男" ? "他" : "她";
+
     const sysPrompt = buildSystem(`${dateHint}根据以下刚刚发生的剧情，判断哪个角色（从联系人列表中选择：${contacts.map(c => c.name).join(", ")}）会主动给玩家发短信。
 【当前剧情】
 ${storyContext.slice(0, 800)}
 
-【要求】
-1. 选出一个最合理的角色。
-2. 生成 1 到 3 条短信内容，口语化，符合角色性格和当前情境。
-3. 严格输出 JSON 格式，不要任何解释：{"sender": "联系人名字", "messages": ["短信1", "短信2"]}`);
+【玩家信息】
+名字：${playerName}
+性别：${playerGender}（用「${playerPronoun}」指代）
+
+【绝对铁律 · 违反即失败】
+1. 玩家是**${playerGender}性**！严禁使用与性别不符的称呼（如果玩家是女性，严禁用"兄弟"、"哥们"、"老铁"，应该用"朋友"、"你"，或者根据人设用"姐妹"）。
+2. 选出一个最合理的角色。
+3. 生成 1 到 3 条短信内容，口语化，符合角色性格和当前情境。
+4. 严格输出 JSON 格式，不要任何解释：{"sender": "联系人名字", "messages": ["短信1", "短信2"]}`);
 
     const res = await callAI([{role:"user", content:"分析并生成短信"}], sysPrompt);
     const match = res.match(/\{[\s\S]*\}/);
