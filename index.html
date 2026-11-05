@@ -3744,98 +3744,113 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
       };
 
       // ===== 存档人设：弹出 10 格选择 =====
-      body.querySelector("#profileSaveBtn").onclick = () => {
-        ensureSaveCurrentProfile();
-        const slots = getProfileSlots();
+const profileSaveBtn = body.querySelector("#profileSaveBtn");
+if (profileSaveBtn) {
+  profileSaveBtn.addEventListener("click", () => {
+    try {
+      ensureSaveCurrentProfile();
+      const slots = getProfileSlots();
 
-        const div = document.createElement("div");
-div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
-div.innerHTML = `<h2 style="color:var(--text);margin-top:0">💾 存档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
-const list = div.querySelector("#pslotList");
+      const div = document.createElement("div");
+      div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+      div.innerHTML = `<h2 style="color:var(--text);margin-top:0">💾 存档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
+      const list = div.querySelector("#pslotList");
 
-slots.forEach((snap, i) => {
-  const filled = !!snap;
-  const label = filled
-    ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
-    : "（空白档）";
-  const row = document.createElement("div");
-  row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-  row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
-            <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;" ${filled ? "" : "disabled"}>读取</button>`;
-  list.appendChild(row);
-});
+      slots.forEach((snap, i) => {
+        const filled = !!snap;
+        const label = filled
+          ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+          : "（空白档）";
+        const row = document.createElement("div");
+        row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+        row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+          <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
+        list.appendChild(row);
+      });
 
-        list.addEventListener("click", (e) => {
-          const btn = e.target.closest("button[data-idx]");
-          if (!btn) return;
-          const idx = parseInt(btn.dataset.idx);
-          if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+      list.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-idx]");
+        if (!btn) return;
+        const idx = parseInt(btn.dataset.idx);
+        if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
 
-          const p = store.getProfile();
-          const autoLabel = `${p.name || "未命名"} · ${new Date().toLocaleString()}`;
+        const p = store.getProfile();
+        const autoLabel = `${p.name || "未命名"} · ${new Date().toLocaleString()}`;
 
-          slots[idx] = {
-            label: autoLabel,
-            timestamp: Date.now(),
-            profile: JSON.parse(JSON.stringify(store.getProfile())),
-            data: collectAllData()
-          };
-          setProfileSlots(slots);
+        slots[idx] = {
+          label: autoLabel,
+          timestamp: Date.now(),
+          profile: JSON.parse(JSON.stringify(store.getProfile())),
+          data: collectAllData()
+        };
+        setProfileSlots(slots);
 
-          toast(`已保存到人设档位 ${idx + 1}`);
-          div.remove();
-          // ★ 保存成功后返回设置界面
-          apps.settings.render($("#appBody"));
+        toast(`已保存到人设档位 ${idx + 1}`);
+        div.remove();
+        apps.settings.render($("#appBody"));
+      });
+
+      div.querySelector("#pslotClose").onclick = () => div.remove();
+      document.querySelector(".device").appendChild(div);
+    } catch (err) {
+      console.error("[profileSaveBtn] 存档失败:", err);
+      toast("存档失败：" + err.message);
+    }
+  });
+}
+
+   // ===== 读档人设：弹出 10 格选择 =====
+const profileLoadBtn = body.querySelector("#profileLoadBtn");
+if (profileLoadBtn) {
+  profileLoadBtn.addEventListener("click", () => {
+    try {
+      const slots = getProfileSlots();
+      if (!slots.some(s => s)) return toast("还没有任何人设存档");
+
+      const div = document.createElement("div");
+      div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+      div.innerHTML = `<h2 style="color:var(--text);margin-top:0">📂 读档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
+      const list = div.querySelector("#pslotList");
+
+      slots.forEach((snap, i) => {
+        const filled = !!snap;
+        const label = filled
+          ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+          : "（空白档）";
+        const row = document.createElement("div");
+        row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+        row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
+          <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px" ${filled ? "" : "disabled"}>${filled ? "读取" : "不可用"}</button>`;
+        list.appendChild(row);
+      });
+
+      list.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-idx]");
+        if (!btn || btn.disabled) return;
+        const idx = parseInt(btn.dataset.idx);
+        const snap = slots[idx];
+        if (!snap) return toast("该档位为空");
+        if (!confirm("读档会将当前所有数据覆盖为该存档内容，确定继续？")) return;
+
+        Object.keys(snap.data || {}).forEach(k => {
+          if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
+            localStorage.setItem(k, snap.data[k]);
+          }
         });
+        if (snap.profile) localStorage.setItem("sv_profile", JSON.stringify(snap.profile));
 
-        div.querySelector("#pslotClose").onclick = () => div.remove();
-        document.querySelector(".device").appendChild(div);
-      };
+        toast("已读档：档位 " + (idx + 1));
+        setTimeout(() => location.reload(), 500);
+      });
 
-      // ===== 读档人设：弹出 10 格选择 =====
-      body.querySelector("#profileLoadBtn").onclick = () => {
-        const slots = getProfileSlots();
-        if (!slots.some(s => s)) return toast("还没有任何人设存档");
-
-        const div = document.createElement("div");
-div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
-div.innerHTML = `<h2 style="color:var(--text);margin-top:0">📂 读档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
-const list = div.querySelector("#pslotList");
-
-slots.forEach((snap, i) => {
-  const filled = !!snap;
-  const label = filled
-    ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
-    : "（空白档）";
-  const row = document.createElement("div");
-  row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-  row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
-    <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px" ${filled ? "" : "disabled"}>${filled ? "读取" : "不可用"}</button>`;
-  list.appendChild(row);
-});
-
-        list.addEventListener("click", (e) => {
-          const btn = e.target.closest("button[data-idx]");
-          if (!btn || btn.disabled) return;
-          const idx = parseInt(btn.dataset.idx);
-          const snap = slots[idx];
-          if (!snap) return toast("该档位为空");
-          if (!confirm("读档会将当前所有数据覆盖为该存档内容，确定继续？")) return;
-
-          Object.keys(snap.data || {}).forEach(k => {
-            if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
-              localStorage.setItem(k, snap.data[k]);
-            }
-          });
-          if (snap.profile) localStorage.setItem("sv_profile", JSON.stringify(snap.profile));
-
-          toast("已读档：档位 " + (idx + 1));
-          setTimeout(() => location.reload(), 500);
-        });
-
-        div.querySelector("#pslotClose").onclick = () => div.remove();
-        document.querySelector(".device").appendChild(div);
-      };
+      div.querySelector("#pslotClose").onclick = () => div.remove();
+      document.querySelector(".device").appendChild(div);
+    } catch (err) {
+      console.error("[profileLoadBtn] 读档失败:", err);
+      toast("读档失败：" + err.message);
+    }
+  });
+}
 
      // ===== 数据管理 =====
       body.querySelector("#exportDataBtn").onclick = () => {
@@ -10408,11 +10423,8 @@ window.openSlots=(mode)=>{
     const label=filled?`${snap.label}<br><span style="color:var(--muted) ;font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`:"（空白档）";
     const row = document.createElement("div");
       row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-      row.innerHTML = `
-        <div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;">
-          <div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>
-          ${label}
-        </div><button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px">${filled?(mode==="save"?"覆盖":"读取"):(mode==="save"?"保存":"不可用")}</button>`;
+     row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+          <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
     list.appendChild(row);
   });
   list.addEventListener("click",(e)=>{
