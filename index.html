@@ -2751,12 +2751,53 @@ setProactiveCfg(c){ this.set("sv_proactive_cfg", c); },
     this.set("sv_behavior_log", log);
   },
 
-  // ===== 🎭 玩家身份类型 =====
+ // ===== 🎭 玩家身份类型 =====
   getPlayerIdentityType() {
     return this.get("sv_player_identity_type", "human");
   },
   setPlayerIdentityType(t) {
     this.set("sv_player_identity_type", t);
+  },
+
+  // ============================================================
+  // 🚫 联系人黑名单（删除联系人后，禁止 AI 再提及）
+  // ============================================================
+  getBlacklist() {
+    const list = this.get("sv_blacklist", []);
+    return Array.isArray(list) ? list : [];
+  },
+  addToBlacklist(name) {
+    const n = String(name || "").trim();
+    if (!n) return;
+    const list = this.getBlacklist();
+    if (!list.includes(n)) {
+      list.push(n);
+      this.set("sv_blacklist", list);
+    }
+  },
+  removeFromBlacklist(name) {
+    const list = this.getBlacklist().filter(x => x !== name);
+    this.set("sv_blacklist", list);
+  },
+  clearBlacklist() {
+    this.set("sv_blacklist", []);
+  },
+  // 归一化：去空格、去标点、转小写 —— 用于模糊匹配
+  _normName(s) {
+    return String(s || "")
+      .toLowerCase()
+      .replace(/[\s·\.\-_()（）【】\[\]]/g, "")
+      .trim();
+  },
+  // 判断某个名字是否在黑名单里（支持中英文别名）
+  isBlacklisted(rawName) {
+    const n = String(rawName || "").trim();
+    if (!n) return false;
+    const nNorm = this._normName(n);
+    return this.getBlacklist().some(b => {
+      const bNorm = this._normName(b);
+      return nNorm === bNorm || nNorm.includes(bNorm) || bNorm.includes(nNorm);
+    });
   }
 };
 const dbHelper = {
@@ -3469,6 +3510,7 @@ if (recent.length < 2) {
 
       const fallbackPrompt = `你是漫威的「米歇尔·琼斯（MJ）」，中城高中的学生，彼得·帕克的同学兼好朋友。
 你有极强的观察力，冷幽默，说话一针见血，不喜欢废话。你有一个**只有你自己知道**的小笔记本，专门观察身边的人。
+${buildBlacklistBanText([])}
 
 【你和他们的关系 · 铁律 · 违反即失败】
 1. 你和「彼得·帕克」是**同学 + 好朋友**，不是陌生人。你对彼得的怪毛病早就见怪不怪了。
@@ -3722,6 +3764,7 @@ VIOLATION OF THIS RULE = FAILURE.
   return `你是蜘蛛侠世界模拟器的 DM。
 ${globalLangRule} 
 ${bracketInterventionPrompt} 
+${buildBlacklistBanText([])}
 【游戏内当前日期 · 死锚】${timeStr}
 【当前阶段】${phase.name}（${phase.year}年${phase.monthRange[0]}-${phase.monthRange[1]}月）
 
@@ -4363,6 +4406,7 @@ window.advanceTheater = async (id, choice) => {
         : "";
 
       sysPrompt = `你是一个剧情 DM，正在续写一段**跨宇宙相遇**剧场（与 MCU 主线无关）。
+${buildBlacklistBanText([])}
 
 【宇宙 A】${uA.title}（${uA.year}）
 宇宙规则：${uA.rules}
@@ -4445,6 +4489,7 @@ ${choice}
       }
 
       sysPrompt = `你是一个剧情 DM，正在续写一个**独立小剧场**（与 MCU 主线无关）。
+${buildBlacklistBanText([])}
 
 【背景设定】
 ${q.background}
@@ -4772,6 +4817,157 @@ function bindFileTrigger(triggerSelector, inputSelector, scope) {
     input.value = "";
     input.click();
   });
+}
+// ============================================================
+// 🚫 一次性迁移：把"用户之前删过但没进黑名单"的联系人补进黑名单
+//    只跑一次，靠 localStorage 标记位防重复
+// ============================================================
+function migrateDeletedContactsToBlacklist() {
+  const MIGRATED_KEY = "sv_blacklist_migrated_v1";
+  if (localStorage.getItem(MIGRATED_KEY) === "1") return;
+
+  try {
+    // ==== 1. 默认联系人里的"标准名字" ====
+    const DEFAULT_CONTACTS = ["彼得·帕克", "内德·利兹", "米歇尔·琼斯", "梅婶"];
+
+    // ==== 2. 当前联系人里还存在的名字（不在黑名单）====
+    const currentContacts = (store.getContacts() || []).map(c => c && c.name).filter(Boolean);
+    const currentSet = new Set(currentContacts);
+
+    // ==== 3. 现有黑名单 ====
+    const existingBlacklist = new Set(store.getBlacklist());
+
+    // ==== 4. 从聊天记录里推断"曾经存在过的联系人" ====
+    //     逻辑：如果某个名字在聊天记录（sv_chats）里出现过，
+    //     但现在又不在联系人列表里，也没有在黑名单里 → 说明用户删了它
+    const chats = store.getChats() || {};
+    const chatNames = Object.keys(chats).filter(n => n && !/^群聊\s*·/.test(n));
+
+    // ==== 5. 从日记、推特帖子里也能推断（可选，但更准）====
+    //     日记里出现过的"彼得/内德/MJ/梅婶"是固定的，不用推断；
+    //     推特帖子里的发帖人里，如果不在联系人里也不在黑名单里，
+    //     也可能是被删的联系人（但风险高，容易误判陌生人，所以不用）
+    //     这里只从聊天记录推断，最准。
+
+    // ==== 6. 合并所有"曾被删过"的名字 ====
+    const toMigrate = [];
+
+    // 6a. 默认联系人里消失的（用户删了默认的）
+    DEFAULT_CONTACTS.forEach(name => {
+      if (!currentSet.has(name) && !existingBlacklist.has(name) && !store.isBlacklisted(name)) {
+        // 还要确认这个默认联系人确实"用过"（有聊天记录，或者当前联系人里曾经有过）
+        // 为了安全，只补默认联系人里"曾经在聊天记录里出现过"的
+        if (chatNames.includes(name)) {
+          toMigrate.push(name);
+        }
+      }
+    });
+
+    // 6b. 聊天记录里出现过、但现在既不在联系人、也不在黑名单里的
+    chatNames.forEach(name => {
+      if (currentSet.has(name)) return;           // 现在还是联系人
+      if (existingBlacklist.has(name)) return;    // 已在黑名单
+      if (store.isBlacklisted(name)) return;      // 模糊匹配已在黑名单
+      if (toMigrate.includes(name)) return;       // 已加入待迁移
+      // 排除群聊（已在上方过滤）
+      // 排除"我"/"Me"/空
+      if (name === "我" || name === "Me" || !name.trim()) return;
+      toMigrate.push(name);
+    });
+
+    // ==== 7. 写入黑名单 ====
+    if (toMigrate.length > 0) {
+      toMigrate.forEach(n => store.addToBlacklist(n));
+      console.log("[黑名单迁移] 已自动加入黑名单：", toMigrate);
+    }
+
+    // ==== 8. 打标记，防止下次再跑 ====
+    localStorage.setItem(MIGRATED_KEY, "1");
+  } catch (e) {
+    console.warn("[黑名单迁移] 失败：", e);
+    // 迁移失败不阻塞页面，下次可重试
+  }
+}
+
+// 页面加载后延迟 500ms 跑一次（等 store / contacts 都初始化完）
+setTimeout(() => {
+  try { migrateDeletedContactsToBlacklist(); } catch (e) { console.warn(e); }
+}, 500);
+// ============================================================
+// 🚫 生成"黑名单禁令"文本，供所有 AI prompt 拼接使用
+// ============================================================
+function buildBlacklistBanText(extraNames) {
+  const banSet = new Set();
+  // 1. 黑名单（已删除的联系人）
+  store.getBlacklist().forEach(n => banSet.add(n));
+  // 2. 额外传入的名字（比如本次调用里明确不想出现的人）
+  (extraNames || []).forEach(n => { if (n) banSet.add(String(n).trim()); });
+  // 3. 当前仍存在的联系人的"名字"也要排除吗？—— 不排除，
+  //    因为"正在关注"里联系人本来就可以出现。这里只排除黑名单。
+
+  if (banSet.size === 0) return "";
+
+  const list = [...banSet].filter(Boolean);
+  return `
+
+【🚫 黑名单 · 绝对禁止出现 · 违反即失败】
+以下名字已经被玩家**删除并拉黑**，它们在任何正文、评论、转发、@提及、引用、暗示里都**绝对不能出现**（包括英文名、别名、账号 handle 的变体，比如 "May Parker"、"Aunt May"、"mayparker" 都算）：
+- ${list.join("\n- ")}
+
+⚠️ 检查你自己要写的内容，逐字扫一遍，只要出现上述任何一个人名/别名/handle，就重写，直到完全不出现为止。
+⚠️ 不要用"某个朋友"、"曾经的某某"、"某位老师"去暗示 ta 们。
+⚠️ 这是硬性红线，不是建议。`;
+}
+
+// ============================================================
+// 🚫 生成结果的代码级过滤：如果 AI 还是漏掉了，本地再过滤一次
+// ============================================================
+function sanitizeByBlacklist(text) {
+  if (!text) return text;
+  let out = String(text);
+  const banList = store.getBlacklist();
+  if (!banList.length) return out;
+
+  // 常见别名映射：黑名单里删了"梅婶"，那 "May Parker"、"Aunt May"、"mayparker" 都要过滤
+  const aliasMap = {
+    "彼得·帕克": ["Peter Parker", "Peter", "Pete", "peterparker", "peter_parker", "Spider-Man", "Spiderman"],
+    "内德·利兹": ["Ned Leeds", "Ned", "nedleeds", "ned_leeds"],
+    "米歇尔·琼斯": ["Michelle Jones", "MJ", "michellejones", "michelle_jones"],
+    "梅婶": ["Aunt May", "May Parker", "May", "梅·帕克", "梅帕克", "梅姨", "mayparker", "auntmay", "aunt_may", "may_parker"],
+    "Flash Thompson": ["Flash", "flashthompson"],
+    "Liz Allan": ["Liz", "lizallan"],
+    "Happy Hogan": ["Happy", "happyhogan"],
+    "托尼·斯塔克": ["Tony Stark", "Iron Man", "IronMan", "tonystark"],
+    "美国队长": ["Steve Rogers", "Captain America", "steve_rogers"],
+    "娜塔莎·罗曼诺夫": ["Natasha Romanoff", "Black Widow", "natasharomanoff"],
+    "雷神": ["Thor", "thor"],
+    "绿巨人": ["Bruce Banner", "Hulk", "brucebanner"],
+    "鹰眼": ["Clint Barton", "Hawkeye", "clintbarton"],
+    "绯红女巫": ["Wanda Maximoff", "Scarlet Witch", "wandamaximoff"],
+    "冬兵": ["Bucky Barnes", "Winter Soldier", "buckybarnes"],
+    "猎鹰": ["Sam Wilson", "Falcon", "samwilson"],
+    "蚁人": ["Scott Lang", "Ant-Man", "AntMan", "scottlang"],
+    "黑豹": ["T'Challa", "TChalla", "Black Panther", "blackpanther"],
+    "战争机器": ["James Rhodes", "War Machine", "Rhodey", "jamesrhodes"],
+    "奇异博士": ["Stephen Strange", "Doctor Strange", "Dr Strange", "stephenstrange"],
+    "夜魔侠": ["Matt Murdock", "Daredevil", "mattmurdock"],
+    "洛基": ["Loki", "loki"]
+  };
+
+  banList.forEach(bannedName => {
+    // 收集要过滤的名字和别名
+    const variants = new Set([bannedName]);
+    (aliasMap[bannedName] || []).forEach(v => variants.add(v));
+
+    variants.forEach(v => {
+      if (!v) return;
+      const esc = v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      // 替换成占位符（用"某位朋友"或直接删掉 + 加 ·）
+      out = out.replace(new RegExp(esc, "gi"), "（已删除的联系人）");
+    });
+  });
+
+  return out;
 }
 const apps = {
 Appearance: {
@@ -5427,6 +5623,18 @@ body.querySelectorAll(".c-ref-trigger").forEach(btn => {
           <div id="persistStatus" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;"></div>
         </div>
 
+<div class="card">
+          <h3>🚫 联系人黑名单</h3>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
+            被删除的联系人会进入黑名单，AI 生成的所有内容（推特、IG、评论、NPC 发信等）都不会再出现这些人。
+          </p >
+          <div id="blacklistContainer" style="margin-bottom:10px;"></div>
+          <div class="row" style="gap:8px;">
+            <button class="btn ghost" id="blAddBtn" style="flex:1;font-size:12px;">➕ 手动添加</button>
+            <button class="btn ghost" id="blClearBtn" style="flex:1;font-size:12px;color:#e62429;border-color:#e62429;">🗑️ 清空全部</button>
+          </div>
+        </div>
+
         <div class="card">
           <h3>💌 彼得主动发信</h3>
           <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">当玩家长时间不回复时，彼得会主动发消息过来。</p >
@@ -5931,6 +6139,109 @@ if (profileLoadBtn) {
           }
         };
       }
+
+// ============================================================
+// 🚫 黑名单管理
+// ============================================================
+const renderBlacklist = () => {
+  const container = body.querySelector("#blacklistContainer");
+  if (!container) return;
+
+  const list = store.getBlacklist();
+  if (!list.length) {
+    container.innerHTML =
+      '<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px;background:var(--panel-2);border-radius:10px;line-height:1.6;">' +
+        '暂无黑名单联系人' +
+      '</div>';
+    return;
+  }
+
+  // 每条：名字 + 恢复按钮 + 移除按钮
+  container.innerHTML = list.map(name =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px;">' +
+      '<span style="font-size:13px;color:var(--text);flex:1;min-width:0;word-break:break-all;">' + esc(name) + '</span>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+        '<button class="btn ghost bl-restore" data-name="' + esc(name) + '" style="width:auto;padding:4px 10px;font-size:11px;color:var(--accent-2);border-color:var(--accent-2);">恢复</button>' +
+        '<button class="btn ghost bl-remove" data-name="' + esc(name) + '" style="width:auto;padding:4px 10px;font-size:11px;color:#e62429;border-color:#e62429;">移除</button>' +
+      '</div>' +
+    '</div>'
+  ).join("");
+
+  // ==== 移除按钮：仅从黑名单删掉，不自动回联系人 ====
+  container.querySelectorAll(".bl-remove").forEach(btn => {
+    btn.onclick = () => {
+      const name = btn.dataset.name;
+      if (!confirm("确定从黑名单移除「" + name + "」吗？\n\n⚠️ 移除后 AI 生成的内容里可以再次出现 ta，但 ta 不会自动变回联系人。")) return;
+      store.removeFromBlacklist(name);
+      toast("已从黑名单移除：" + name);
+      renderBlacklist();
+    };
+  });
+
+  // ==== 恢复按钮：从黑名单删掉 + 重新加回联系人 ====
+  container.querySelectorAll(".bl-restore").forEach(btn => {
+    btn.onclick = () => {
+      const name = btn.dataset.name;
+      if (!confirm("确定把「" + name + "」恢复成联系人吗？\n\n会做两件事：\n1. 从黑名单移除\n2. 加回联系人列表（好感度从 0 开始）")) return;
+      store.removeFromBlacklist(name);
+      const contacts = store.getContacts();
+      if (!contacts.find(c => c.name === name)) {
+        contacts.push({
+          name: name,
+          desc: "之前被删除的联系人，已恢复",
+          affinity: 0,
+          heart: "暂无"
+        });
+        store.setContacts(contacts);
+      }
+      toast("已恢复联系人：" + name);
+      renderBlacklist();
+    };
+  });
+};
+renderBlacklist();
+
+     // ➕ 手动添加
+     const blAddBtn = body.querySelector("#blAddBtn");
+     if (blAddBtn) {
+       blAddBtn.onclick = () => {
+         const name = prompt("输入要加入黑名单的名字（必须是联系人列表里曾经的准确名字）：");
+         if (!name || !name.trim()) return;
+         const trimmed = name.trim();
+
+         // 重复检查（精确 + 模糊）
+         if (store.getBlacklist().includes(trimmed)) {
+           return toast("该名字已在黑名单里");
+         }
+         if (store.isBlacklisted(trimmed)) {
+           if (!confirm(`「${trimmed}」疑似已在黑名单里（可能是别名），仍要添加吗？`)) return;
+         }
+
+         // 如果这个名字还在联系人列表里，警告用户
+         const contacts = store.getContacts();
+         if (contacts.find(c => c.name === trimmed)) {
+           if (!confirm(`「${trimmed}」现在还在联系人列表里。\n\n加入黑名单后，AI 生成内容里会禁止出现 ta，但 ta 仍然会留在联系人里。\n\n确定加入黑名单吗？`)) return;
+         }
+
+         store.addToBlacklist(trimmed);
+         toast("已加入黑名单：" + trimmed);
+         renderBlacklist();
+       };
+     }
+
+     // 🗑️ 清空全部
+     const blClearBtn = body.querySelector("#blClearBtn");
+     if (blClearBtn) {
+       blClearBtn.onclick = () => {
+         const list = store.getBlacklist();
+         if (!list.length) return toast("黑名单已经是空的");
+         if (!confirm(`确定清空全部 ${list.length} 个黑名单联系人吗？\n\n⚠️ 清空后 AI 生成的内容里可以再次出现这些人。`)) return;
+         store.clearBlacklist();
+         toast("黑名单已清空");
+         renderBlacklist();
+       };
+     }
+
 // ===== 快速预设 =====
       const presetListEl = body.querySelector("#apiPresetList");
       const renderPresets = () => {
@@ -9252,6 +9563,7 @@ async generateMixedComments(postText, postName) {
   let contactComments = [];
   if (contactsList.length > 0) {
     const contactPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
+${buildBlacklistBanText([postName])}
 
 【任务】
 这条推文下面，以下联系人**每一个人都必须留下一条评论**，一个都不能少：
@@ -9313,6 +9625,7 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
   let strangerComments = [];
   try {
     const strangerPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
+${buildBlacklistBanText([postName])}
 
 【任务】
 生成 5 条来自**世界各地陌生网友**的评论。
@@ -9364,7 +9677,13 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
   strangerComments = strangerComments.slice(0, 5);
 
   // ===== 合并：联系人全放前面，陌生人放后面 =====
-  return [...contactComments, ...strangerComments];
+  // ★ 黑名单兜底：过滤掉任何黑名单用户（无论 AI 怎么拼凑的）
+  const merged = [...contactComments, ...strangerComments].filter(c => {
+    if (!c || !c.user) return false;
+    return !store.isBlacklisted(c.user);
+  });
+
+  return merged;
 },
 
     async newPost() {
@@ -9493,6 +9812,7 @@ ${worldEventsHint}
 
 【当前阶段】${phase.name}（${phase.year}年）
 ${followingPrompt}
+${buildBlacklistBanText([myName])}
 
 【每条推文必须包含】
 1. **固定 5-8 条评论**（不是 2 条，是 5 到 8 条随机网友的评论）。
@@ -9514,7 +9834,8 @@ ${followingPrompt}
 注意：评论之间必须用 " ;;" 分隔，且**至少 5 条评论**。`);
 
         const res = await callAI([{ role: "user", content: isFollowing ? "刷新正在关注" : "刷新为你推荐" }], sysPrompt);
-
+        // ★ 代码级兜底过滤：如果 AI 还是提到了黑名单的人，直接过滤掉
+        const safeRes = sanitizeByBlacklist(res);
         const all = store.getPosts();
         all.twitter = all.twitter || [];
 
@@ -9533,7 +9854,7 @@ const cleanName = (raw) => {
   return n.trim();
 };
 
-       res.split('\n').filter(l => l.includes('|||')).forEach(line => {
+      safeRes.split('\n').filter(l => l.includes('|||')).forEach(line => {
   let parts = line.split('|||').map(s => s.trim());
 
   // ★ 如果第一列是"x"或空，说明 AI 多返回了一个占位列，直接删掉
@@ -10149,6 +10470,7 @@ instagram: {
         const contactsList = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || "")).map(c => c.name).join("、");
 
         const sysPrompt = buildSystem(`用户发了 IG 动态，发帖人名字是："${myName}"，文案："${text}"。
+${buildBlacklistBanText([myName])}
 【要求】
 1. 根据文案生成 1 个英文生图 Prompt。
 2. 生成 3-5 条来自世界各地网友的评论。
@@ -10286,6 +10608,8 @@ ${avatarPersona}
 
         const sysPrompt = buildSystem(`${dateHint}请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
 ${avengersIGHint}
+${buildBlacklistBanText([myName])}
+
 【要求】
 1. 其余发帖人可以是：彼得·帕克(Peter Parker)、内德·利兹(Ned Leeds)、MJ(Michelle Jones)、Flash Thompson、随机NPC，名字必须英文。
 2. **严禁使用 "${myName}" 或任何中文字符串作为发帖人名称！**
@@ -10305,8 +10629,10 @@ ${promptHint}
 发帖人 ||| 账号 ||| 文案 ||| 英文生图Prompt ||| 评论1网名(语言) ||| 评论1原文 ||| 评论1中文翻译 ;; 评论2网名(语言) ||| 评论2原文 ||| 评论2中文翻译
 最少生成 5 行，不要任何解释性文字。`);
         const res = await callAI([{role:"user",content:"生成 5 条帖子"}], sysPrompt);
+        // ★ 代码级兜底过滤
+        const safeRes = sanitizeByBlacklist(res);
 
-        const lines = res.split('\n').filter(l => l.includes('|||'));
+        const lines = safeRes.split('\n').filter(l => l.includes('|||'));
         const newPosts = [];
 
         for (const line of lines.slice(0, 5)) {
@@ -12957,13 +13283,15 @@ const groups = contacts.filter(c => isGroupContact(c));
           el.onclick = (e) => {
             e.stopPropagation();
             const name = el.dataset.name;
-            if (!confirm(`确定删除联系人「${name}」及其聊天记录吗？`)) return;
+            if (!confirm(`确定删除联系人「${name}」及其聊天记录吗？\n\n⚠️ 删除后 ta 会被加入黑名单，AI 生成的所有内容里将不再出现 ta。`)) return;
             const list = store.getContacts().filter(c => c.name !== name);
             store.setContacts(list);
             const chats = store.getChats();
             delete chats[name];
             store.setChats(chats);
-            toast("已删除");
+            // ★ 写入黑名单
+            store.addToBlacklist(name);
+            toast("已删除并加入黑名单");
             self.render(body);
           };
         });
@@ -14000,6 +14328,8 @@ window.showMemory=()=>{
     const playerPronoun = playerGender === "男" ? "他" : "她";
 
     const sysPrompt = buildSystem(`${dateHint}根据以下刚刚发生的剧情，判断哪个角色（从联系人列表中选择：${contacts.map(c => c.name).join(", ")}）会主动给玩家发短信。
+${buildBlacklistBanText([])}
+
 【当前剧情】
 ${storyContext.slice(0, 800)}
 
@@ -14008,8 +14338,8 @@ ${storyContext.slice(0, 800)}
 性别：${playerGender}（用「${playerPronoun}」指代）
 
 【绝对铁律 · 违反即失败】
-1. 玩家是**${playerGender}性**！严禁使用与性别不符的称呼（如果玩家是女性，严禁用"兄弟"、"哥们"、"老铁"，应该用"朋友"、"你"，或者根据人设用"姐妹"）。
-2. 选出一个最合理的角色。
+1. 玩家是**${playerGender}性**！严禁使用与性别不符的称呼（如果玩家是女性，严禁用"兄弟"、"哥们"、"这家伙"、"dude"、"bro"、"老铁"，应该用"朋友"、"你"，或者根据人设用"姐妹"）。
+2. 选出一个最合理的角色（必须从联系人列表里选，不能选黑名单里的）。
 3. 生成 1 到 3 条短信内容，口语化，符合角色性格和当前情境。
 4. 严格输出 JSON 格式，不要任何解释：{"sender": "联系人名字", "messages": ["短信1", "短信2"]}`);
 
@@ -14021,6 +14351,8 @@ ${storyContext.slice(0, 800)}
     if (!data.sender || !data.messages || !data.messages.length) return;
 
     if (!contacts.find(c => c.name === data.sender)) return;
+    // ★ 黑名单兜底
+    if (store.isBlacklisted(data.sender)) return;
 
     // ===== 如果玩家正在和这个 sender 聊天，不要重复插入（避免「正在聊天时突然刷屏」） =====
 const isCurrentlyChatting = apps.messages.currentUser === data.sender && apps.messages.view === "chat";
