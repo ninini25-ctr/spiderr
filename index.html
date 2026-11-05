@@ -4916,17 +4916,21 @@ Appearance: {
 
     // 用户头像（自动裁剪 256×256 + 压缩）
     body.querySelector("#ap_avatar").onchange = async (e) => {
-      const file = e.target.files[0]; if (!file) return;
-      try {
-        const dataUrl = await compressImage(file, { maxSize: 256, square: true, quality: 0.85, maxBytes: 60 * 1024 });
-        cfg.userAvatar = "idb:user_avatar";
-        store.set("sv_appearance", cfg);
-        this.render(body);
-        toast("头像已更新（已自动压缩）");
-      } catch (err) {
-        toast("头像上传失败：" + err.message);
-      }
-    };
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const dataUrl = await compressImage(file, { maxSize: 256, square: true, quality: 0.85, maxBytes: 60 * 1024 });
+    // ★ 关键：先存进 IndexedDB
+    await dbHelper.saveImage("user_avatar", dataUrl);
+    // ★ 写进缓存，避免重新 render 时读不到
+    _imgCache["user_avatar"] = dataUrl;
+    cfg.userAvatar = "idb:user_avatar";
+    store.set("sv_appearance", cfg);
+    this.render(body);
+    toast("头像已更新（已自动压缩）");
+  } catch (err) {
+    toast("头像上传失败：" + err.message);
+  }
+};
      
     // 联系人头像（压缩 → 存 IDB → 只存 idb:key）
     body.querySelectorAll(".c-avatar-input").forEach(input => {
@@ -5426,16 +5430,23 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
       // ===== 存档人设：弹出 10 格选择 =====
 const profileSaveBtn = body.querySelector("#profileSaveBtn");
 if (profileSaveBtn) {
-  profileSaveBtn.addEventListener("click", () => {
+  // ★ 用 onclick 而不是 addEventListener，避免重复绑定
+  profileSaveBtn.onclick = () => {
     try {
+      // ★ 单例保护：先移除所有已存在的存档面板
+      document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
+
       ensureSaveCurrentProfile();
       const slots = getProfileSlots();
 
       const div = document.createElement("div");
+      div.className = "__profile_slot_panel";   // ★ 唯一标识
+      div.dataset.mode = "save";                // ★ 标记模式
       div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
       div.innerHTML = `<h2 style="color:var(--text);margin-top:0">💾 存档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
       const list = div.querySelector("#pslotList");
 
+      // ★ 用 onclick 逐个绑定，不用事件委托，避免重复触发
       slots.forEach((snap, i) => {
         const filled = !!snap;
         const label = filled
@@ -5445,29 +5456,35 @@ if (profileSaveBtn) {
         row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
         row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
           <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
-        list.appendChild(row);
-      });
 
-      list.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-idx]");
-        if (!btn) return;
-        const idx = parseInt(btn.dataset.idx);
-        if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+        // ★ 直接绑在按钮上
+        const btn = row.querySelector("button[data-idx]");
+        btn.onclick = (ev) => {
+          ev.stopPropagation();
+          ev.preventDefault();
 
-        const p = store.getProfile();
-        const autoLabel = `${p.name || "未命名"} · ${new Date().toLocaleString()}`;
+          // ★ 点击时重新读一次最新 slots，不用打开面板时的旧引用
+          const latestSlots = getProfileSlots();
+          if (latestSlots[i] && !confirm(`档位 ${i + 1} 已有内容，是否覆盖？`)) return;
 
-        slots[idx] = {
-          label: autoLabel,
-          timestamp: Date.now(),
-          profile: JSON.parse(JSON.stringify(store.getProfile())),
-          data: collectAllData()
+          const p = store.getProfile();
+          const autoLabel = `${p.name || "未命名"} · ${new Date().toLocaleString()}`;
+
+          latestSlots[i] = {
+            label: autoLabel,
+            timestamp: Date.now(),
+            profile: JSON.parse(JSON.stringify(store.getProfile())),
+            data: collectAllData()
+          };
+          setProfileSlots(latestSlots);
+
+          toast(`✅ 已保存到人设档位 ${i + 1}`);
+          div.remove();
+          // ★ 重新渲染设置页，让档位状态刷新
+          apps.settings.render($("#appBody"));
         };
-        setProfileSlots(slots);
 
-        toast(`已保存到人设档位 ${idx + 1}`);
-        div.remove();
-        apps.settings.render($("#appBody"));
+        list.appendChild(row);
       });
 
       div.querySelector("#pslotClose").onclick = () => div.remove();
@@ -5476,18 +5493,23 @@ if (profileSaveBtn) {
       console.error("[profileSaveBtn] 存档失败:", err);
       toast("存档失败：" + err.message);
     }
-  });
+  };
 }
 
-   // ===== 读档人设：弹出 10 格选择 =====
+  // ===== 读档人设：弹出 10 格选择 =====
 const profileLoadBtn = body.querySelector("#profileLoadBtn");
 if (profileLoadBtn) {
-  profileLoadBtn.addEventListener("click", () => {
+  profileLoadBtn.onclick = () => {
     try {
+      // ★ 单例保护
+      document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
+
       const slots = getProfileSlots();
       if (!slots.some(s => s)) return toast("还没有任何人设存档");
 
       const div = document.createElement("div");
+      div.className = "__profile_slot_panel";
+      div.dataset.mode = "load";
       div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
       div.innerHTML = `<h2 style="color:var(--text);margin-top:0">📂 读档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
       const list = div.querySelector("#pslotList");
@@ -5501,26 +5523,32 @@ if (profileLoadBtn) {
         row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
         row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px"><b>档位 ${i + 1}</b><br>${label}</div>
           <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px" ${filled ? "" : "disabled"}>${filled ? "读取" : "不可用"}</button>`;
+
+        const btn = row.querySelector("button[data-idx]");
+        btn.onclick = (ev) => {
+  ev.stopPropagation();
+  ev.preventDefault();
+  if (btn.disabled) return;
+
+  const latestSlots = getProfileSlots();
+  const latestSnap = latestSlots[i];
+  if (!latestSnap) return toast("该档位为空");
+  if (!confirm("读档会将当前所有数据覆盖为该存档内容，确定继续？")) return;
+
+  Object.keys(latestSnap.data || {}).forEach(k => {
+    if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
+      localStorage.setItem(k, latestSnap.data[k]);
+    }
+  });
+  if (latestSnap.profile) {
+    localStorage.setItem("sv_profile", JSON.stringify(latestSnap.profile));
+  }
+
+  toast("已读档：档位 " + (i + 1));
+  setTimeout(() => location.reload(), 500);
+};
+
         list.appendChild(row);
-      });
-
-      list.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-idx]");
-        if (!btn || btn.disabled) return;
-        const idx = parseInt(btn.dataset.idx);
-        const snap = slots[idx];
-        if (!snap) return toast("该档位为空");
-        if (!confirm("读档会将当前所有数据覆盖为该存档内容，确定继续？")) return;
-
-        Object.keys(snap.data || {}).forEach(k => {
-          if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
-            localStorage.setItem(k, snap.data[k]);
-          }
-        });
-        if (snap.profile) localStorage.setItem("sv_profile", JSON.stringify(snap.profile));
-
-        toast("已读档：档位 " + (idx + 1));
-        setTimeout(() => location.reload(), 500);
       });
 
       div.querySelector("#pslotClose").onclick = () => div.remove();
@@ -5529,7 +5557,7 @@ if (profileLoadBtn) {
       console.error("[profileLoadBtn] 读档失败:", err);
       toast("读档失败：" + err.message);
     }
-  });
+  };
 }
 
      // ===== 数据管理 =====
@@ -6540,7 +6568,7 @@ chatHtml += `<div id="chatThread">`;
     } else {
       const senderName = m.groupSender || "群成员";
       const memberC = store.getContacts().find(c => c.name === senderName);
-      const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
+      const senderAvatar = (memberC && memberC.avatar) ? realAv(memberC.avatar) : "";
       return `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
   <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
     ${realAv(senderAvatar) ? `<img src="${realAv(senderAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : esc((senderName || "?")[0])}
@@ -8006,13 +8034,14 @@ ${isPeterHeart && heartAff >= 151 ? `【彼得深爱时的心声 · 铁律】\n�
         store.setChats(chatsNow);
         
         const curContactLive = store.getContacts().find(c => c.name === self.currentUser);
-        const liveAv = (curContactLive && curContactLive.avatar) ? curContactLive.avatar : "";
-        const liveFirst = esc((curContactLive ? curContactLive.name : "?")[0]);
-        currentThread.innerHTML +=
-          '<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
-            '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
-              (liveAv ? '<img src="' + liveAv + '" style="width:100%;height:100%;object-fit:cover;">' : liveFirst) +
-            '</div>' +
+const rawLiveAv = (curContactLive && curContactLive.avatar) ? curContactLive.avatar : "";
+const liveAv = realAv(rawLiveAv);   // ★ 关键：解析 idb:xxx
+const liveFirst = esc((curContactLive ? curContactLive.name : "?")[0]);
+currentThread.innerHTML +=
+  '<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
+    '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
+      (liveAv ? '< img src="' + liveAv + '" style="width:100%;height:100%;object-fit:cover;">' : liveFirst) +
+    '</div>' +
             '<div class="bubble them" style="max-width:72%;">' + esc(msgText) + '</div>' +
           '</div>';
         currentThread.scrollTop = currentThread.scrollHeight;
@@ -8197,7 +8226,7 @@ ${missName}：消息内容`;
         const curThread = body.querySelector("#chatThread");
         if (curThread) {
           const memberC = store.getContacts().find(c => c.name === sender);
-          const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
+          const senderAvatar = (memberC && memberC.avatar) ? realAv(memberC.avatar) : "";
           const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
   ${realAv(senderAvatar) ? `<img src="${realAv(senderAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
 </div>`;
@@ -13417,17 +13446,45 @@ window.openSlots=(mode)=>{
           <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
     list.appendChild(row);
   });
-  list.addEventListener("click",(e)=>{
-    const btn=e.target.closest("button[data-idx]"); if(!btn) return;
-    const idx=parseInt(btn.dataset.idx);
-    if(mode==="save"){
-      if(slots[idx]&&!confirm(`存档位 ${idx+1} 已有内容，是否覆盖？`)) return;
-      storeSlot(idx); div.remove();
-    } else {
-      if(!slots[idx]) return toast("该存档位为空");
-      loadSlot(idx); div.remove();
+  list.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-idx]"); if (!btn) return;
+  const idx = parseInt(btn.dataset.idx);
+
+  if (mode === "save") {
+    // ★ 关键：每次都重新读一次，防止打开面板后数据被别处改过
+    const freshSlots = getSlots();
+    if (freshSlots[idx]) {
+      if (!confirm(`存档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
     }
-  });
+    try {
+      storeSlot(idx);
+      // ★ 保存成功后立刻刷新列表 UI，让用户看到"已保存"
+      const newSlots = getSlots();
+      list.querySelectorAll("button[data-idx]").forEach(b => {
+        const i = parseInt(b.dataset.idx);
+        const row = b.closest("div[style*='border-radius']");
+        if (!row) return;
+        const labelDiv = row.querySelector("div > div");
+        const filled = !!newSlots[i];
+        b.textContent = filled ? "覆盖" : "保存";
+        b.style.color = filled ? "var(--text)" : "var(--muted)";
+        if (labelDiv) {
+          labelDiv.innerHTML = filled
+            ? `<div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${newSlots[i].label}<br><span style="color:var(--muted);font-size:11px">${new Date(newSlots[i].timestamp).toLocaleString()}</span>`
+            : `<div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>（空白档）`;
+        }
+      });
+      toast(`✅ 已存档到位置 ${idx + 1}`);
+    } catch (err) {
+      console.error("[存档失败]", err);
+      toast("❌ 存档失败：" + (err.message || "未知错误"));
+    }
+  } else {
+    if (!slots[idx]) return toast("该存档位为空");
+    loadSlot(idx);
+    div.remove();
+  }
+});
   document.querySelector(".device").appendChild(div);
 };
 
