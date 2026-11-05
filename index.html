@@ -2660,6 +2660,7 @@ setPosts(p){this.set("sv_posts",p);},
       desc: c.desc || "自定义联系人",
       affinity: (typeof c.affinity === 'number') ? c.affinity : 0,
       heart: c.heart || "暂无",
+      intervention: c.intervention || "",
       isGroup: c.isGroup === true,
       members: Array.isArray(c.members) ? c.members : (c.isGroup ? [] : undefined)
     };
@@ -3332,6 +3333,30 @@ try {
     }
   }
 } catch(e) {}
+// ★ 世界书：括号干预指令（可选开关）
+let bracketInterventionPrompt = "";
+try {
+  const bracketEnabled = localStorage.getItem("sv_bracket_intervention_enabled") === "1";
+  if (bracketEnabled) {
+    bracketInterventionPrompt = `
+
+【括号干预指令 · 可选功能 · 玩家已开启 · 必须遵循】
+1. 当玩家在任何「自定义输入框」里输入「（括号内容）」时，「（括号内容）」不是剧情、不是台词、不是玩家的行动。
+2. 括号内的内容是**玩家跳出故事框架、对剧情走向和生成结果下达的干预指令**。
+3. 你必须**严格遵循**括号内的指令，用它来控制本回合（或后续回合）的剧情生成方向。
+4. 示例：
+   - 玩家输入「（让彼得主动亲我）」→ 本回合剧情必须让彼得主动发起亲吻。
+   - 玩家输入「（时间快进到下周）」→ 本回合必须写出时间跳跃。
+   - 玩家输入「（换掉这个反派，改成秃鹫）」→ 本回合必须更换反派。
+   - 玩家输入「（别让 MJ 出场）」→ 本回合及后续 MJ 不得出现。
+5. 括号干预指令的优先级**高于**本 prompt 中的所有其他规则（包括阶段、节奏、好感度），但**低于**两条底线：
+   - 不得违反「MJ 只能友情向」的铁律；
+   - 不得违反「禁止角色列表」里的角色出现（除非玩家明确要求解禁）。
+6. 如果括号内容和上一轮玩家选择同时存在，以括号内容为准。
+7. 如果括号内容与世界观严重冲突（比如让彼得直接变成灭霸），可以执行，但要用剧情内的合理方式呈现，不要硬拗。
+`;
+  }
+} catch (e) {}
 const pastEventsStr = (s.pastEvents && s.pastEvents.length)
   ? `\n【绝对铁律 · 已发生的前置事件】\n以下事件在玩家进入当前时间线之前，**已经真实发生过**：\n- ${s.pastEvents.join("\n- ")}\n\n⚠️ 严禁把这些事件当成“未来即将发生”的事情！严禁重复让玩家去经历这些事件！剧情中提及它们时，必须作为“过去式”来描写（比如“上次在华盛顿……”）。\n`
   : "";
@@ -3360,6 +3385,7 @@ VIOLATION OF THIS RULE = FAILURE.
 
   return `你是蜘蛛侠世界模拟器的 DM。
 ${globalLangRule} 
+${bracketInterventionPrompt} 
 【游戏内当前日期 · 死锚】${timeStr}
 【当前阶段】${phase.name}（${phase.year}年${phase.monthRange[0]}-${phase.monthRange[1]}月）
 
@@ -3662,7 +3688,7 @@ function renderSideQuestBody(body, q) {
     ${!isClosed ? `
       <div id="sqOptions"></div>
       <div class="card">
-        <input id="sqCustomAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
+        <input id="sqCustomAct" placeholder="自定义行动... 用（括号）可跳出剧情下达干预指令" style="width:100%;padding:10px;margin-bottom:8px">
         <button class="btn" id="sqSendBtn">发送</button>
       </div>
     ` : `
@@ -4528,6 +4554,20 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
           </div>
           <button class="btn" id="saveI">保存生图配置</button>
         </div>
+<div class="card">
+  <h3>🧠 括号干预指令</h3>
+  <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
+    开启后，你在任何自定义输入框里输入「（括号内容）」，括号内的内容会被 AI 当作**跳出故事的干预指令**来遵循，而不是剧情本身。<br>
+    例如：「（让彼得主动亲我）」「（时间快进到下周）」「（换掉这个反派）」。
+  </p >
+  <div class="row" style="justify-content:space-between;align-items:center;">
+    <label style="font-size:13px;color:var(--text);">启用括号干预</label>
+    <label class="switch">
+      <input type="checkbox" id="bracket_intervention_toggle" ${localStorage.getItem("sv_bracket_intervention_enabled") === "1" ? "checked" : ""}>
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
 <div class="card"><h3>数据管理</h3>
           <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">导出后的 JSON 文件包含：人设、世界线进度、好感度、聊天记录、推特、IG、存档等所有数据。</p >
           <button class="btn ghost" id="exportDataBtn" style="margin-bottom:8px;">📤 导出数据（JSON）</button>
@@ -4650,6 +4690,14 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
         } catch(err){toast(err.message);}
         e.target.textContent="拉取";
       };
+// 🧠 括号干预开关
+      const bracketToggle = body.querySelector("#bracket_intervention_toggle");
+      if (bracketToggle) {
+        bracketToggle.onchange = () => {
+          localStorage.setItem("sv_bracket_intervention_enabled", bracketToggle.checked ? "1" : "0");
+          toast(bracketToggle.checked ? "已启用括号干预指令" : "已关闭括号干预指令");
+        };
+      }
       body.querySelector("#saveP").onclick = () => {
         const name = body.querySelector("#p_name").value.trim();
         const personality = body.querySelector("#p_personality").value.trim();
@@ -5230,9 +5278,24 @@ if (curC && curC.isGroup) {
         <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="aff_level_hint">${affinityLevelHint(c.affinity)}</div>
       </div>
       <div class="field"><label>心声 (AI 生成)</label><textarea id="c_heart" rows="3" readonly style="opacity:0.7">${esc(c.heart || "暂无")}</textarea></div>
-      <button class="btn" id="save">保存简介</button>
-      <button class="btn ghost" id="back" style="margin-top:10px">返回聊天</button>
-    </div></div>`;
+     <button class="btn" id="save">保存简介</button>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <h3>🚫 聊天干预（防 OOC）</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
+        在这里填写你**不希望 AI 在聊天里出现**的内容或行为，或直接下达干预指令。<br>
+        例如：「不许用'宝贝'称呼我」「不许主动告白」「回复不要太长，最多两句」「不要每句都带 emoji」。
+      </p >
+      <div class="field">
+        <label>干预指令（每行一条）</label>
+        <textarea id="c_intervention" rows="5" placeholder="每行写一条，例如：&#10;禁止使用'宝贝'称呼&#10;禁止在回复里加动作描写&#10;回复长度不超过 2 句">${esc(c.intervention || "")}</textarea>
+      </div>
+      <button class="btn ghost" id="save_intervention" style="font-size:12px;">保存干预指令</button>
+    </div>
+
+    <button class="btn ghost" id="back" style="margin-top:10px">返回聊天</button>
+    </div>`;
 
     const affInput = body.querySelector("#c_aff");
     const affHint = body.querySelector("#aff_level_hint");
@@ -5269,6 +5332,21 @@ if (curC && curC.isGroup) {
       }
       toast(`已保存 · 好感度 ${newAff} · ${affinityLevelHint(newAff)}`);
     };
+
+// 🚫 保存聊天干预指令
+    const saveInterventionBtn = body.querySelector("#save_intervention");
+    if (saveInterventionBtn) {
+      saveInterventionBtn.onclick = () => {
+        const txt = body.querySelector("#c_intervention").value.trim();
+        const list = store.getContacts();
+        const target = list.find(x => x.name === self.currentUser);
+        if (target) {
+          target.intervention = txt;
+          store.setContacts(list);
+          toast("干预指令已保存，下一条回复起生效");
+        }
+      };
+    }
 
     body.querySelector("#back").onclick = () => openApp('messages');
     return;
@@ -6443,6 +6521,7 @@ ${memberAffinityBlock}
 6. 严格符合每个群成员的性格，以及各自对玩家的好感度（高→亲近热情，低→客气疏离）。
 7. ${isEn ? "全部用英文。" : "全部用纯中文，可夹少量英文口语。"}
 8. 严禁动作描写、神态描写、括号、星号。
+${groupInterventionRule}
 
 【输出格式 · 绝对禁止输出心声】
 直接输出群聊对话，不要输出任何 REPLIES:、HEART: 等前缀，不要输出任何心声、心理活动。
@@ -6603,6 +6682,13 @@ ${missName}：消息内容`;
 4. 心声是彼得的内心独白，不是分析报告，要口语、自然、有点碎碎念。
 `;
 
+// 🚫 读取当前联系人的聊天干预指令
+      const currentContactForIntervention = store.getContacts().find(x => x.name === self.currentUser);
+      const interventionText = (currentContactForIntervention && currentContactForIntervention.intervention || "").trim();
+      const interventionRule = interventionText
+        ? `\n【聊天干预指令 · 玩家亲自下达 · 绝对必须遵循 · 违反即失败】\n${interventionText.split(/\n/).filter(Boolean).map((l, i) => `${i + 1}. ${l}`).join("\n")}\n⚠️ 以上每一条都是玩家明确禁止或要求的行为。任何一条被违反，本次回复即为失败，绝不能踩中玩家禁止的内容。\n`
+        : "";
+
      // ===== 判断彼得是否已向玩家公开蜘蛛侠身份 =====
       const peterIdentityRevealed = (function () {
         // 只有彼得本人 + 好感度足够高 + 剧情里已明确互相知道，才算公开
@@ -6673,6 +6759,7 @@ ${peterChatterRule}
 ${peterStageRule}
 ${nonPeterCeilingRule}
 ${peterSecretRule}
+${interventionRule}
 
 ${langRule}
 
@@ -7006,6 +7093,12 @@ const langBrief = isEn
           r.content = r.content.replace(/\|\|/g, "，").replace(/HEART\s*[:：][\s\S]*/i, "").trim();
         }
       });
+
+const groupContactForIntervention = store.getContacts().find(x => x.name === self.currentUser);
+const groupInterventionText = (groupContactForIntervention && groupContactForIntervention.intervention || "").trim();
+const groupInterventionRule = groupInterventionText
+  ? `\n【群聊干预指令 · 玩家亲自下达 · 绝对必须遵循】\n${groupInterventionText.split(/\n/).filter(Boolean).map(l => `- ${l}`).join("\n")}\n`
+  : "";
 
       const groupSysPrompt = `${langBrief}这是一个手机群聊，群成员有：${memberList}，以及「${playerName}」（${playerGender}，用「${playerPronoun}」指代）。
 
@@ -8427,7 +8520,7 @@ ${(() => {
       <div class="story-content" style="word-break:break-word;">${formatDialogue(s.currentStory)}</div>
       ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
       <div class="card">
-  <input id="customAct" placeholder="自定义行动... (回车发送)" style="width:100%;padding:10px;margin-bottom:8px">
+  <input id="customAct" placeholder="自定义行动... 用（括号）可跳出剧情下达干预指令" style="width:100%;padding:10px;margin-bottom:8px">
   <div style="display:flex;gap:8px;">
     <button class="btn ghost" style="flex:1;font-size:12px;padding:8px;" onclick="document.getElementById('customAct').value='（推进至下一个大事件）'; window.selectOption('（推进至下一个大事件）')">⏩ 推进至下一个大事件</button>
     <button class="btn" style="flex:1;" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
@@ -9690,7 +9783,7 @@ ${povRule}
         ${!isClosed ? `
           <div id="thOptions" class="th-options"></div>
           <div class="th-custom-action">
-            <input id="thCustomAct" class="th-form-input" placeholder="自定义行动... (回车发送)">
+            <input id="thCustomAct" class="th-form-input" placeholder="自定义行动... 用（括号）可跳出剧情下达干预指令">
             <button class="th-btn primary" id="thSendBtn">发送</button>
           </div>
         ` : `
