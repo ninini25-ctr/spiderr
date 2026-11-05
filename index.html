@@ -1438,6 +1438,654 @@ body.theme-light .bubble-trans {
   color: var(--text);
   border-color: var(--muted);
 }
+/* ============================================================
+   🕵️ MJ 笔记本 · 悬疑侦探风 UI
+   ============================================================ */
+
+/* ===== 外层容器 ===== */
+.mjn-wrap {
+  padding: 16px;
+  position: relative;
+}
+.mjn-cover {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #1a1a24 0%, #0f0f15 100%);
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+body.theme-light .mjn-cover {
+  background: linear-gradient(135deg, #f5f3eb 0%, #e8e3d5 100%);
+}
+.mjn-cover-label {
+  font-size: 10px;
+  color: var(--accent-2);
+  letter-spacing: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.mjn-cover-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 3px;
+}
+.mjn-cover-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+.mjn-suspicion-ring {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--accent) 0%,
+    var(--accent) calc(var(--pct, 0) * 1%),
+    rgba(120, 120, 140, 0.18) calc(var(--pct, 0) * 1%),
+    rgba(120, 120, 140, 0.18) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.mjn-suspicion-ring::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: #14141c;
+}
+body.theme-light .mjn-suspicion-ring::before {
+  background: #f5f3eb;
+}
+.mjn-suspicion-inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.mjn-suspicion-num {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.mjn-suspicion-label {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ===== 摊牌横幅 ===== */
+.mjn-showdown-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(230, 36, 41, 0.15), rgba(45, 107, 255, 0.08));
+  border: 1px solid rgba(230, 36, 41, 0.5);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  animation: mjnPulseGlow 2.5s ease-in-out infinite;
+}
+@keyframes mjnPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(230, 36, 41, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(230, 36, 41, 0.15);
+  }
+}
+.mjn-showdown-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(230, 36, 41, 0.6));
+}
+.mjn-showdown-body {
+  flex: 1;
+  min-width: 0;
+}
+.mjn-showdown-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.mjn-showdown-desc {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.mjn-showdown-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.mjn-showdown-btn:hover {
+  filter: brightness(1.15);
+}
+.mjn-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--panel-2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.mjn-tab {
+  flex: 1;
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.mjn-tab.active {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.mjn-tab-count {
+  font-size: 10px;
+  background: var(--line);
+  color: var(--muted);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.mjn-tab.active .mjn-tab-count {
+  background: var(--accent-2);
+  color: #fff;
+}
+
+/* ===== 加载中 ===== */
+.mjn-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 13px;
+  font-family: "FangSong", "仿宋", serif;
+  font-style: italic;
+}
+.mjn-loading-spin {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: mjnSpin 0.9s linear infinite;
+}
+@keyframes mjnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== 空状态 ===== */
+.mjn-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+.mjn-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.mjn-empty-text {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* ===== 线索列表 ===== */
+.mjn-clue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mjn-clue-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 14px;
+  padding: 14px 16px;
+  position: relative;
+  transition: all 0.15s;
+}
+.mjn-clue-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(230, 36, 41, 0.08);
+}
+.mjn-clue-card::after {
+  content: "✎";
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 14px;
+  color: var(--accent);
+  opacity: 0.35;
+  pointer-events: none;
+}
+.mjn-clue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mjn-clue-date {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: "FangSong", "仿宋", serif;
+  letter-spacing: 0.5px;
+}
+.mjn-clue-type {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+}
+.mjn-type-peter {
+  background: rgba(230, 36, 41, 0.15);
+  color: var(--accent);
+}
+.mjn-type-user-ability {
+  background: rgba(45, 107, 255, 0.15);
+  color: var(--accent-2);
+}
+.mjn-type-behavior {
+  background: rgba(120, 120, 140, 0.15);
+  color: var(--muted);
+}
+.mjn-clue-text {
+  font-size: 13.5px;
+  line-height: 1.85;
+  color: var(--text);
+  font-family: "FangSong", "仿宋", "STFangsong", serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 4px 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 26px,
+    rgba(230, 36, 41, 0.08) 26px,
+    rgba(230, 36, 41, 0.08) 27px
+  );
+}
+.mjn-clue-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.mjn-clue-suspicion {
+  font-size: 10.5px;
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+.mjn-clue-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0.3;
+}
+
+/* 冷却提示 */
+.mjn-cooldown {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 12px;
+  font-style: italic;
+  font-family: "FangSong", "仿宋", serif;
+}
+
+.mjn-gen-more {
+  font-family: inherit;
+}
+
+/* ===== 观察名单 ===== */
+.mjn-suspect-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mjn-suspect-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  transition: all 0.15s;
+}
+.mjn-suspect-card:hover {
+  border-color: var(--accent-2);
+}
+.mjn-suspect-self {
+  border-style: dashed;
+  opacity: 0.85;
+}
+.mjn-suspect-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.mjn-suspect-info {
+  flex: 1;
+  min-width: 0;
+}
+.mjn-suspect-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.mjn-suspect-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.mjn-suspect-notes {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+  padding-left: 8px;
+  border-left: 2px solid var(--accent);
+  opacity: 0.85;
+}
+.mjn-suspect-notes b {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ===== 拼图页 ===== */
+.mjn-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mjn-profile-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.mjn-profile-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  opacity: 0.6;
+}
+.mjn-profile-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+.mjn-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.mjn-stat {
+  text-align: center;
+  padding: 12px 6px;
+  background: var(--panel-2);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.mjn-stat::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  opacity: 0.6;
+}
+.mjn-stat-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+.mjn-stat-label {
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+.mjn-puzzle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+.mjn-puzzle-piece {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.15s;
+  cursor: help;
+}
+.mjn-puzzle-piece:hover {
+  border-color: var(--accent);
+  border-style: solid;
+  transform: scale(1.1) rotate(-3deg);
+  box-shadow: 0 4px 12px rgba(230, 36, 41, 0.2);
+}
+.mjn-puzzle-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 20px;
+  width: 100%;
+  text-align: center;
+  font-style: italic;
+}
+.mjn-puzzle-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-style: italic;
+}
+.mjn-profile-quote {
+  background: linear-gradient(135deg, rgba(45, 107, 255, 0.06), rgba(230, 36, 41, 0.04));
+  border-left: 3px solid var(--accent-2);
+  padding: 18px 20px;
+}
+.mjn-quote-mark {
+  font-size: 32px;
+  color: var(--accent-2);
+  opacity: 0.4;
+  font-family: Georgia, serif;
+  line-height: 0.5;
+}
+.mjn-quote-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.8;
+  font-family: "FangSong", "仿宋", serif;
+  font-style: italic;
+  margin: 8px 0;
+  padding: 0 8px;
+}
+
+/* ===== 未解锁状态 ===== */
+.mjn-locked {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--panel);
+  border-radius: 16px;
+  border: 1px dashed var(--line);
+}
+.mjn-locked-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+  filter: drop-shadow(0 0 12px rgba(230, 36, 41, 0.3));
+}
+.mjn-locked-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+  font-family: "FangSong", "仿宋", serif;
+  letter-spacing: 1px;
+}
+.mjn-locked-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin-bottom: 24px;
+  font-family: "FangSong", "仿宋", serif;
+}
+.mjn-locked-progress {
+  max-width: 260px;
+  margin: 0 auto;
+}
+.mjn-progress-bar {
+  height: 6px;
+  background: var(--panel-2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.mjn-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.mjn-progress-text {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 380px) {
+  .mjn-cover {
+    padding: 14px 16px;
+  }
+  .mjn-cover-title {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .mjn-suspicion-ring {
+    width: 64px;
+    height: 64px;
+  }
+  .mjn-suspicion-num {
+    font-size: 15px;
+  }
+  .mjn-showdown-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+/* ============================================================
+   🌌 多元宇宙穿越卡 · 完整样式
+   ============================================================ */
+#startMultiverseBtn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a24 0%, #251a2e 100%);
+  border: 1px solid rgba(138, 43, 226, 0.4);
+  transition: all 0.2s;
+}
+body.theme-light #startMultiverseBtn {
+  background: linear-gradient(135deg, #f8f5fb 0%, #ede5f5 100%);
+  border: 1px solid rgba(138, 43, 226, 0.35);
+}
+#startMultiverseBtn:hover {
+  border-color: rgba(138, 43, 226, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(138, 43, 226, 0.2);
+}
+#startMultiverseBtn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 100%, rgba(138, 43, transparent55%),
+              radial-gradient(circle at 90% 10%, rgba(45, 107, 255, 0.12), transparent 50%);
+  pointer-events: none;
+}
+#startMultiverseBtn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.12), transparent 60%);
+  pointer-events: none;
+}
+#startMultiverseBtn > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 多元宇宙选择器 · 项悬停态 */
+.mv-item:hover {
+  border-color: var(--accent-2) !important;
+  transform: translateX(2px);
+}
 </style>
 </head>
 <body>
@@ -1455,6 +2103,7 @@ body.theme-light .bubble-trans {
       <button class="app-icon" data-app="Spider_Terminal"><span>🕷️</span><label>蜘蛛终端</label></button>
       <button class="app-icon" data-app="Theater"><span>🎭</span><label>小剧场</label></button>
       <button class="app-icon" data-app="Diary"><span>📓</span><label>双人日记</label></button>
+      <button class="app-icon" data-app="MJNotebook"><span>🕵️</span><label>MJ 笔记本</label></button>
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>社交圈</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
@@ -2044,6 +2693,38 @@ getProactiveCfg(){
   });
 },
 setProactiveCfg(c){ this.set("sv_proactive_cfg", c); },
+
+  // ===== 🕵️ MJ 笔记本 =====
+  getMjNotebook() {
+    return this.get("sv_mj_notebook", {
+      clues: [],
+      unlocked: false,
+      showdown: false,
+      lastGenTurn: 0
+    });
+  },
+  setMjNotebook(nb) {
+    this.set("sv_mj_notebook", nb);
+  },
+
+  // ===== 🧠 玩家行为日志 =====
+  getBehaviorLog() {
+    return this.get("sv_behavior_log", []);
+  },
+  pushBehaviorLog(entry) {
+    const log = this.getBehaviorLog();
+    log.push(entry);
+    if (log.length > 30) log.splice(0, log.length - 30);
+    this.set("sv_behavior_log", log);
+  },
+
+  // ===== 🎭 玩家身份类型 =====
+  getPlayerIdentityType() {
+    return this.get("sv_player_identity_type", "human");
+  },
+  setPlayerIdentityType(t) {
+    this.set("sv_player_identity_type", t);
+  }
 };
 const dbHelper = {
   db: null,
@@ -2493,6 +3174,130 @@ function getAffinityOf(name) {
     if (typeof s.affinity === "number") return s.affinity;
   }
   return 0;
+}
+
+// ============================================================
+// 🕵️ MJ 笔记本 · AI 生成一条观察
+// 铁律：MJ 只能"从外部观察"，绝不能看到彼得换战衣、不能听到彼得承认
+// ============================================================
+async function generateMjClue() {
+  const s = store.getState();
+  const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+  const profile = store.getProfile();
+  const playerName = profile.name || "玩家";
+  const playerPronoun = profile.gender === "male" ? "他" : "她";
+  const identityType = store.getPlayerIdentityType();
+  const behaviorLog = store.getBehaviorLog();
+  const nb = store.getMjNotebook();
+
+  // 从最近的行为日志里抽 4 条（不够就有多少用多少）
+  const recent = behaviorLog.slice(-4);
+
+  if (!recent.length) {
+    return null; // 没有可观察的行为，不生成
+  }
+
+  // 玩家身份对应的"MJ 可能观察到的东西"
+  const identityHints = {
+    human: `玩家是普通人。MJ 对${playerName}的观察仅限于"人身上的怪事"：情绪、作息、突然消失、受伤、和彼得的关系异常。`,
+    mutant: `玩家是变种人/异能者。MJ **还没有确定**${playerName}有超能力，但注意到一些"解释不通"的细节：突然的身体反应、手上的一次性灼伤、深夜离开、对某些声响的过度警觉。MJ 会把这些记下来，但**不会**下结论说"${playerName}是变种人"，只会觉得"${playerName}有点不对劲"。`,
+    magic: `玩家有魔法/超自然能力。MJ 注意到一些诡异现象：${playerName}周围的空气偶尔变冷、小型物品凭空移位、${playerName}对钟表/时间格外敏感。MJ **不会**直接说"${playerName}会魔法"，只会记下"事情不对劲"。`,
+    tech: `玩家有高科技/改造背景。MJ 注意到：${playerName}偶尔看着手表发呆、耳朵里有东西闪光、对摄像头位置特别警觉、手机上有奇怪的程序。MJ **不会**说"${playerName}改造人"，只会记下"${playerName}不是普通学生"。`,
+    other: `玩家有特殊身份。MJ 只是隐约觉得${playerName}"和普通同学不太一样"，但说不出具体哪里不对。`
+  };
+  const identityHint = identityHints[identityType] || identityHints.other;
+
+  // 已生成的线索，避免重复
+  const existingClues = (nb.clues || []).slice(-6).map(c => "· " + c.text).join("\n");
+
+  const sysPrompt = `你是漫威的「米歇尔·琼斯（MJ）」，中城高中的学生，彼得·帕克的同学兼好朋友。
+你有极强的观察力，冷幽默，说话一针见血，不喜欢废话。你有一个**只有你自己知道**的小笔记本，专门观察身边的人。
+
+【当前游戏内日期】${s.gameYear}年${s.gameMonth}月${s.gameDay}日
+【当前阶段】${phase.name}
+
+【玩家】${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
+${identityHint}
+
+【你最近观察到的"彼得 + ${playerName}"的行为（这是你亲眼所见/亲眼所听，不是听别人说的）】
+${recent.map((b, i) => `【${b.date}】玩家选择：「${b.playerChoice}」\n剧情片段：${b.storyExcerpt}`).join("\n\n")}
+
+【你之前已经在笔记本里写过的观察（不要重复）】
+${existingClues || "（还没有）"}
+
+【你的任务】
+写一条新的观察，让笔记本的"拼图"再近一步。
+
+【写作铁律 · 违反即失败】
+1. **你只能写"外部可见的、能解释得通的细节"**。你是普通人，你的观察必须是：
+   - 彼得/ ${playerName} 走路的姿势不对（像受了伤）
+   - 某个人突然消失了一段时间（下午 3 点到 5 点不见人）
+   - 有人手机响了立刻挂掉、躲到走廊
+   - 校服袖口有一块洗不掉的污渍（像某种化学药水）
+   - 有人对某个特定的声响特别敏感（比如警笛、玻璃碎）
+   - 有人最近总看同一个方向（窗外/门口/手机）
+   - ${playerName} 看向彼得的时候眼神不对
+   - 彼得撒谎时的小动作（摸后颈、语速变快、突然岔开话题）
+   - **你能从"他们的行为"推测出"事情不对"，但你**绝不能**看见"他们换战衣"、"他们说自己是蜘蛛侠"、"战衣放在桌上"这种穿帮内容。
+
+2. **绝对不能出现以下穿帮内容（违反就作废）**：
+   ❌ 看到彼得穿蜘蛛侠战衣
+   ❌ 听到彼得/ ${playerName} 承认自己有超能力
+   ❌ 看到什么"英雄装备"放在宿舍/课桌上
+   ❌ 听到任何"变身""能力""秘密身份"的字眼
+   ❌ 说"我确定${playerName}是变种人/魔法师/改造人"
+   ❌ 假装自己是全知全能（你只是普通学生，只能靠推理）
+
+3. **称呼规则**：
+   - 彼得就是"彼得"
+   - 玩家用「${playerName}」或「${playerPronoun}」
+   - 你自己用"我"
+
+4. **风格**：
+   - MJ 的口吻：短句、冷幽默、一针见血、偶尔讽刺
+   - 用 2-4 句写一条观察
+   - 偶尔自己吐槽一下"我是不是想多了"
+   - 有悬念感（读完让人想知道"然后呢"）
+
+5. **格式**：
+   只输出这一条观察本身，不要任何前缀。用第一人称写。
+   长度 40-90 字。
+   可以加 1 个 emoji（🕵️ 🤔 📓 这类），不要堆砌。
+
+【示例风格 · 参考这个语气】
+"今天彼得走路一瘸一拐的，问他怎么回事，他说体育课摔了。体育课。周四。他上周也是体育课。🕵️"
+"下午三点到五点，彼得和${playerName}同时消失。两个小时后出现，头发有点乱，校服上有一块洗不掉的黑色污渍。我什么都没问。"
+"${playerName}今天盯着窗外看了整整一节课。下课铃响的时候，ta 的动作比铃声还快。有意思。"
+
+直接输出观察本身，不要任何格式标记。`;
+
+  const raw = await callAI([{ role: "user", content: "写一条新观察" }], sysPrompt);
+  const text = String(raw || "").trim();
+  if (!text || text.length < 10) return null;
+
+  // 生成"怀疑度"（0-100，逐渐攀升）
+  const prevSuspicion = nb.clues.length ? (nb.clues[nb.clues.length - 1].suspicion || 0) : 0;
+  const bump = 8 + Math.floor(Math.random() * 8); // 每次 +8~15
+  const newSuspicion = Math.min(100, prevSuspicion + bump);
+
+  // 判断这条线索是不是关于"用户身份"的
+  const type = /(变种|魔法|改造|不像普通|不对劲|异常|不是普通人)/.test(text)
+    ? (identityType !== "human" ? "user-ability" : "behavior")
+    : (/彼得/.test(text) ? "peter" : "behavior");
+
+  const clue = {
+    date: `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`,
+    text: text,
+    suspicion: newSuspicion,
+    type: type,
+    turn: s.turn
+  };
+
+  nb.clues.push(clue);
+  nb.lastGenTurn = s.turn;
+  store.setMjNotebook(nb);
+
+  return clue;
 }
 
 function buildSystem(extra) {
@@ -3024,6 +3829,25 @@ window.selectOption = (optText) => {
   }
 }
 
+// ★ 记录本回合玩家行为，供 MJ 笔记本推断（含用户身份判断）
+        try {
+          const profile = store.getProfile();
+          const playerName = profile.name || "玩家";
+          const identityType = store.getPlayerIdentityType();
+          
+          // 从剧情里提取"彼得/玩家做了什么"
+          const behaviorEntry = {
+            turn: s.turn,
+            date: `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`,
+            playerChoice: lastTurn ? (lastTurn.choice || "") : "",
+            storyExcerpt: (s.currentStory || "").slice(0, 400), // 只存前 400 字，够 AI 推断
+            phase: phase.name,
+            affinity: s.affinity,
+            playerIdentityType: identityType
+          };
+          store.pushBehaviorLog(behaviorEntry);
+        } catch (e) { console.warn("行为日志失败:", e); }
+
   store.setState(s);
   openApp('worldline');
 };
@@ -3135,8 +3959,108 @@ window.advanceTheater = async (id, choice) => {
   try {
     const sNow = store.getState();
     const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+// ============================================================
+    // 🌌 跨宇宙剧场 vs 普通剧场 · 分支
+    // ============================================================
+    let sysPrompt;
 
-    const sysPrompt = `你是一个剧情 DM，正在续写一个**独立小剧场**（与 MCU 主线无关）。
+    if (q.universe === "multiverse") {
+      // ===== 跨宇宙剧场专用 prompt =====
+      const turn = q.history.length + 1;
+      const uA = WORLD.parallelUniverses.find(u => u.key === q.universeA) || { title: "宇宙 A", year: "?", rules: "", background: "" };
+      const uB = WORLD.parallelUniverses.find(u => u.key === q.universeB) || { title: "宇宙 B", year: "?", rules: "", background: "" };
+
+      const turnHint = turn >= 15
+        ? `
+【回合数警告 · 第 ${turn} 回合 / 共 20 回合】
+本剧场必须在本回合或下一回合收尾。
+你必须让故事走向"最终选择"。
+不允许再引入新危机、新角色、新谜题。
+如果本回合已经可以收尾，请立刻收尾。
+`
+        : "";
+
+      const endHint = turn >= 10
+        ? `
+【剧情阶段：收束期】
+两个彼得已经互相理解/对立到某个程度。
+可以开始铺垫"最终选择"的伏笔：
+- 其中一个要选择"留下"还是"回去"
+- 两个宇宙是否要合并、是否要分开
+- 玩家作为锚点的代价
+`
+        : "";
+
+      sysPrompt = `你是一个剧情 DM，正在续写一段**跨宇宙相遇**剧场（与 MCU 主线无关）。
+
+【宇宙 A】${uA.title}（${uA.year}）
+宇宙规则：${uA.rules}
+宇宙背景：${uA.background}
+
+【宇宙 B】${uB.title}（${uB.year}）
+宇宙规则：${uB.rules}
+宇宙背景：${uB.background}
+
+【当前游戏内日期.slice-100字差异必须保持**：
+   - 一个的说话方式、行动风格，另一个必须不同。
+   - 严禁"两个彼得说话一模一样"。
+3. **宇宙规则冲突必须体现**：
+   - 托比宇宙的彼得看到机械发射器会惊讶；
+   - 加菲宇宙的彼得看到 2002 年的报纸时代会觉得"太原始"；
+   - 2099 宇宙的彼得看到 2024 年的纽约会觉得"太落后"；
+   - 暗影宇宙的彼得来到彩色世界会不适应。
+4. 结尾用【选项】列出 A. B. C. D. 四个方向。
+5. **收尾逻辑**（必须在 20 回合内结束）：
+   - 第 1-9 回合：铺垫、冲突、探索
+   - 第 10-14 回合：两个彼得开始理解/对立到极点
+   - 第 15-19 回合：必须进入"最终选择"
+   - 第 20 回合：**强制完结**
+6. **如果本**或 剧情已经自然结束），在末尾另写一行：
+   **【小剧场完结】**
+   收尾必须让：
+   - 两个宇宙的未来被明确（谁留下 / 谁回去 / 宇宙是否合并）
+   - 玩家的选择产生了明确的后果
+   - 一个"余韵"结尾（比如两个彼得最后一眼、最后一句话、最后一个动作）
+7. **不允许**在收尾后留下未解决的悬念（可以留"新的开始"，但当前事件必须结束）。
+8. 不要标注好感度、不要提 MCU 主线。
+
+【文风】电影镜头感，两个彼得对白风格差异鲜明。英文对白用 *"..."*（中文翻译）格式。`;
+
+    } else {
+      // ===== 普通剧场 · 8 回合自然收尾版 =====
+      const turn = q.history.length + 1;
+      const maxTurns = 8;
+
+      // 阶段提示
+      let phaseHint = "";
+      if (turn >= 7) {
+        phaseHint = `
+【回合数警告 · 第 ${turn} 回合 / 共 ${maxTurns} 回合】
+这是**倒数第 ${maxTurns - turn + 1} 回合**。
+本回合或下一回合**必须收尾**。
+- 不允许再引入新危机、新角色、新谜题
+- 必须让所有未完的线索走向结局
+- 必须给出一个明确的"落幕"瞬间
+- 如果本回合已经可以收尾，请立刻收尾，并在末尾另写一行：【小剧场完结】
+`;
+      } else if (turn >= 5) {
+        phaseHint = `
+【剧情阶段：收束期 · 第 ${turn} 回合 / 共 ${maxTurns} 回合】
+故事已经过半。现在开始**收束**：
+- 不要再开新坑、新支线、新反派
+- 让当前的冲突走向高潮，并铺垫"最终选择"
+- 可以开始让重要人物说"告别式"的话
+- 为第 7-8 回合的最终收尾做准备
+`;
+      } else {
+        phaseHint = `
+【剧情阶段：发展期 · 第 ${turn} 回合 / 共 ${maxTurns} 回合】
+可以自由推进、可以引入新线索、可以让角色互动。
+但请记住：**本剧场一共只有 ${maxTurns} 回合**。
+`;
+      }
+
+      sysPrompt = `你是一个剧情 DM，正在续写一个**独立小剧场**（与 MCU 主线无关）。
 
 【背景设定】
 ${q.background}
@@ -3144,7 +4068,7 @@ ${q.background}
 【玩家身份】${q.identity}
 【氛围倾向】${q.tone}
 【当前游戏内日期】${date}
-【已推进轮数】${q.history.length}
+${phaseHint}
 
 【上一轮剧情】
 ${q.story.slice(0, 800)}
@@ -3152,13 +4076,33 @@ ${q.story.slice(0, 800)}
 【玩家选择】
 ${choice}
 
-【要求】
-1. 承接上一轮剧情和玩家选择继续发展，写 600~1000 字。
-2. 结尾用【选项】列出 A. B. C. D.。
-3. 如果故事已经自然收尾，在末尾另写一行：**【小剧场完结】**
-4. 不要标注好感度、不要提 MCU 主线。
+【核心要求 · 铁律】
+1.选择， 【 D **剧情连贯性**：每一回合必须承接上一回合的结尾，不能跳戏。
 
-【文风】电影镜头感，英文对白用 *"..."*（中文翻译）格式。`;
+【收尾逻辑 · 极重要】
+本剧场**一共只有 8 回合**。你的剧情节奏必须符合：
+- **第 1-4 回合（发展期）**：可以自由发挥，可以开新线索、新危机。
+- **第 5-6 回合（收束期）**：不再开新坑。开始收束现有冲突，铺垫"最终选择"。
+- **第 7 回合（高潮期）**：所有线索必须走向高潮。让玩家做出一个关键选择。
+- **第 8 回合（完结期）**：**强制收尾**。必须：
+  - 解决所有未完成的冲突（反派被击败 / 谜题被解开 / 危机被化解 / 关系有明确走向）
+  - 给出一个"落幕"瞬间（最后一句话、最后一个动作、最后一个镜头）
+  - 如果在第 8 回合已经自然收尾，在末尾另写一行：**【小剧场完结】**
+  
+【如果玩家想提前收尾 · 极重要】
+如果玩家在选项里输入了类似"结束""收尾""完结""我想走了"等意图，
+**不必等到第 8 回合**。你可以立刻收尾，并写【小剧场完结】。
+但收尾必须仍然符合"圆回逻辑"的标准（解决冲突 + 落幕瞬间）。
+
+【禁止事项 · 违反即失败】
+- ❌ 到第 8 回合还在"下一章"、"敬请期待"、"故事才刚刚开始"
+- ❌ 到第 8 回合还在引入新角色、新谜题、新伏笔
+- ❌ 到第 8 回合还有核心冲突没解决（除非结局本身就是"留有遗憾"，但必须明确写出来）
+- ❌ 用"未完待续"这种开放式结尾
+- ❌ 标注好感度、提 MCU 主线
+
+【文风】电影镜头感，对白自然，人物鲜明。英文对白用 *"..."*（中文翻译）格式。`;
+    }
 
     const res = await callAI([{ role: "user", content: "继续" }], sysPrompt);
     const isFinished = /【小剧场完结】/.test(res);
@@ -3171,7 +4115,9 @@ ${choice}
 
     q.story = storyText;
     q.options = optionsText;
-    q.closed = isFinished || q.history.length >= 8;
+    // 🌌 跨宇宙剧场最多 20 回合；普通剧场最多 8 回合
+const maxTurns = q.universe === "multiverse" ? 20 : 8;
+q.closed = isFinished || q.history.length >= maxTurns;
 
     const idx = list.findIndex(x => x.id === id);
     if (idx !== -1) list[idx] = q;
@@ -3512,6 +4458,16 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
              <div class="field"><label>其他备注（选填）</label>
             <textarea id="p_notes" rows="2" placeholder="任何想补充给 AI 的设定">${esc(p.notes || "")}</textarea>
           </div>
+          <div class="field">
+            <label>🥷 我的身份类型（影响 MJ 笔记本的观察方式）</label>
+            <select id="p_identity_type">
+              <option value="human" ${store.getPlayerIdentityType() === "human" ? "selected" : ""}>👤 普通人（没有超能力）</option>
+              <option value="mutant" ${store.getPlayerIdentityType() === "mutant" ? "selected" : ""}>🧬 变种人 / 异能者</option>
+              <option value="magic" ${store.getPlayerIdentityType() === "magic" ? "selected" : ""}>🔮 魔法 / 超自然能力</option>
+              <option value="tech" ${store.getPlayerIdentityType() === "tech" ? "selected" : ""}>⚙️ 科技改造 / 有特殊装备</option>
+              <option value="other" ${store.getPlayerIdentityType() === "other" ? "selected" : ""}>❓ 其他特殊身份</option>
+            </select>
+          </div>
           <button class="btn" id="saveP">保存人设</button>
           <div class="row" style="gap:8px;margin-top:8px;">
             <button class="btn ghost" id="profileSaveBtn" style="flex:1;">💾 存档人设</button>
@@ -3710,6 +4666,7 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
           likes: body.querySelector("#p_likes").value.trim(),
           notes: body.querySelector("#p_notes").value.trim()
         });
+      store.setPlayerIdentityType(body.querySelector("#p_identity_type").value);
         toast("人设已保存");
       };
 // ===== 人设存档 / 读档（10 格独立档位）=====
@@ -8076,6 +9033,25 @@ Theater: {
           </div>
         ` : ""}
 
+<!-- 🌌 多元宇宙穿越 -->
+        ${(function() {
+          const finishedUniverses = list.filter(x => x.closed && x.universe);
+          const uniqueUniverseKeys = [...new Set(finishedUniverses.map(x => x.universe))];
+          if (uniqueUniverseKeys.length < 2) return "";
+          return `
+            <div class="th-section-title">🌌 多元宇宙穿越</div>
+            <div class="th-universe-grid" id="multiverseGrid">
+              <button class="th-universe-card" id="startMultiverseBtn" style="--u-color:#8a2be2;padding:16px;text-align:left;border:none;cursor:pointer;width:100%;">
+                <div class="th-universe-tag" style="color:#8a2be2;background:rgba(138,43,226,.15);">CROSSOVER</div>
+                <div class="th-universe-title">跨宇宙相遇</div>
+                <div class="th-universe-year">从 ${uniqueUniverseKeys.length} 个已完结宇宙中挑两个</div>
+                <div class="th-universe-desc">彼得 A 遇到彼得 B。世界线会撞在一起，产生一个全新的平行宇宙故事。</div>
+                <div class="th-universe-arrow" style="opacity:1;color:#8a2be2;">→</div>
+              </button>
+            </div>
+          `;
+        })()}
+
         <div class="th-section-title">🌌 官方宇宙</div>
         <div class="th-universe-grid">
           ${universes.map(u => `
@@ -8122,6 +9098,15 @@ Theater: {
     // 打开进行中
     if (active) {
       body.querySelector("#openActiveBtn").onclick = () => this.openQuest(active.id);
+    }
+
+// 🌌 多元宇宙穿越按钮
+    const mvBtn = body.querySelector("#startMultiverseBtn");
+    if (mvBtn) {
+      mvBtn.onclick = () => {
+        if (active) return toast("请先完成当前剧场");
+        this.showMultiversePicker(body);
+      };
     }
 
     // 点宇宙卡片 → 生成开场
@@ -8261,6 +9246,217 @@ ${povRule}
 
       this.bindChat(q);
       toast("剧场已开启：" + q.title);
+      this.openQuest(q.id);
+    } catch (e) {
+      body.innerHTML = `<div class="th-wrap"><div class="th-error">生成失败：${esc(e.message)}</div></div>`;
+    }
+  },
+
+// ============================================================
+  // 🌌 多元宇宙穿越 · 选择两个宇宙
+  // ============================================================
+  showMultiversePicker(body) {
+    const list = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+    const finishedUniverses = list.filter(x => x.closed && x.universe);
+    const uniqueKeys = [...new Set(finishedUniverses.map(x => x.universe))];
+    const universes = WORLD.parallelUniverses.filter(u => uniqueKeys.includes(u.key));
+
+    // 自定义宇宙也算一种（如果做过自定义已完结剧场）
+    const customFinished = finishedUniverses.filter(x => !x.universe || !WORLD.parallelUniverses.find(u => u.key === x.universe));
+
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+    div.innerHTML = `
+      <div style="max-width:480px;margin:20px auto;">
+        <h2 style="color:var(--text);margin-top:0;font-size:18px;">🌌 选择两个宇宙</h2>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 16px;line-height:1.6;">
+          两个已完结的宇宙会撞在一起。AI 会生成一段 10~20 回合的跨宇宙相遇剧情。
+        </p >
+
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">选择宇宙 A：</div>
+        <div id="mvListA" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">选择宇宙 B：</div>
+        <div id="mvListB" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+
+        <div style="display:flex;gap:8px;">
+          <button class="btn ghost" id="mvCancel" style="flex:1;">取消</button>
+          <button class="btn" id="mvGo" style="flex:1;opacity:0.4;pointer-events:none;">🚀 撞在一起</button>
+        </div>
+        <div id="mvHint" style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center;">
+          请选择两个不同的宇宙
+        </div>
+      </div>
+    `;
+    document.querySelector(".device").appendChild(div);
+
+    let pickA = null;
+    let pickB = null;
+
+    const renderList = (container, which) => {
+      container.innerHTML = universes.map(u => `
+        <div class="mv-item" data-key="${u.key}" data-which="${which}" style="padding:10px 12px;background:var(--panel);border:2px solid var(--line);border-radius:12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px;">
+          <div style="width:8px;height:32px;background:${u.color};border-radius:3px;flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);">${esc(u.title)}</div>
+            <div style="font-size:11px;color:var(--muted);">${esc(u.year)} · ${esc(u.tag)}</div>
+          </div>
+        </div>
+      `).join("") || `<div style="font-size:12px;color:var(--muted);padding:10px;">还没有已完结的宇宙</div>`;
+    };
+
+    const listA = div.querySelector("#mvListA");
+    const listB = div.querySelector("#mvListB");
+    renderList(listA, "A");
+    renderList(listB, "B");
+
+    const updateGoBtn = () => {
+      const goBtn = div.querySelector("#mvGo");
+      const hint = div.querySelector("#mvHint");
+      if (pickA && pickB && pickA !== pickB) {
+        goBtn.style.opacity = "1";
+        goBtn.style.pointerEvents = "auto";
+        const ua = universes.find(u => u.key === pickA);
+        const ub = universes.find(u => u.key === pickB);
+        hint.textContent = `${ua.title} × ${ub.title}`;
+      } else {
+        goBtn.style.opacity = "0.4";
+        goBtn.style.pointerEvents = "none";
+        hint.textContent = pickA === pickB && pickA ? "不能选同一个宇宙" : "请选择两个不同的宇宙";
+      }
+    };
+
+    div.querySelectorAll(".mv-item").forEach(el => {
+      el.onclick = () => {
+        const which = el.dataset.which;
+        const key = el.dataset.key;
+        if (which === "A") pickA = key;
+        else pickB = key;
+
+        // 高亮当前选择的列表
+        const thisList = which === "A" ? listA : listB;
+        thisList.querySelectorAll(".mv-item").forEach(x => {
+          x.style.borderColor = x.dataset.key === key ? "var(--accent-2)" : "var(--line)";
+          x.style.background = x.dataset.key === key ? "rgba(45,107,255,.08)" : "var(--panel)";
+        });
+        updateGoBtn();
+      };
+    });
+
+    div.querySelector("#mvCancel").onclick = () => div.remove();
+    div.querySelector("#mvGo").onclick = () => {
+      const ua = universes.find(u => u.key === pickA);
+      const ub = universes.find(u => u.key === pickB);
+      if (!ua || !ub) return;
+      div.remove();
+      this.startMultiverse(body, ua, ub);
+    };
+  },
+
+  // ============================================================
+  // 🌌 多元宇宙穿越 · 生成开场
+  // ============================================================
+  async startMultiverse(body, uA, uB) {
+    body.innerHTML = `<div class="loader"><div class="spin"></div>正在撕裂多元宇宙...</div>`;
+
+    try {
+      const sNow = store.getState();
+      const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+      const profile = store.getProfile();
+      const playerName = profile.name || "玩家";
+      const playerPronoun = profile.gender === "male" ? "他" : "她";
+
+      const sysPrompt = `你是一个剧情 DM，正在生成一段**跨宇宙相遇**的开场。
+
+【宇宙 A】${uA.title}（${uA.year}）
+背景：${uA.background}
+规则：${uA.rules}
+
+【宇宙 B】${uB.title}（${uB.year}）
+背景：${uB.background}
+规则：${uB.rules}
+
+【玩家】${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
+
+【当前游戏内日期】${date}
+
+【核心设定 · 铁律 · 违反即失败】
+1. **两个宇宙的彼得因某种"维度裂缝"撞在了一起**。可以是：
+   - 彼得 A 追某个反派时被拉进了彼得 B 的世界
+   - 彼得 B 在荡蛛丝时突然掉进了彼得 A 的纽约
+   - 两人同时被一个"跨维度事件"卷进一个中间地带（比如某个废弃地铁站、某个神秘实验室）
+   - 玩家的存在是第三个变量（玩家可能同时认识两个彼得，也可能被卷进来）
+2. **两个彼得一开始都不知道对方是谁**。他们会互相试探、误解、甚至打起来。
+3. **两个宇宙的规则必须互相冲突**：
+   - 托比宇宙的彼得：有机蛛丝、报纸时代、没有复联
+   - 加菲宇宙的彼得：机械发射器、格温、没有复联
+   - 黑色战衣宇宙的彼得：共生体、暴躁、力量更强
+   - 蜘蛛格温宇宙：格温是蜘蛛侠、彼得是普通人
+   - 2099 宇宙：赛博朋克、企业统治
+   - 暗影宇宙：黑白世界、大萧条
+   - 自定义宇宙：按用户设定
+
+【开场要求】
+1. 写一段 800-1200 字的开场剧情。
+2. 剧情必须包含：
+   - 撞在一起的那一瞬间（感官描写）
+   - 两个彼得第一次对视、第一句话
+   - 一个具体的危机/谜题（让玩家必须做选择）
+3. 结尾用【选项】列出 A. B. C. D. 四个方向。
+4. 最后一行：【小剧场标题: 不超过8个字】
+
+【文风】电影镜头感，两个彼得性格差异要鲜明。对白用 *"English"*（中文翻译）格式。
+
+【穿越逻辑 · 极重要】
+本剧场是一个**独立小剧场**，与 MCU 主线无关。两个彼得最终要么：
+- 其中一个选择"留下"，另一个"回去"
+- 两个都回去，但留下某样东西
+- 两个宇宙合并（代价巨大）
+- 玩家作为锚点，让两个宇宙"共存"（需要付出代价）
+
+**本剧场不会超过 20 回合**。到第 15 回合左右，剧情会自动推进到"必须做出最终选择"。
+
+现在写开场。`;
+
+      const res = await callAI([{ role: "user", content: "开始跨宇宙相遇" }], sysPrompt);
+
+      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+      const optionsIdx = res.indexOf("【选项】");
+      const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+        .replace("【剧情】", "")
+        .replace(/【小剧场标题[:：].*?】/g, "")
+        .trim();
+      const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+      const title = titleMatch ? titleMatch[1].trim() : "跨宇宙相遇";
+
+      const q = {
+        id: "th_mv_" + Date.now() + "_" + Math.random().toString(36).slice(2),
+        title: `${uA.title} × ${uB.title} · ${title}`,
+        background: `跨宇宙相遇：${uA.title}（${uA.year}）× ${uB.title}（${uB.year}）`,
+        universe: "multiverse",
+        universeA: uA.key,
+        universeB: uB.key,
+        identity: "跨宇宙见证者",
+        tone: "多元宇宙",
+        pov: sNow.pov || "second",
+        userName: playerName,
+        date,
+        story: storyText,
+        options: optionsText,
+        history: [],
+        closed: false,
+        createdAt: Date.now(),
+        openingStory: storyText,
+        openingOptions: optionsText,
+        maxTurns: 20
+      };
+
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      all.unshift(q);
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
+
+      this.bindChat(q);
+      toast("宇宙撕裂完成：" + title);
       this.openQuest(q.id);
     } catch (e) {
       body.innerHTML = `<div class="th-wrap"><div class="th-error">生成失败：${esc(e.message)}</div></div>`;
@@ -8437,10 +9633,25 @@ ${povRule}
 
   renderQuest(body, q) {
     const isClosed = q.closed;
-    const universe = WORLD.parallelUniverses?.find(u => u.key === q.universe);
-    const universeBadge = universe
-      ? `<div class="th-quest-universe" style="--u-color:${universe.color};">${esc(universe.title)} · ${esc(universe.year)}</div>`
-      : "";
+   let universeBadge = "";
+    if (q.universe === "multiverse") {
+      const uA = WORLD.parallelUniverses.find(u => u.key === q.universeA);
+      const uB = WORLD.parallelUniverses.find(u => u.key === q.universeB);
+      if (uA && uB) {
+        universeBadge = `
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+            <div class="th-quest-universe" style="--u-color:${uA.color};">${esc(uA.title)} · ${esc(uA.year)}</div>
+            <div style="font-size:14px;font-weight:700;color:var(--muted);padding:0 4px;">×</div>
+            <div class="th-quest-universe" style="--u-color:${uB.color};">${esc(uB.title)} · ${esc(uB.year)}</div>
+          </div>
+        `;
+      }
+    } else {
+      const universe = WORLD.parallelUniverses?.find(u => u.key === q.universe);
+      universeBadge = universe
+        ? `<div class="th-quest-universe" style="--u-color:${universe.color};">${esc(universe.title)} · ${esc(universe.year)}</div>`
+        : "";
+    }
 
     body.innerHTML = `
       <div class="th-wrap">
@@ -8785,6 +9996,397 @@ if (closedReviewBtn) {
       this.openQuest(q.id);
     };
   },
+},
+
+MJNotebook: {
+  title: "MJ 的笔记本",
+  currentTab: "clues", // "clues" | "suspects" | "profile"
+
+  async render(body) {
+    const s = store.getState();
+    const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+    const nb = store.getMjNotebook();
+    const profile = store.getProfile();
+    const playerName = profile.name || "玩家";
+    const identityType = store.getPlayerIdentityType();
+
+    // ===== 解锁判定 =====
+    const turn = s.turn || 1;
+    const aff = s.affinity || 0;
+    const unlocked = nb.unlocked || turn >= 8 || aff >= 51;
+    if (unlocked && !nb.unlocked) {
+      nb.unlocked = true;
+      store.setMjNotebook(nb);
+    }
+
+    if (!unlocked) {
+      // 未解锁 → 显示"锁"页面
+      body.innerHTML = `
+        <div class="mjn-wrap">
+          <div class="mjn-locked">
+            <div class="mjn-locked-icon">🔒</div>
+            <div class="mjn-locked-title">还没有人翻开这本笔记本</div>
+            <div class="mjn-locked-desc">
+              你和 MJ 还没熟到那个程度。<br>
+              也许再走近一点，她会让你看看她写的东西。<br><br>
+              <span style="color:var(--muted);font-size:11px;">（需要好感度 ≥ 51，或推进到第 8 回合）</span>
+            </div>
+            <div class="mjn-locked-progress">
+              <div class="mjn-progress-bar">
+                <div class="mjn-progress-fill" style="width:${Math.min(100, (aff / 51) * 100)}%"></div>
+              </div>
+              <div class="mjn-progress-text">当前好感度：${aff} / 51</div>
+            </div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    // ===== 已解锁 → 主页面 =====
+    const clues = nb.clues || [];
+    const suspicion = clues.length ? clues[clues.length - 1].suspicion : 0;
+    const showdownReady = suspicion >= 80 && !nb.showdown;
+
+    // 顶部
+    body.innerHTML = `
+      <div class="mjn-wrap">
+
+        <!-- 封面 -->
+        <div class="mjn-cover">
+          <div class="mjn-cover-left">
+            <div class="mjn-cover-label">MJ's Notes</div>
+            <div class="mjn-cover-title">她的观察</div>
+            <div class="mjn-cover-sub">关于 ${esc(playerName)} 和彼得</div>
+          </div>
+          <div class="mjn-cover-right">
+            <div class="mjn-suspicion-ring" style="--pct:${suspicion}">
+              <div class="mjn-suspicion-inner">
+                <div class="mjn-suspicion-num">${suspicion}%</div>
+                <div class="mjn-suspicion-label">接近真相</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${showdownReady ? `
+          <div class="mjn-showdown-banner">
+            <div class="mjn-showdown-icon">🕯️</div>
+            <div class="mjn-showdown-body">
+              <div class="mjn-showdown-title">她好像已经知道了什么</div>
+              <div class="mjn-showdown-desc">MJ 最近的观察越来越精准。或许，是时候让她主动开口了。</div>
+            </div>
+            <button class="mjn-showdown-btn" id="mjnShowdownBtn">去听她说</button>
+          </div>
+        ` : ""}
+
+        <!-- Tag 栏 -->
+        <div class="mjn-tabs">
+          <div class="mjn-tab ${this.currentTab==='clues'?'active':''}" data-tab="clues">
+            <span>📓 线索</span>
+            <span class="mjn-tab-count">${clues.length}</span>
+          </div>
+          <div class="mjn-tab ${this.currentTab==='suspects'?'active':''}" data-tab="suspects">
+            <span>🎯 观察名单</span>
+          </div>
+          <div class="mjn-tab ${this.currentTab==='profile'?'active':''}" data-tab="profile">
+            <span>🧩 拼图</span>
+          </div>
+        </div>
+
+        <div id="mjnContent" class="mjn-content"></div>
+      </div>`;
+
+    const content = body.querySelector("#mjnContent");
+
+    // ===== 每 4 回合自动生成新线索 =====
+    const lastGen = nb.lastGenTurn || 0;
+    const needNew = clues.length === 0 || (s.turn - lastGen >= 4);
+
+    // 渲染各 tab
+    const renderClues = () => {
+      if (!clues.length) {
+        content.innerHTML = `
+          <div class="mjn-empty">
+            <div class="mjn-empty-icon">📓</div>
+            <div class="mjn-empty-text">笔记本还是空的。<br>MJ 还没开始观察。</div>
+            <button class="btn" id="mjnGenFirst" style="margin-top:16px;">让 MJ 记下第一笔</button>
+          </div>`;
+        const btn = content.querySelector("#mjnGenFirst");
+        if (btn) btn.onclick = async () => {
+          content.innerHTML = `<div class="mjn-loading"><div class="mjn-loading-spin"></div>她正在写...</div>`;
+          try {
+            await generateMjClue();
+            this.render(body);
+          } catch (e) {
+            toast("生成失败：" + e.message);
+            this.render(body);
+          }
+        };
+        return;
+      }
+
+      content.innerHTML = `
+        <div class="mjn-clue-list">
+          ${[...clues].reverse().map((c, i) => `
+            <div class="mjn-clue-card">
+              <div class="mjn-clue-head">
+                <div class="mjn-clue-date">${esc(c.date)}</div>
+                <div class="mjn-clue-type-badge mjn-type-${c.type}">${c.type === "user-ability" ? "👤 关于她" : c.type === "peter" ? "🕷️ 关于彼得" : "📝 观察"}</div>
+              </div>
+              <div class="mjn-clue-text">${esc(c.text)}</div>
+              <div class="mjn-clue-foot">
+                <div class="mjn-clue-suspicion">怀疑度：${c.suspicion}%</div>
+                <div class="mjn-clue-line"></div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+        ${needNew ? `
+          <button class="btn ghost mjn-gen-more" id="mjnGenMore" style="width:100%;margin-top:12px;">
+            ✨ 让 MJ 再写一条（每 4 回合可更新）
+          </button>
+        ` : `
+          <div class="mjn-cooldown">📌 她最近刚写完，等推进几回合再看新的</div>
+        `}
+      `;
+
+      const genMoreBtn = content.querySelector("#mjnGenMore");
+      if (genMoreBtn) genMoreBtn.onclick = async () => {
+        genMoreBtn.disabled = true;
+        genMoreBtn.textContent = "她正在写...";
+        try {
+          const clue = await generateMjClue();
+          if (!clue) {
+            toast("暂时没有新的观察");
+            genMoreBtn.disabled = false;
+            genMoreBtn.textContent = "✨ 让 MJ 再写一条";
+            return;
+          }
+          this.render(body);
+        } catch (e) {
+          toast("生成失败：" + e.message);
+          genMoreBtn.disabled = false;
+          genMoreBtn.textContent = "✨ 让 MJ 再写一条";
+        }
+      };
+    };
+
+    const renderSuspects = () => {
+      const peterAff = getAffinityOf("彼得·帕克");
+      const mjAff = getAffinityOf("米歇尔·琼斯");
+      const userTypeLabel = {
+        human: "👤 普通学生",
+        mutant: "🧬 有异能的同学",
+        magic: "🔮 有秘密的同学",
+        tech: "⚙️ 有背景的同学",
+        other: "❓ 不太一样的人"
+      }[identityType] || "👤 普通学生";
+
+      content.innerHTML = `
+        <div class="mjn-suspect-list">
+          <div class="mjn-suspect-card">
+            <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#e62429,#2d6bff);">P</div>
+            <div class="mjn-suspect-info">
+              <div class="mjn-suspect-name">彼得·帕克</div>
+              <div class="mjn-suspect-desc">中城高中学生 · 好友</div>
+              <div class="mjn-suspect-notes">MJ 的笔记：<b>最近总在忙</b>，说不清在忙什么</div>
+            </div>
+          </div>
+
+          <div class="mjn-suspect-card">
+            <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#8a2be2,#e62429);">${esc((playerName || "?")[0])}</div>
+            <div class="mjn-suspect-info">
+              <div class="mjn-suspect-name">${esc(playerName)}</div>
+              <div class="mjn-suspect-desc">${esc(userTypeLabel)} · 好友</div>
+              <div class="mjn-suspect-notes">MJ 的笔记：<b>${identityType === "human" ? "和彼得最近走得很近" : "总觉得 ta 和普通同学不太一样"}</b></div>
+            </div>
+          </div>
+
+          <div class="mjn-suspect-card mjn-suspect-self">
+            <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#3a3a4d,#1d1d28);color:#fff;">MJ</div>
+            <div class="mjn-suspect-info">
+              <div class="mjn-suspect-name">米歇尔·琼斯</div>
+              <div class="mjn-suspect-desc">观察者 · 记录人</div>
+              <div class="mjn-suspect-notes" style="font-style:italic;color:var(--muted);">"我什么都没做，我只是看着。"</div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const renderProfile = () => {
+      // "拼图"页面 = 汇总式悬疑感
+      const peterClues = clues.filter(c => c.type === "peter").length;
+      const userClues = clues.filter(c => c.type === "user-ability").length;
+      const totalSuspicion = suspicion;
+
+      content.innerHTML = `
+        <div class="mjn-profile">
+          <div class="mjn-profile-section">
+            <div class="mjn-profile-title">🔍 已经记录</div>
+            <div class="mjn-profile-stats">
+              <div class="mjn-stat">
+                <div class="mjn-stat-num">${peterClues}</div>
+                <div class="mjn-stat-label">关于彼得</div>
+              </div>
+              <div class="mjn-stat">
+                <div class="mjn-stat-num">${userClues}</div>
+                <div class="mjn-stat-label">关于${esc(playerName)}</div>
+              </div>
+              <div class="mjn-stat">
+                <div class="mjn-stat-num">${totalSuspicion}%</div>
+                <div class="mjn-stat-label">接近真相</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mjn-profile-section">
+            <div class="mjn-profile-title">🧩 拼图碎片</div>
+            <div class="mjn-puzzle">
+              ${clues.slice(-9).map((c, i) => `
+                <div class="mjn-puzzle-piece" title="${esc(c.text)}">
+                  <span>${c.type === "user-ability" ? "👤" : c.type === "peter" ? "🕷️" : "📝"}</span>
+                </div>
+              `).join("") || `<div class="mjn-puzzle-empty">还没有碎片</div>`}
+            </div>
+            <div class="mjn-puzzle-hint">每写一条观察，就多一块拼图。</div>
+          </div>
+
+          <div class="mjn-profile-section mjn-profile-quote">
+            <div class="mjn-quote-mark">"</div>
+            <div class="mjn-quote-text">
+              MJ 坐在角落，翻着笔记本。<br>
+              她什么都没说，但什么都记住了。
+            </div>
+            <div class="mjn-quote-mark" style="text-align:right;">"</div>
+          </div>
+        </div>
+      `;
+    };
+
+    // 初始渲染当前 tab
+    if (this.currentTab === "clues") renderClues();
+    else if (this.currentTab === "suspects") renderSuspects();
+    else renderProfile();
+
+    // Tab 切换
+    body.querySelectorAll(".mjn-tab").forEach(el => {
+      el.onclick = () => {
+        this.currentTab = el.dataset.tab;
+        this.render(body);
+      };
+    });
+
+    // 摊牌按钮
+    const showdownBtn = body.querySelector("#mjnShowdownBtn");
+    if (showdownBtn) showdownBtn.onclick = () => this.startShowdown(body);
+  },
+
+  // ============================================================
+  // 🕯️ 摊牌支线
+  // ============================================================
+  async startShowdown(body) {
+    const nb = store.getMjNotebook();
+    if (nb.showdown) {
+      toast("摊牌已经发生过了");
+      return;
+    }
+
+    const s = store.getState();
+    const profile = store.getProfile();
+    const playerName = profile.name || "玩家";
+    const playerPronoun = profile.gender === "male" ? "他" : "她";
+    const identityType = store.getPlayerIdentityType();
+    const clues = nb.clues || [];
+
+    // 拼凑 MJ 已经掌握的所有线索
+    const clueSummary = clues.slice(-8).map(c => `【${c.date}】${c.text}`).join("\n");
+
+    body.innerHTML = `<div class="mjn-loading" style="height:200px;"><div class="mjn-loading-spin"></div>她在整理笔记本...</div>`;
+
+    try {
+      const sysPrompt = `你是漫威的「米歇尔·琼斯（MJ）」。你已经观察彼得·帕克和「${playerName}」很久了。
+今天晚上，你终于决定坐下来，**把话挑明**。
+
+【你的全部观察线索（这些是你亲笔记下的）】
+${clueSummary}
+
+【玩家信息】
+名字：${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
+身份类型：${identityType === "human" ? "普通人" : "异能者/特殊背景"}
+
+【MJ 的性格】
+- 冷静、犀利、不爱废话
+- 冷幽默，喜欢用玩笑话包装尖锐的观察
+- 不轻易动感情，但一旦在意就是真的在意
+- 说重点的时候，语速会变慢，眼神会直接对视
+
+【写作铁律 · 违反即失败】
+1. 这场对话是 MJ **主动开口**。她不是在审问，是在"确认"。
+2. **MJ 不会用"你是不是蜘蛛侠""你是不是变种人"这种直白问法**。
+   她会用**具体的观察**来逼近真相：
+   - "上周四下午你说你在家写作业，但我那天在 7-11 门口看见一个穿连帽衫的人。"
+   - "你手上那道疤，是从哪儿来的？"
+   - "我只是想知道，**你是不是真的没事**。"
+3. **MJ 不会知道任何"她不该知道"的东西**。她只知道自己观察到的：
+   - 彼得/ ${playerName} 的行为异常
+   - 时间线上的"巧合"
+   - 身体上解释不通的痕迹（伤疤、淤青、奇怪的污渍）
+4. **MJ 不会接受"含混敷衍"**。如果玩家撒谎，她会打断、会追问、会用下一个观察戳穿。
+5. MJ **没有恶意**，她只是想知道"你们是不是在瞒着我什么危险的事"。
+6. 这一场开头，MJ 坐在学校图书馆的角落，笔记本摊在桌上，抬头看着你们。她说了第一句话。
+
+【输出格式】
+写一段开头剧情，600-900 字。
+- 场景描写要具体（灯光、桌椅、声音）
+- MJ 的台词用 *"English"*（中文翻译）格式
+- 结尾用【选项】列出 A. B. C. D. 四个玩家的回应方向
+- 最后一行：【小剧场标题: MJ 的摊牌】（固定这几个字）
+- 不要标注好感度、不要出现"阶段""主线"等游戏术语
+
+【文风】电影镜头感，冷、慢、有压迫感。`;
+
+      const res = await callAI([{ role: "user", content: "开始" }], sysPrompt);
+
+      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+      const optionsIdx = res.indexOf("【选项】");
+      const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+        .replace("【剧情】", "")
+        .replace(/【小剧场标题[:：].*?】/g, "")
+        .trim();
+      const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+
+      const q = {
+        id: "th_mj_showdown_" + Date.now(),
+        title: "🕯️ MJ 的摊牌",
+        background: `MJ 观察了很久，终于把笔记本摊开在彼得和${playerName}面前。`,
+        identity: "MJ 的同学",
+        tone: "悬疑",
+        pov: s.pov || "second",
+        userName: playerName,
+        date: `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`,
+        story: storyText,
+        options: optionsText,
+        history: [],
+        closed: false,
+        createdAt: Date.now(),
+        openingStory: storyText,
+        openingOptions: optionsText
+      };
+
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      all.unshift(q);
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
+
+      nb.showdown = true;
+      store.setMjNotebook(nb);
+
+      toast("MJ 开口了");
+      apps.Theater.openQuest(q.id);
+    } catch (e) {
+      body.innerHTML = `<div style="padding:20px;"><div class="card">失败：${esc(e.message)}</div></div>`;
+    }
+  }
 },
 
 Diary: {
