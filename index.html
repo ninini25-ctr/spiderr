@@ -4814,7 +4814,7 @@ Appearance: {
   <h3>👤 用户头像</h3>
   <div class="row" style="gap:12px;align-items:center;">
     <div style="width:50px;height:50px;border-radius:50%;background:var(--panel-2);overflow:hidden;flex-shrink:0;">
-     ${realOf(cfg.userAvatar) ? `< img src="${realOf(cfg.userAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
+     ${realOf(cfg.userAvatar) ? `<img src="${realOf(cfg.userAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
     </div>
 
     <!-- ★ 可见按钮 -->
@@ -4839,7 +4839,7 @@ Appearance: {
   <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
     <div class="row" style="gap:12px;align-items:center;margin-bottom:8px;">
       <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
-        ${realOf(c.avatar) ? `< img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+        ${realOf(c.avatar) ? `<img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
       </div>
       <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
 
@@ -4853,7 +4853,7 @@ Appearance: {
 
     <div class="row" style="gap:10px;align-items:center;">
       <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-        ${realOf(c.refImage) ? `< img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
+        ${realOf(c.refImage) ? `<img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
@@ -8141,7 +8141,7 @@ const liveFirst = esc((curContactLive ? curContactLive.name : "?")[0]);
 currentThread.innerHTML +=
   '<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
     '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
-      (liveAv ? '< img src="' + liveAv + '" style="width:100%;height:100%;object-fit:cover;">' : liveFirst) +
+      (liveAv ? '<img src="' + liveAv + '" style="width:100%;height:100%;object-fit:cover;">' : liveFirst) +
     '</div>' +
             '<div class="bubble them" style="max-width:72%;">' + esc(msgText) + '</div>' +
           '</div>';
