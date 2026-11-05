@@ -11142,6 +11142,7 @@ Theater: {
         : `【叙事人称 · 第三人称】全程用「${userName}」称呼玩家。`;
 
       const sysPrompt = `你是一个剧情 DM，正在开启一个**平行宇宙小剧场**。
+${buildBlacklistBanText([])}
 
 【宇宙名称】${u.title}（${u.year}年）
 【宇宙背景】${u.background}
@@ -11341,7 +11342,7 @@ ${bg}
         : `【第三人称】全程用「${userName || playerName}」称呼玩家。`;
 
       const sysPrompt = `你是一个剧情 DM，正在生成一段**跨宇宙相遇**的开场。
-
+${buildBlacklistBanText([])}
 【宇宙 A】${uA.title}（${uA.year}）
 背景：${uA.background}
 规则：${uA.rules}
@@ -11652,7 +11653,7 @@ showTheaterSetupForm(config) {
         : `【第三人称】全程用「${userName}」称呼玩家。`;
 
       const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
-
+${buildBlacklistBanText([])}
 【用户自定义背景】
 ${bg}
 
@@ -12493,6 +12494,7 @@ content.innerHTML = `
 
     try {
       const sysPrompt = `你是漫威的「米歇尔·琼斯（MJ）」。你已经观察彼得·帕克和「${playerName}」很久了。
+${buildBlacklistBanText([])}
 今天晚上，你终于决定坐下来，**把话挑明**。
 
 【你的全部观察线索（这些是你亲笔记下的）】
@@ -12800,7 +12802,7 @@ ${myRecent}
 `;
 
       const sysPrompt = `你现在是漫威的「彼得·帕克」，正在写**自己的私人日记**。
-
+${buildBlacklistBanText([])}
 【当前日期】${date}
 【当前阶段】${phase.name}
 【阶段概述】${phase.summary}
@@ -13013,7 +13015,7 @@ ${lastDiaryHint}
       // ===== 让彼得回应 =====
       try {
         const sysPrompt = `你是漫威的彼得·帕克。玩家刚写了一篇日记，你"无意中"看到了（或者玩家主动给你看）。
-
+${buildBlacklistBanText([])}
 【当前日期】${dateToUse}
 【玩家日记标题】${title}
 【玩家日记内容】
