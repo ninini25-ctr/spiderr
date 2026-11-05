@@ -3339,7 +3339,7 @@ function getAffinityOf(name) {
 function buildMjRelationToPlayer() {
   const profile = store.getProfile();
   const playerName = profile.name || "玩家";
-  const playerPronoun = profile.gender === "male" ? "他" : "她";
+  const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
   const identityDesc = (profile.identity || "").trim();
   const backgroundDesc = (profile.background || "").trim();
   const mjAff = getAffinityOf("米歇尔·琼斯");
@@ -3433,7 +3433,7 @@ async function generateMjClue() {
   const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
   const profile = store.getProfile();
   const playerName = profile.name || "玩家";
-  const playerPronoun = profile.gender === "male" ? "他" : "她";
+  const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
   const identityType = store.getPlayerIdentityType();
   const behaviorLog = store.getBehaviorLog();
   const nb = store.getMjNotebook();
@@ -3462,7 +3462,7 @@ if (recent.length < 2) {
       const phase2 = WORLD.timeline[s2.anchor] || WORLD.timeline[0];
       const profile2 = store.getProfile();
       const playerName2 = profile2.name || "玩家";
-      const playerPronoun2 = profile2.gender === "male" ? "他" : "她";
+      const playerPronoun2 = profile2.gender === "male" ? "他" : (profile2.gender === "nonbinary" ? "TA" : "她");;
       const peterAff2 = getAffinityOf("彼得·帕克");
       const mjAff2 = getAffinityOf("米歇尔·琼斯");
       const mjRelation = buildMjRelationToPlayer();
@@ -3741,7 +3741,11 @@ ${WORLD.mjPolicy}
 
 【玩家 · 人设】
 姓名：${p.name}
-性别：${p.gender === "male" ? "男" : "女"}（默认女，用"她"指代）
+性别：${
+  p.gender === "male" ? "男（用「他」指代）" :
+  p.gender === "nonbinary" ? "非二元（用「TA」指代）" :
+  "女（用「她」指代）"
+}
 性格：${personalityText}
 背景：${backgroundText}
 ${extraFields.join("\n")}
@@ -4368,7 +4372,20 @@ window.advanceTheater = async (id, choice) => {
 宇宙规则：${uB.rules}
 宇宙背景：${uB.background}
 
-【当前游戏内日期.slice-100字差异必须保持**：
+【当前游戏内日期】${date}
+【已推进回合】第 ${turn} 回合 / 共 20 回合
+${turnHint}
+${endHint}
+
+【上一轮剧情】
+${(q.story || "").slice(0, 800)}
+
+【玩家本轮选择】
+${choice}
+
+【核心要求 · 铁律 · 违反即失败】
+1. **剧情连贯性**：必须严格承接上一轮结尾和玩家选择，不能跳戏。
+2. **两个彼得的人设差异必须保持**：
    - 一个的说话方式、行动风格，另一个必须不同。
    - 严禁"两个彼得说话一模一样"。
 3. **宇宙规则冲突必须体现**：
@@ -4382,7 +4399,7 @@ window.advanceTheater = async (id, choice) => {
    - 第 10-14 回合：两个彼得开始理解/对立到极点
    - 第 15-19 回合：必须进入"最终选择"
    - 第 20 回合：**强制完结**
-6. **如果本**或 剧情已经自然结束），在末尾另写一行：
+6. **如果剧情已经自然结束**（或玩家要求收尾），在末尾另写一行：
    **【小剧场完结】**
    收尾必须让：
    - 两个宇宙的未来被明确（谁留下 / 谁回去 / 宇宙是否合并）
@@ -4438,13 +4455,15 @@ ${q.background}
 ${phaseHint}
 
 【上一轮剧情】
-${q.story.slice(0, 800)}
+${(q.story || "").slice(0, 800)}
 
 【玩家选择】
 ${choice}
 
 【核心要求 · 铁律】
-1.选择， 【 D **剧情连贯性**：每一回合必须承接上一回合的结尾，不能跳戏。
+1. **剧情连贯性**：每一回合必须承接上一回合的结尾，不能跳戏。
+2. **玩家 = 视角中心**：禁止跳到彼得视角，禁止替玩家做决定、替玩家说话。
+3. **结尾必须用【选项】列出 A. B. C. D.**，每个选项各占一行，不要加 markdown 加粗，不要改成【你的选择】等别的标题。
 
 【收尾逻辑 · 极重要】
 本剧场**一共只有 8 回合**。你的剧情节奏必须符合：
@@ -4455,7 +4474,7 @@ ${choice}
   - 解决所有未完成的冲突（反派被击败 / 谜题被解开 / 危机被化解 / 关系有明确走向）
   - 给出一个"落幕"瞬间（最后一句话、最后一个动作、最后一个镜头）
   - 如果在第 8 回合已经自然收尾，在末尾另写一行：**【小剧场完结】**
-  
+
 【如果玩家想提前收尾 · 极重要】
 如果玩家在选项里输入了类似"结束""收尾""完结""我想走了"等意图，
 **不必等到第 8 回合**。你可以立刻收尾，并写【小剧场完结】。
@@ -4472,16 +4491,54 @@ ${choice}
     }
 
     const res = await callAI([{ role: "user", content: "继续" }], sysPrompt);
-    const isFinished = /【小剧场完结】/.test(res);
-    const optionsIdx = res.indexOf("【选项】");
-    const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
-      .replace("【剧情】", "")
-      .replace("【小剧场完结】", "")
-      .trim();
-    const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).replace("【小剧场完结】", "").trim() : "";
+const isFinished = /【小剧场完结】/.test(res);
 
-    q.story = storyText;
-    q.options = optionsText;
+// ============================================================
+// ★ 兼容多种"选项标题"写法：只要匹配到"选项/你的选择/选择"这类字样，
+//   或者正文里出现连续的 A. B. C. D. 行，就把后面当选项处理
+// ============================================================
+function splitStoryAndOptions(raw) {
+  let text = String(raw || "").replace(/【小剧场完结】/g, "").replace(/【剧情】/g, "").trim();
+
+  // 1. 找标题：** 【你的选择】 ** / 【选项】 / 【选择】 / 你的选择等
+  //    允许前后有 markdown 加粗、空格、冒号
+  const titleRe = /(?:\*{0,2}\s*)?[【\[]\s*(?:选项|你的选择|行动选择|请选择|选择)\s*[】\]]\s*(?:\*{0,2})?/i;
+  const m = text.match(titleRe);
+
+  let storyPart = text;
+  let optionsPart = "";
+
+  if (m && typeof m.index === "number") {
+    storyPart = text.slice(0, m.index).trim();
+    optionsPart = text.slice(m.index + m[0].length).trim();
+  } else {
+    // 2. 没找到标题 → 用"连续的 A. / B. 行"来猜选项起点
+    const lines = text.split("\n");
+    let firstABCD = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (/^\s*(?:\*{0,2}\s*)?A[\.\、\:：]/.test(lines[i])) {
+        // 且后面 3 行里至少要再出现 B 或 C
+        const next = lines.slice(i + 1, i + 4).join("\n");
+        if (/^\s*(?:\*{0,2}\s*)?[BC][\.\、\:：]/m.test(next)) {
+          firstABCD = i;
+          break;
+        }
+      }
+    }
+    if (firstABCD > -1) {
+      storyPart = lines.slice(0, firstABCD).join("\n").trim();
+      optionsPart = lines.slice(firstABCD).join("\n").trim();
+    }
+  }
+
+  // 3. 选项里如果还夹了"自定义行动"这种 D. 项，也算选项，保留
+  return { storyPart, optionsPart };
+}
+
+const { storyPart, optionsPart } = splitStoryAndOptions(res);
+
+q.story = storyPart;
+q.options = optionsPart;
     // 🌌 跨宇宙剧场最多 20 回合；普通剧场最多 8 回合
 const maxTurns = q.universe === "multiverse" ? 20 : 8;
 q.closed = isFinished || q.history.length >= maxTurns;
@@ -4837,38 +4894,29 @@ Appearance: {
         </p >
         ${contacts.filter(c => !c.isTheater).map(c => `
   <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
-    <div class="row" style="gap:12px;align-items:center;margin-bottom:8px;">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
       <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
-        ${realOf(c.avatar) ? `<img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+        ${realOf(c.avatar) ? `< img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
       </div>
       <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
-
-      <!-- ★ 头像：用 button 显式 click，input 用隐藏技巧 -->
-      <button type="button" class="btn ghost c-avatar-trigger" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
-        换头像
-      </button>
-      <input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*"
-             style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
+      <button type="button" class="btn ghost c-avatar-trigger" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">换头像</button>
+      <input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
     </div>
-
-    <div class="row" style="gap:10px;align-items:center;">
+    <div style="display:flex;gap:10px;align-items:center;">
       <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-        ${realOf(c.refImage) ? `<img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
+        ${realOf(c.refImage) ? `< img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
         <div style="display:flex;gap:6px;">
-          <button type="button" class="btn ghost c-ref-trigger" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;margin:0;">
-            上传
-          </button>
-          <input type="file" class="c-ref-input" data-name="${esc(c.name)}" accept="image/*"
-                 style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
+          <button type="button" class="btn ghost c-ref-trigger" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;margin:0;">上传</button>
+          <input type="file" class="c-ref-input" data-name="${esc(c.name)}" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
           ${c.refImage ? `<button type="button" class="btn ghost c-ref-clear" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;color:#e62429;border-color:#e62429;">清除</button>` : ""}
-             </div>
-           </div>
-         </div>
-       </div>
-   `).join("")}
+        </div>
+      </div>
+    </div>
+  </div>
+`).join("")}
       </div>
 
       <div class="card">
@@ -5174,44 +5222,106 @@ body.querySelectorAll(".c-ref-trigger").forEach(btn => {
    </p >
    <button class="btn ghost" id="resetStartNodeBtn" style="color:#e62429;border-color:#e62429;">🔄 重新选择开局时间（会清空当前进度）</button>
  </div>
-<div class="card"><h3>我的角色设定</h3>
-          <div class="field"><label>姓名（必填）</label>
-            <input id="p_name" value="${esc(p.name)}" placeholder="例如：你">
-          </div>
-          <div class="field"><label>性格（必填）</label>
-            <textarea id="p_personality" rows="2" placeholder="例如：冷静、话少、对朋友很护短">${esc(p.personality || "")}</textarea>
-          </div>
-          <div class="field"><label>背景（必填）</label>
-            <textarea id="p_background" rows="3" placeholder="例如：皇后区长大，中城高中二年级，和彼得是同学">${esc(p.background || "")}</textarea>
-          </div>
-          <div class="field"><label>身份（选填）</label>
-            <input id="p_identity" value="${esc(p.identity || "")}" placeholder="例如：同学 / 邻居">
-          </div>
-          <div class="field"><label>外貌（选填）</label>
-            <textarea id="p_appearance" rows="2" placeholder="例如：黑色短发，戴眼镜">${esc(p.appearance || "")}</textarea>
-          </div>
-          <div class="field"><label>喜好（选填）</label>
-            <textarea id="p_likes" rows="2" placeholder="例如：喜欢科幻、拉面、下雨天">${esc(p.likes || "")}</textarea>
-          </div>
-             <div class="field"><label>其他备注（选填）</label>
-            <textarea id="p_notes" rows="2" placeholder="任何想补充给 AI 的设定">${esc(p.notes || "")}</textarea>
-          </div>
-          <div class="field">
-            <label>🥷 我的身份类型（影响 MJ 笔记本的观察方式）</label>
-            <select id="p_identity_type">
-              <option value="human" ${store.getPlayerIdentityType() === "human" ? "selected" : ""}>👤 普通人（没有超能力）</option>
-              <option value="mutant" ${store.getPlayerIdentityType() === "mutant" ? "selected" : ""}>🧬 变种人 / 异能者</option>
-              <option value="magic" ${store.getPlayerIdentityType() === "magic" ? "selected" : ""}>🔮 魔法 / 超自然能力</option>
-              <option value="tech" ${store.getPlayerIdentityType() === "tech" ? "selected" : ""}>⚙️ 科技改造 / 有特殊装备</option>
-              <option value="other" ${store.getPlayerIdentityType() === "other" ? "selected" : ""}>❓ 其他特殊身份</option>
-            </select>
-          </div>
-          <button class="btn" id="saveP">保存人设</button>
-          <div class="row" style="gap:8px;margin-top:8px;">
-            <button class="btn ghost" id="profileSaveBtn" style="flex:1;">💾 存档人设</button>
-            <button class="btn ghost" id="profileLoadBtn" style="flex:1;">📂 读档人设</button>
-          </div>
-        </div>
+<div class="card">
+  <h3>我的角色设定</h3>
+
+  <!-- 性别 -->
+  <div class="field">
+    <label>性别 <span style="color:#e62429;">*</span></label>
+    <div class="gender-picker" style="display:flex;gap:8px;">
+      <button type="button" class="gender-opt" data-gender="female"
+              style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;">
+        👩 女性
+      </button>
+      <button type="button" class="gender-opt" data-gender="male"
+              style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;">
+        👨 男性
+      </button>
+      <button type="button" class="gender-opt" data-gender="nonbinary"
+              style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;">
+        🧑 其他
+      </button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+      AI 会用对应的人称代词（她 / 他 / TA）。默认女性。
+    </div>
+  </div>
+
+  <!-- 姓名 -->
+  <div class="field">
+    <label>姓名 <span style="color:#e62429;">*</span></label>
+    <input id="p_name" value="${esc(p.name || "")}" placeholder="例如：林夏" maxlength="20" autocomplete="off">
+  </div>
+
+  <!-- 性格 -->
+  <div class="field">
+    <label>性格 <span style="color:#e62429;">*</span>
+      <span style="font-size:11px;color:var(--muted);font-weight:400;">（简短描述 1-2 句，AI 会据此把握说话方式）</span>
+    </label>
+    <textarea id="p_personality" rows="2" placeholder="例如：冷静、话少，但对朋友很护短；偶尔毒舌"
+              style="resize:vertical;min-height:56px;">${esc(p.personality || "")}</textarea>
+  </div>
+
+  <!-- 背景 -->
+<div class="field">
+  <label>背景 <span style="color:#e62429;">*</span>
+    <span style="font-size:11px;color:var(--muted);font-weight:400;">（出身、学校、和彼得/其他角色的关系）</span>
+  </label>
+  <textarea id="p_background" rows="3" placeholder="例如：皇后区长大，中城高中二年级，和彼得是同班同学，经常在地铁上碰到"
+            style="resize:vertical;min-height:72px;">${esc(p.background || "")}</textarea>
+</div>
+  <!-- 身份 -->
+  <div class="field">
+    <label>身份</label>
+    <input id="p_identity" value="${esc(p.identity || "")}" placeholder="例如：同学 / 邻居 / 兼职记者" maxlength="30">
+  </div>
+
+  <!-- 外貌 -->
+  <div class="field">
+    <label>外貌</label>
+    <textarea id="p_appearance" rows="2" placeholder="例如：黑色短发，戴黑框眼镜，常穿灰色卫衣"
+              style="resize:vertical;min-height:56px;">${esc(p.appearance || "")}</textarea>
+  </div>
+
+  <!-- 喜好 -->
+  <div class="field">
+    <label>喜好</label>
+    <textarea id="p_likes" rows="2" placeholder="例如：喜欢科幻、拉面、下雨天；讨厌嘈杂的人群"
+              style="resize:vertical;min-height:56px;">${esc(p.likes || "")}</textarea>
+  </div>
+
+  <!-- 身份类型 -->
+  <div class="field">
+    <label>🥷 我的身份类型</label>
+    <select id="p_identity_type">
+      <option value="human"    ${store.getPlayerIdentityType() === "human"    ? "selected" : ""}>👤 普通人（没有超能力）</option>
+      <option value="mutant"   ${store.getPlayerIdentityType() === "mutant"   ? "selected" : ""}>🧬 变种人 / 异能者</option>
+      <option value="magic"    ${store.getPlayerIdentityType() === "magic"    ? "selected" : ""}>🔮 魔法 / 超自然能力</option>
+      <option value="tech"     ${store.getPlayerIdentityType() === "tech"     ? "selected" : ""}>⚙️ 科技改造 / 有特殊装备</option>
+      <option value="other"    ${store.getPlayerIdentityType() === "other"    ? "selected" : ""}>❓ 其他特殊身份</option>
+    </select>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">影响 MJ 笔记本的观察方式（普通人 vs 有超能力的同学）。</div>
+  </div>
+
+  <!-- 备注 -->
+  <div class="field">
+    <label>其他备注</label>
+    <textarea id="p_notes" rows="2" placeholder="任何想补充给 AI 的设定，比如口头禅、家庭情况、特别怕的东西"
+              style="resize:vertical;min-height:56px;">${esc(p.notes || "")}</textarea>
+  </div>
+
+  <!-- 按钮 -->
+  <button class="btn" id="saveP" style="margin-bottom:8px;">💾 保存人设</button>
+  <div class="row" style="gap:8px;">
+    <button class="btn ghost" id="profileSaveBtn" style="flex:1;">📁 存档人设</button>
+    <button class="btn ghost" id="profileLoadBtn" style="flex:1;">📂 读档人设</button>
+  </div>
+
+  <!-- 草稿 / 自动填充提示 -->
+  <div id="profileDraftHint" style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">
+    💡 带 <span style="color:#e62429;">*</span> 的是必填项。填完后点「保存人设」生效。
+  </div>
+</div>
         <div class="card"><h3>文本 AI 接入</h3>
           <div class="row" style="justify-content:space-between;margin-bottom:12px"><label>启用</label><label class="switch"><input type="checkbox" id="c_enabled" ${cfg.enabled?'checked':''}><span class="slider"></span></label></div>
           <div class="field"><label>预设</label><select id="c_provider">
@@ -5478,25 +5588,61 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
           toast(bracketToggle.checked ? "已启用括号干预指令" : "已关闭括号干预指令");
         };
       }
-      body.querySelector("#saveP").onclick = () => {
-        const name = body.querySelector("#p_name").value.trim();
-        const personality = body.querySelector("#p_personality").value.trim();
-        const background = body.querySelector("#p_background").value.trim();
-        if (!name) return toast("姓名必填");
-        if (!personality) return toast("性格必填");
-        if (!background) return toast("背景必填");
-        store.setProfile({
-          name: name,
-          personality: personality,
-          background: background,
-          identity: body.querySelector("#p_identity").value.trim(),
-          appearance: body.querySelector("#p_appearance").value.trim(),
-          likes: body.querySelector("#p_likes").value.trim(),
-          notes: body.querySelector("#p_notes").value.trim()
-        });
-      store.setPlayerIdentityType(body.querySelector("#p_identity_type").value);
-        toast("人设已保存");
-      };
+      // ============================================================
+// 💾 保存人设（含性别必填校验）
+// ============================================================
+// 性别选择按钮逻辑
+let selectedGender = (store.getProfile().gender || "female");
+const genderBtns = body.querySelectorAll(".gender-opt");
+const refreshGenderUI = () => {
+  genderBtns.forEach(b => {
+    const active = b.dataset.gender === selectedGender;
+    b.style.borderColor = active ? "var(--accent-2)" : "var(--line)";
+    b.style.background  = active ? "rgba(45,107,255,.12)" : "var(--panel-2)";
+    b.style.fontWeight  = active ? "700" : "400";
+  });
+};
+genderBtns.forEach(b => {
+  b.onclick = () => {
+    selectedGender = b.dataset.gender;
+    refreshGenderUI();
+  };
+});
+refreshGenderUI();
+
+body.querySelector("#saveP").onclick = () => {
+  const name        = body.querySelector("#p_name").value.trim();
+  const personality = body.querySelector("#p_personality").value.trim();
+const background  = body.querySelector("#p_background").value.trim();
+const identity    = body.querySelector("#p_identity").value.trim();
+  const appearance  = body.querySelector("#p_appearance").value.trim();
+  const likes       = body.querySelector("#p_likes").value.trim();
+  const notes       = body.querySelector("#p_notes").value.trim();
+  const identityType = body.querySelector("#p_identity_type").value;
+
+  // ★ 必填校验（性别默认女性，已经 fallback，所以只需校验三项）
+  if (!name)        return toast("请填写姓名");
+  if (!personality) return toast("请填写性格");
+  if (!background)  return toast("请填写背景");
+  if (name.length > 20) return toast("姓名太长（≤20 字）");
+
+  store.setProfile({
+    name,
+    personality,
+    background,
+    identity,
+    appearance,
+    likes,
+    notes,
+    gender: selectedGender   // ★ 新字段
+  });
+  store.setPlayerIdentityType(identityType);
+
+  toast(`✅ 人设已保存 · ${name}（${
+    selectedGender === "male" ? "男" :
+    selectedGender === "nonbinary" ? "其他" : "女"
+  }）`);
+};
 // ===== 人设存档 / 读档（10 格独立档位）=====
       // 注意：不再声明 PROFILE_SLOTS_KEY（已移到全局，见 apps 定义前）
 
@@ -10649,23 +10795,25 @@ Theater: {
 
   // ===== 从平行宇宙模板直接开始 =====
   async startUniverse(body, u) {
-    // 询问玩家身份（简单选择）
-    const identity = prompt(`【${u.title}】\n\n你的身份是？（比如：同学、邻居、记者、路人）`, "同学") || "同学";
-    const pov = prompt("叙事人称？1=第一人称「我」 2=第二人称「你」 3=第三人称", "2") || "2";
-    const povMap = { "1": "first", "2": "second", "3": "third" };
-    const povKey = povMap[pov] || "second";
-
-    body.innerHTML = `<div class="loader"><div class="spin"></div>正在开启「${esc(u.title)}」...</div>`;
-
-    try {
+  const self = this;
+  this.showTheaterSetupForm({
+    mode: "universe",
+    universeInfo: u,
+    title: `🌌 ${u.title}`,
+    subtitle: `UNIVERSE · ${u.year}`,
+    defaultBg: `【宇宙背景】${u.background}\n【宇宙规则】${u.rules}`,
+    defaultIdentity: "同学",
+    defaultTone: "自由",
+    onGenerate: async ({ bg, identity, tone, pov, userName }) => {
+      body.innerHTML = `<div class="loader"><div class="spin"></div>正在开启「${esc(u.title)}」...</div>`;
       const sNow = store.getState();
       const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
 
-      const povRule = povKey === "first"
+      const povRule = pov === "first"
         ? "【叙事人称 · 第一人称】全程用「我」称呼玩家。玩家=我。"
-        : povKey === "second"
+        : pov === "second"
         ? "【叙事人称 · 第二人称】全程用「你」称呼玩家。玩家=你。"
-        : "【叙事人称 · 第三人称】全程用「玩家」称呼玩家。";
+        : `【叙事人称 · 第三人称】全程用「${userName}」称呼玩家。`;
 
       const sysPrompt = `你是一个剧情 DM，正在开启一个**平行宇宙小剧场**。
 
@@ -10673,9 +10821,13 @@ Theater: {
 【宇宙背景】${u.background}
 【宇宙规则】${u.rules}
 【玩家身份】${identity}
+【氛围倾向】${tone}
 【当前游戏内日期】${date}
 
 ${povRule}
+
+【用户自定义补充】
+${bg}
 
 【绝对铁律】
 1. 严格贴合这个宇宙的设定和规则，不要混入其他宇宙。
@@ -10687,7 +10839,7 @@ ${povRule}
 【要求】
 1. 写一段开场剧情，600~900 字。
 2. 剧情要体现这个宇宙的独特性（时代、氛围、视觉）。
-3. 结尾用【选项】列出 A. B. C. D. 四个行动方向。
+3. 结尾必须用【选项】列出 A. B. C. D.，每个选项各占一行。
 4. 最后一行：【小剧场标题: 不超过8个字】
 
 【文风】电影镜头感，严禁 AI 腔。英文对白用 *"..."*（中文翻译）格式。`;
@@ -10706,12 +10858,12 @@ ${povRule}
       const q = {
         id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
         title: `${u.title} · ${title}`,
-        background: u.background,
+        background: bg,
         universe: u.key,
         identity,
-        tone: "自由",
-        pov: povKey,
-        userName: "玩家",
+        tone,
+        pov,
+        userName,
         date,
         story: storyText,
         options: optionsText,
@@ -10726,13 +10878,12 @@ ${povRule}
       all.unshift(q);
       localStorage.setItem("sv_theaters", JSON.stringify(all));
 
-      this.bindChat(q);
+      self.bindChat(q);
       toast("剧场已开启：" + q.title);
-      this.openQuest(q.id);
-    } catch (e) {
-      body.innerHTML = `<div class="th-wrap"><div class="th-error">生成失败：${esc(e.message)}</div></div>`;
+      self.openQuest(q.id);
     }
-  },
+  });
+},
 
 // ============================================================
   // 🌌 多元宇宙穿越 · 选择两个宇宙
@@ -10827,26 +10978,41 @@ ${povRule}
 
     div.querySelector("#mvCancel").onclick = () => div.remove();
     div.querySelector("#mvGo").onclick = () => {
-      const ua = universes.find(u => u.key === pickA);
-      const ub = universes.find(u => u.key === pickB);
-      if (!ua || !ub) return;
-      div.remove();
-      this.startMultiverse(body, ua, ub);
-    };
+  const ua = universes.find(u => u.key === pickA);
+  const ub = universes.find(u => u.key === pickB);
+  if (!ua || !ub) return;
+  div.remove();
+  this.startMultiverse(body, ua, ub);   // startMultiverse 内部会先弹通用表单
+   };
   },
 
   // ============================================================
   // 🌌 多元宇宙穿越 · 生成开场
   // ============================================================
   async startMultiverse(body, uA, uB) {
-    body.innerHTML = `<div class="loader"><div class="spin"></div>正在撕裂多元宇宙...</div>`;
+  const self = this;
+  this.showTheaterSetupForm({
+    mode: "multiverse",
+    multiverseInfo: { uA, uB },
+    title: `🌌 跨宇宙相遇`,
+    subtitle: `CROSSOVER · ${uA.year} × ${uB.year}`,
+    defaultBg: `【宇宙 A】${uA.title}（${uA.year}）\n背景：${uA.background}\n规则：${uA.rules}\n\n【宇宙 B】${uB.title}（${uB.year}）\n背景：${uB.background}\n规则：${uB.rules}`,
+    defaultIdentity: "跨宇宙见证者",
+    defaultTone: "自由",
+    onGenerate: async ({ bg, identity, tone, pov, userName }) => {
+      body.innerHTML = `<div class="loader"><div class="spin"></div>正在撕裂多元宇宙...</div>`;
 
-    try {
       const sNow = store.getState();
       const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
       const profile = store.getProfile();
-      const playerName = profile.name || "玩家";
-      const playerPronoun = profile.gender === "male" ? "他" : "她";
+      const playerName = profile.name || userName || "玩家";
+      const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
+
+      const povRule = pov === "first"
+        ? "【第一人称】全程用「我」称呼玩家。"
+        : pov === "second"
+        ? "【第二人称】全程用「你」称呼玩家。"
+        : `【第三人称】全程用「${userName || playerName}」称呼玩家。`;
 
       const sysPrompt = `你是一个剧情 DM，正在生成一段**跨宇宙相遇**的开场。
 
@@ -10858,47 +11024,32 @@ ${povRule}
 背景：${uB.background}
 规则：${uB.rules}
 
-【玩家】${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
-
+【玩家】${playerName}（${profile.gender === "male" ? "男" : profile.gender === "nonbinary" ? "非二元" : "女"}，用「${playerPronoun}」指代）
+【你的身份】${identity}
+【氛围倾向】${tone}
 【当前游戏内日期】${date}
 
+${povRule}
+
+【用户补充】
+${bg}
+
 【核心设定 · 铁律 · 违反即失败】
-1. **两个宇宙的彼得因某种"维度裂缝"撞在了一起**。可以是：
+1. **两个宇宙的彼得因某种"维度裂缝"撞在了一起**。
    - 彼得 A 追某个反派时被拉进了彼得 B 的世界
    - 彼得 B 在荡蛛丝时突然掉进了彼得 A 的纽约
-   - 两人同时被一个"跨维度事件"卷进一个中间地带（比如某个废弃地铁站、某个神秘实验室）
-   - 玩家的存在是第三个变量（玩家可能同时认识两个彼得，也可能被卷进来）
+   - 两人同时被一个"跨维度事件"卷进一个中间地带
 2. **两个彼得一开始都不知道对方是谁**。他们会互相试探、误解、甚至打起来。
-3. **两个宇宙的规则必须互相冲突**：
-   - 托比宇宙的彼得：有机蛛丝、报纸时代、没有复联
-   - 加菲宇宙的彼得：机械发射器、格温、没有复联
-   - 黑色战衣宇宙的彼得：共生体、暴躁、力量更强
-   - 蜘蛛格温宇宙：格温是蜘蛛侠、彼得是普通人
-   - 2099 宇宙：赛博朋克、企业统治
-   - 暗影宇宙：黑白世界、大萧条
-   - 自定义宇宙：按用户设定
+3. **两个宇宙的规则必须互相冲突**（时代/装备/世界观等）。
+4. 本剧场是一个**独立小剧场**，与 MCU 主线无关。**不超过 20 回合**。
 
 【开场要求】
 1. 写一段 800-1200 字的开场剧情。
-2. 剧情必须包含：
-   - 撞在一起的那一瞬间（感官描写）
-   - 两个彼得第一次对视、第一句话
-   - 一个具体的危机/谜题（让玩家必须做选择）
-3. 结尾用【选项】列出 A. B. C. D. 四个方向。
+2. 必须包含：撞在一起的那一瞬间（感官描写）、两个彼得第一次对视与第一句话、一个具体的危机/谜题（让玩家必须做选择）。
+3. 结尾必须用【选项】列出 A. B. C. D.，每个选项各占一行。
 4. 最后一行：【小剧场标题: 不超过8个字】
 
-【文风】电影镜头感，两个彼得性格差异要鲜明。对白用 *"English"*（中文翻译）格式。
-
-【穿越逻辑 · 极重要】
-本剧场是一个**独立小剧场**，与 MCU 主线无关。两个彼得最终要么：
-- 其中一个选择"留下"，另一个"回去"
-- 两个都回去，但留下某样东西
-- 两个宇宙合并（代价巨大）
-- 玩家作为锚点，让两个宇宙"共存"（需要付出代价）
-
-**本剧场不会超过 20 回合**。到第 15 回合左右，剧情会自动推进到"必须做出最终选择"。
-
-现在写开场。`;
+【文风】电影镜头感，两个彼得性格差异要鲜明。对白用 *"English"*（中文翻译）格式。`;
 
       const res = await callAI([{ role: "user", content: "开始跨宇宙相遇" }], sysPrompt);
 
@@ -10914,14 +11065,14 @@ ${povRule}
       const q = {
         id: "th_mv_" + Date.now() + "_" + Math.random().toString(36).slice(2),
         title: `${uA.title} × ${uB.title} · ${title}`,
-        background: `跨宇宙相遇：${uA.title}（${uA.year}）× ${uB.title}（${uB.year}）`,
+        background: bg,
         universe: "multiverse",
         universeA: uA.key,
         universeB: uB.key,
-        identity: "跨宇宙见证者",
-        tone: "多元宇宙",
-        pov: sNow.pov || "second",
-        userName: playerName,
+        identity,
+        tone,
+        pov,
+        userName: userName || playerName,
         date,
         story: storyText,
         options: optionsText,
@@ -10937,87 +11088,244 @@ ${povRule}
       all.unshift(q);
       localStorage.setItem("sv_theaters", JSON.stringify(all));
 
-      this.bindChat(q);
+      self.bindChat(q);
       toast("宇宙撕裂完成：" + title);
-      this.openQuest(q.id);
-    } catch (e) {
-      body.innerHTML = `<div class="th-wrap"><div class="th-error">生成失败：${esc(e.message)}</div></div>`;
+      self.openQuest(q.id);
     }
-  },
+  });
+},
+// ============================================================
+// 🎭 通用小剧场设置表单
+//   所有（自定义 / 固定宇宙 / 多元宇宙）都走这一个
+//   config = {
+//     mode: "custom" | "universe" | "multiverse",
+//     universeInfo: { title, year, color, desc, background, rules } | null,
+//     multiverseInfo: { uA, uB } | null,
+//     defaultBg: string,
+//     defaultIdentity: string,
+//     defaultTone: string,
+//     title: string,        // 弹窗标题
+//     subtitle: string,     // 副标题
+//     onGenerate: async ({ bg, identity, tone, pov, userName }) => void
+//   }
+// ============================================================
+showTheaterSetupForm(config) {
+  const self = this;
+  const profile = store.getProfile();
+  const {
+    mode = "custom",
+    universeInfo = null,
+    multiverseInfo = null,
+    defaultBg = "",
+    defaultIdentity = "",
+    defaultTone = "自由",
+    title = "✏️ 自定义小剧场",
+    subtitle = "CUSTOM THEATER",
+    onGenerate
+  } = config || {};
 
+  // ===== 遮罩 =====
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;";
+  document.querySelector(".device").appendChild(overlay);
+
+  const panel = document.createElement("div");
+  panel.style.cssText = "width:100%;max-width:440px;max-height:92vh;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;";
+  overlay.appendChild(panel);
+
+  // ===== 顶部（会根据 mode 变色）=====
+  const headerBg = mode === "multiverse"
+    ? "linear-gradient(135deg,rgba(138,43,226,.20),rgba(45,107,255,.10))"
+    : (mode === "universe" && universeInfo
+        ? `linear-gradient(135deg,color-mix(in srgb, ${universeInfo.color} 22%, transparent),rgba(0,0,0,.02))`
+        : "linear-gradient(135deg,rgba(45,107,255,.16),rgba(230,36,41,.10))");
+
+  const header = document.createElement("div");
+  header.style.cssText = `padding:18px 20px 14px;background:${headerBg};border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;`;
+  header.innerHTML = `
+    <div>
+      <div style="font-size:11px;color:var(--accent-2);letter-spacing:2px;font-weight:700;">${esc(subtitle)}</div>
+      <div style="font-size:17px;font-weight:800;color:var(--text);margin-top:2px;">${esc(title)}</div>
+    </div>
+    <button id="thSetupClose" style="background:var(--panel-2);border:1px solid var(--line);color:var(--muted);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;">✕</button>
+  `;
+  panel.appendChild(header);
+
+  // ===== 主体 =====
+  const bodyEl = document.createElement("div");
+  bodyEl.style.cssText = "flex:1;overflow-y:auto;padding:16px 20px;";
+  panel.appendChild(bodyEl);
+
+  // ===== 宇宙信息卡片（固定宇宙 / 多元宇宙）=====
+  let universeCardHtml = "";
+
+  if (mode === "universe" && universeInfo) {
+    const u = universeInfo;
+    universeCardHtml = `
+      <div style="margin-bottom:14px;padding:12px;border-radius:12px;border-left:3px solid ${u.color};background:var(--panel-2);">
+        <div style="font-size:11px;font-weight:700;color:${u.color};letter-spacing:0.5px;">${esc(u.tag || "")} · ${esc(u.year || "")}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:4px;">${esc(u.title)}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px;">${esc(u.desc || "")}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);line-height:1.6;">
+          <b style="color:var(--text);">宇宙规则：</b>${esc(u.rules || "")}
+        </div>
+      </div>
+    `;
+  } else if (mode === "multiverse" && multiverseInfo) {
+    const uA = multiverseInfo.uA;
+    const uB = multiverseInfo.uB;
+    universeCardHtml = `
+      <div style="margin-bottom:14px;display:flex;gap:8px;align-items:stretch;">
+        <div style="flex:1;padding:10px;border-radius:12px;border:1px solid ${uA.color}55;background:var(--panel-2);">
+          <div style="font-size:10px;font-weight:700;color:${uA.color};letter-spacing:0.5px;">${esc(uA.tag || "")} · ${esc(uA.year || "")}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:3px;">${esc(uA.title)}</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--muted);padding:0 2px;">×</div>
+        <div style="flex:1;padding:10px;border-radius:12px;border:1px solid ${uB.color}55;background:var(--panel-2);">
+          <div style="font-size:10px;font-weight:700;color:${uB.color};letter-spacing:0.5px;">${esc(uB.tag || "")} · ${esc(uB.year || "")}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:3px;">${esc(uB.title)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  bodyEl.innerHTML = `
+    ${universeCardHtml}
+
+    <!-- 背景设定 -->
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;color:var(--text);font-weight:600;display:block;margin-bottom:6px;">
+        背景设定 <span style="color:#e62429;">*</span>
+        <span style="font-size:11px;color:var(--muted);font-weight:400;">（AI 会严格按它生成开场）</span>
+      </label>
+      <textarea id="th_bg" rows="5" maxlength="800"
+        placeholder="例如：平行宇宙，彼得和玩家都是中城高中二年级学生，学校组织去欧洲游学，在威尼斯遇到神秘客……"
+        style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--text);font-size:14px;line-height:1.6;resize:vertical;min-height:110px;font-family:inherit;outline:none;">${esc(defaultBg || "")}</textarea>
+      <div style="text-align:right;font-size:11px;color:var(--muted);margin-top:4px;"><span id="th_bg_count">${(defaultBg || "").length}</span>/800</div>
+    </div>
+
+    <!-- 你的身份 -->
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;color:var(--text);font-weight:600;display:block;margin-bottom:6px;">
+        你的身份 <span style="color:#e62429;">*</span>
+      </label>
+      <input id="th_identity" maxlength="30"
+        value="${esc(defaultIdentity || profile.identity || "同学")}"
+        placeholder="例如：同学 / 记者 / 邻居"
+        style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;">
+    </div>
+
+    <!-- 叙事人称 -->
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;color:var(--text);font-weight:600;display:block;margin-bottom:6px;">
+        叙事人称 <span style="color:#e62429;">*</span>
+      </label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="th-pov-opt" data-pov="first"  style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;">我</button>
+        <button type="button" class="th-pov-opt" data-pov="second" style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;">你</button>
+        <button type="button" class="th-pov-opt" data-pov="third"  style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;">她 / 玩家名</button>
+      </div>
+    </div>
+
+    <!-- 第三人称名字 -->
+    <div id="th_nameField" style="margin-bottom:14px;display:none;">
+      <label style="font-size:12px;color:var(--text);font-weight:600;display:block;margin-bottom:6px;">第三人称下你的名字</label>
+      <input id="th_name" maxlength="20"
+        value="${esc(profile.name || "玩家")}"
+        style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;">
+    </div>
+
+    <!-- 氛围 -->
+    <div style="margin-bottom:6px;">
+      <label style="font-size:12px;color:var(--text);font-weight:600;display:block;margin-bottom:6px;">氛围倾向</label>
+      <select id="th_tone" style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;">
+        <option value="日常" ${defaultTone === "日常" ? "selected" : ""}>日常轻喜剧</option>
+        <option value="悬疑" ${defaultTone === "悬疑" ? "selected" : ""}>悬疑紧张</option>
+        <option value="情感" ${defaultTone === "情感" ? "selected" : ""}>情感细腻</option>
+        <option value="战斗" ${defaultTone === "战斗" ? "selected" : ""}>战斗动作</option>
+        <option value="自由" ${(!defaultTone || defaultTone === "自由" || defaultTone === "多元宇宙") ? "selected" : ""}>自由发挥</option>
+      </select>
+    </div>
+  `;
+
+  // ===== 底部 =====
+  const footer = document.createElement("div");
+  footer.style.cssText = "display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);background:var(--panel-2);flex-shrink:0;";
+  footer.innerHTML = `
+    <button id="th_cancel" class="btn ghost" style="flex:1;">取消</button>
+    <button id="th_gen" class="btn" style="flex:1;">🚀 生成开场</button>
+  `;
+  panel.appendChild(footer);
+
+  // ===== 逻辑 =====
+  let selectedPov = "second";
+  const povBtns = bodyEl.querySelectorAll(".th-pov-opt");
+  const nameField = bodyEl.querySelector("#th_nameField");
+  const refreshPovUI = () => {
+    povBtns.forEach(b => {
+      const active = b.dataset.pov === selectedPov;
+      b.style.borderColor = active ? "var(--accent-2)" : "var(--line)";
+      b.style.background  = active ? "rgba(45,107,255,.12)" : "var(--panel-2)";
+      b.style.fontWeight  = active ? "700" : "400";
+    });
+    nameField.style.display = selectedPov === "third" ? "block" : "none";
+  };
+  povBtns.forEach(b => {
+    b.onclick = () => { selectedPov = b.dataset.pov; refreshPovUI(); };
+  });
+  refreshPovUI();
+
+  const bgInput = bodyEl.querySelector("#th_bg");
+  const bgCount = bodyEl.querySelector("#th_bg_count");
+  bgInput.addEventListener("input", () => {
+    bgCount.textContent = bgInput.value.length;
+  });
+
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  footer.querySelector("#th_cancel").onclick = close;
+  header.querySelector("#thSetupClose").onclick = close;
+
+  footer.querySelector("#th_gen").onclick = async () => {
+    const bg = bgInput.value.trim();
+    const identity = bodyEl.querySelector("#th_identity").value.trim();
+    const tone = bodyEl.querySelector("#th_tone").value;
+    const userName = bodyEl.querySelector("#th_name").value.trim() || profile.name || "玩家";
+
+    if (!bg) return toast("请填写背景设定");
+    if (!identity) return toast("请填写你的身份");
+    if (bg.length < 10) return toast("背景设定太短了（至少 10 个字）");
+
+    close();
+    try {
+      await onGenerate({ bg, identity, tone, pov: selectedPov, userName });
+    } catch (e) {
+      toast("生成失败：" + e.message);
+    }
+  };
+},
   // ===== 自定义小剧场设置 =====
   showSetup(body) {
-    body.innerHTML = `
-      <div class="th-wrap">
-        <div class="th-header">
-          <div class="th-title">✏️ 自定义小剧场</div>
-          <div class="th-subtitle">自由设定背景，AI 会按你的设定生成开场</div>
-        </div>
-
-        <div class="th-form">
-          <label class="th-form-label">背景设定（最重要）</label>
-          <textarea id="th_bg" class="th-form-textarea" rows="5" placeholder="例如：平行宇宙，彼得和玩家都是中城高中二年级学生，学校组织去欧洲游学，在威尼斯遇到神秘客……"></textarea>
-
-          <label class="th-form-label">你的身份</label>
-          <input id="th_identity" class="th-form-input" value="${esc(store.getProfile().identity || "同学")}">
-
-          <label class="th-form-label">叙事人称</label>
-          <select id="th_pov" class="th-form-input">
-            <option value="first">第一人称（"我"）</option>
-            <option value="second" selected>第二人称（"你"）</option>
-            <option value="third">第三人称（"某某"）</option>
-          </select>
-
-          <div id="th_nameField" style="display:none;">
-            <label class="th-form-label">第三人称下你的名字</label>
-            <input id="th_name" class="th-form-input" value="${esc(store.getProfile().name || "玩家")}">
-          </div>
-
-          <label class="th-form-label">氛围倾向</label>
-          <select id="th_tone" class="th-form-input">
-            <option value="日常">日常轻喜剧</option>
-            <option value="悬疑">悬疑紧张</option>
-            <option value="情感">情感细腻</option>
-            <option value="战斗">战斗动作</option>
-            <option value="自由">自由发挥</option>
-          </select>
-
-          <div class="th-form-actions">
-            <button class="th-btn ghost" id="th_cancel">取消</button>
-            <button class="th-btn primary" id="th_gen">生成开场</button>
-          </div>
-        </div>
-      </div>`;
-
-    body.querySelector("#th_cancel").onclick = () => this.render(body);
-
-    const povSel = body.querySelector("#th_pov");
-    const nameField = body.querySelector("#th_nameField");
-    povSel.onchange = () => {
-      nameField.style.display = povSel.value === "third" ? "block" : "none";
-    };
-
-    body.querySelector("#th_gen").onclick = async () => {
-      const bg = body.querySelector("#th_bg").value.trim();
-      const identity = body.querySelector("#th_identity").value.trim() || "同学";
-      const tone = body.querySelector("#th_tone").value;
-      const pov = povSel.value;
-      const userName = body.querySelector("#th_name").value.trim() || "玩家";
-      if (!bg) return toast("请填写背景设定");
-
+  const self = this;
+  this.showTheaterSetupForm({
+    mode: "custom",
+    title: "✏️ 自定义小剧场",
+    subtitle: "CUSTOM THEATER",
+    defaultBg: "",
+    defaultIdentity: store.getProfile().identity || "同学",
+    defaultTone: "自由",
+    onGenerate: async ({ bg, identity, tone, pov, userName }) => {
       body.innerHTML = `<div class="loader"><div class="spin"></div>生成开场中...</div>`;
+      const sNow = store.getState();
+      const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
 
-      try {
-        const sNow = store.getState();
-        const date = `${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日`;
+      const povRule = pov === "first"
+        ? "【第一人称】全程用「我」称呼玩家。"
+        : pov === "second"
+        ? "【第二人称】全程用「你」称呼玩家。"
+        : `【第三人称】全程用「${userName}」称呼玩家。`;
 
-        const povRule = pov === "first"
-          ? "【第一人称】全程用「我」称呼玩家。"
-          : pov === "second"
-          ? "【第二人称】全程用「你」称呼玩家。"
-          : `【第三人称】全程用「${userName}」称呼玩家。`;
-
-        const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
+      const sysPrompt = `你是一个剧情 DM，正在生成一个**独立小剧场**（与 MCU 主线无关）。
 
 【用户自定义背景】
 ${bg}
@@ -11036,49 +11344,47 @@ ${povRule}
 
 【要求】
 1. 写一段围绕玩家视角的开场剧情，500~900 字。
-2. 结尾用【选项】列出 A. B. C. D.。
+2. 结尾必须用【选项】列出 A. B. C. D.，每个选项各占一行。
 3. 最后一行：【小剧场标题: 不超过8个字】
 
 【文风】电影镜头感，严禁 AI 腔。英文对白用 *"..."*（中文翻译）格式。`;
 
-        const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
+      const res = await callAI([{ role: "user", content: "生成开场" }], sysPrompt);
 
-        const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
-        const optionsIdx = res.indexOf("【选项】");
-        const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
-          .replace("【剧情】", "")
-          .replace(/【小剧场标题[:：].*?】/g, "")
-          .trim();
-        const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
-        const title = titleMatch ? titleMatch[1].trim() : "小剧场";
+      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+      const optionsIdx = res.indexOf("【选项】");
+      const storyText = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+        .replace("【剧情】", "")
+        .replace(/【小剧场标题[:：].*?】/g, "")
+        .trim();
+      const optionsText = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+      const title = titleMatch ? titleMatch[1].trim() : "小剧场";
 
-        const q = {
-          id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-          title,
-          background: bg,
-          identity, tone, pov, userName,
-          date,
-          story: storyText,
-          options: optionsText,
-          history: [],
-          closed: false,
-          createdAt: Date.now(),
-          openingStory: storyText,
-          openingOptions: optionsText
-        };
+      const q = {
+        id: "th_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        title,
+        background: bg,
+        identity, tone, pov, userName,
+        date,
+        story: storyText,
+        options: optionsText,
+        history: [],
+        closed: false,
+        createdAt: Date.now(),
+        openingStory: storyText,
+        openingOptions: optionsText
+      };
 
-        const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-        all.unshift(q);
-        localStorage.setItem("sv_theaters", JSON.stringify(all));
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      all.unshift(q);
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
 
-        this.bindChat(q);
-        toast("开场已生成：" + title);
-        this.openQuest(q.id);
-      } catch (e) {
-        body.innerHTML = `<div class="th-wrap"><div class="th-error">生成失败：${esc(e.message)}</div></div>`;
-      }
-    };
-  },
+      self.bindChat(q);
+      toast("开场已生成：" + title);
+      self.openQuest(q.id);
+    }
+  });
+},
 
   bindChat(q) {
     const contacts = store.getContacts();
@@ -11230,11 +11536,70 @@ ${povRule}
     if (memBtn) memBtn.onclick = () => this.showTheaterMemory(q);
 
     if (!isClosed) {
-    const optsEl = body.querySelector("#thOptions");
-    const opts = (q.options || "").split('\n').filter(l => /^[A-D][\.\、]/.test(l.trim()));
-    optsEl.innerHTML = opts.map(o => `
-      <button class="th-option-btn" onclick="window.advanceTheater('${q.id}', '${esc(o).replace(/'/g, "\\'")}')">${esc(o)}</button>
-    `).join("");
+   const optsEl = body.querySelector("#thOptions");
+
+// ============================================================
+// ★ 彻底兼容 AI 各种奇怪的选项格式
+//   1. 允许行首有 markdown 加粗 ** / 空格 / 数字
+//   2. 允许 A. A、 A: A： A) 等分隔符
+//   3. 允许选项内容里带 **【安抚彼得】 ** 这种修饰，全部保留原样展示
+//   4. 允许选项被写成连续单行，没有换行 → 先按 A/B/C/D 断句
+// ============================================================
+function parseOptions(raw) {
+  if (!raw) return [];
+
+  let text = String(raw).trim();
+
+  // 先把各种反引号/``` 去掉
+  text = text.replace(/```[a-z]*/gi, "").replace(/```/g, "");
+
+  // ★ 关键：AI 有时把 4 个选项挤成一行（"A. xxx B. xxx C. xxx"），
+  //   这里手动在 " B." " C." " D." 前面插换行
+  //   避免误伤正文（只处理选项区，且只处理大写 A-D 后面紧跟 . 、 : ： ) 的情况）
+  text = text.replace(/([^\n])\s+([B-D])\s*[\.\、\:：\)]\s*/g, (m, p1, p2) => {
+    // 只在前面不是字母/数字时拆分，避免把 "Version 2.0" 之类拆开
+    return p1 + "\n" + p2 + ". ";
+  });
+
+  // 按行提取
+  const lines = text.split("\n");
+  const collected = [];
+  let current = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // 匹配行首 A. / A、 / A: / A： / A)  （允许前置 ** 加粗和空格）
+    const m = line.match(/^(?:\*{0,2}\s*)?([A-D])\s*[\.\、\:：\)]\s*(?:\*{0,2}\s*)?(.+)$/);
+
+    if (m) {
+      if (current) collected.push(current);
+      current = (m[1] + ". " + m[2]).trim();
+    } else {
+      // 没有 A/B/C/D 前缀的行 → 如果上一行是选项，就拼到上一行（多行选项）
+      if (current) {
+        current += " " + line;
+      } else {
+        // 前面没有选项行，说明不是选项内容，跳过
+        continue;
+      }
+    }
+  }
+  if (current) collected.push(current);
+
+  return collected;
+}
+
+const opts = parseOptions(q.options);
+
+optsEl.innerHTML = opts.map(o => {
+  // 转义单引号，防止 onclick 里字符串断裂
+  const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+  return `
+    <button class="th-option-btn" onclick="window.advanceTheater('${q.id}', '${safe}')">${formatDialogue(o)}</button>
+  `;
+}).join("");
 
     const input = body.querySelector("#thCustomAct");
     const send = () => {
@@ -11791,7 +12156,7 @@ content.innerHTML = `
     const s = store.getState();
     const profile = store.getProfile();
     const playerName = profile.name || "玩家";
-    const playerPronoun = profile.gender === "male" ? "他" : "她";
+    const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
     const identityType = store.getPlayerIdentityType();
     const clues = nb.clues || [];
 
