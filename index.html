@@ -2415,6 +2415,7 @@ avengersSocialPersona: {
   "黑豹": "王室风范、文字优雅、充满瓦坎达的骄傲。喜欢发瓦坎达的高科技、传统服饰和风景。",
   "战争机器": "军人作风、严肃、偶尔开玩笑，发帖多与军方、复联任务有关。",
   "奇异博士": "高冷、神秘、用词文绉绉。经常会发一些别人看不懂的魔法术语，或者警告人类不要打破现实。",
+  "洛基": "自大、爱炫耀、说话带着居高临下的讽刺感，喜欢用夸张的修辞和 emoji（👑 🐍），管所有人叫 'mortal'（凡人）。偶尔发一些『本神降临』式的段子，或者在推特上阴阳怪气地嘲讽雷神。如果是被关押时期，会发一些冷幽默的自嘲（『牢房伙食不错』）。TVA 变体洛基会发一些关于多元宇宙、时间线的谜语式发言。",
   "夜魔侠": "律师身份，充满正义感，发帖经常和地狱厨房的治安有关，偶尔吐槽夜巡太累。"
 },
 // ===== 复联成员状态（按 anchor 阶段）=====
@@ -2426,7 +2427,7 @@ avengersStatusByPhase: {
   3: { /* phase3 · 2016.7-9 秃鹫 */ active: ["托尼·斯塔克"], note: "美队一方成为通缉犯，托尼在纽约。罗德正在复健，战争机器暂时不能出战。彼得是托尼的秘密项目。" },
   4: { /* phase4 · 2018.4-5 复联大厦 */ active: ["托尼·斯塔克", "奇异博士", "绿巨人", "王"], note: "灭霸的黑暗教团入侵纽约，奇异博士被绑架。此时美队一方仍通缉中，尚未归队。" },
   5: { /* phase5 · 2018.5-6 泰坦星 */ active: [], note: "响指已发生，宇宙一半生命化灰。在地球上，托尼和彼得下落不明。复联成员生死未卜。" },
-  6: { /* phase6 · 2024.6+ 多元宇宙 */ active: ["奇异博士", "夜魔侠"], note: "2023年灭霸被击败、托尼·斯塔克牺牲（化灰再复活后打响指牺牲自己）。娜塔莎·罗曼诺夫在沃米尔星牺牲。幻视已死。5年大消失的受害者已回归。彼得复活后参加托尼葬礼。" }
+  6: { /* phase6 · 2024.6+ 多元宇宙 */ active: ["奇异博士", "夜魔侠", "洛基"], note: "2023年灭霸被击败、托尼·斯塔克牺牲（全宇宙的一半人化灰再复活阶段后打响指牺牲自己）。娜塔莎·罗曼诺夫在沃米尔星牺牲。幻视已死。5年大消失的受害者已回归。彼得复活后参加托尼葬礼。多元宇宙撕裂后，2012 年逃走的洛基变体在 TVA 之外的时间线活动，可以出现在社交平台上。" }
 },
 
 // ===== MCU 世界大事记（供 AI 生成陌生人帖时提及）=====
@@ -2561,7 +2562,37 @@ const store = {
   setApiSlots(slots) {
     this.set("sv_api_slots", slots);
   },
+// ===== 生图 API 档位（URL + Key + 模型，独立于文本配置）=====
+  getImgApiSlots() {
+    let slots = this.get("sv_img_api_slots", null);
+    if (!Array.isArray(slots) || slots.length !== 10) {
+      slots = Array(10).fill(null);
+      this.set("sv_img_api_slots", slots);
+    }
+    return slots;
+  },
+  setImgApiSlots(slots) {
+    this.set("sv_img_api_slots", slots);
+  },
 
+  // ===== 生图 API 预设（内置常见服务商）=====
+  getImgApiPresets() {
+    let presets = this.get("sv_img_api_presets", null);
+    if (!Array.isArray(presets)) {
+      presets = [
+        { name: "OpenAI gpt-image-2", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2" },
+        { name: "OpenAI dall-e-3", baseUrl: "https://api.openai.com/v1", model: "dall-e-3" },
+        { name: "OpenAI dall-e-2", baseUrl: "https://api.openai.com/v1", model: "dall-e-2" },
+        { name: "通义万相", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "wanx-v1" },
+       { name: "通义万相 2", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "wanx-v1" }
+      ];
+      this.set("sv_img_api_presets", presets);
+    }
+    return presets;
+  },
+  setImgApiPresets(presets) {
+    this.set("sv_img_api_presets", presets);
+  },
   // ===== API 预设（快速切换，内置常见服务商）=====
   getApiPresets() {
     let presets = this.get("sv_api_presets", null);
@@ -2661,6 +2692,7 @@ setPosts(p){this.set("sv_posts",p);},
       affinity: (typeof c.affinity === 'number') ? c.affinity : 0,
       heart: c.heart || "暂无",
       intervention: c.intervention || "",
+      refImage: c.refImage || "",
       isGroup: c.isGroup === true,
       members: Array.isArray(c.members) ? c.members : (c.isGroup ? [] : undefined)
     };
@@ -3058,31 +3090,96 @@ async function fetchModels(baseUrl, apiKey) {
   return (await res.json()).data.map(m=>m.id).sort();
 }
 
-async function generateImage(prompt) {
+// ============================================================
+// 🖼️ 生图：支持纯文生图 + 参考图图生图
+//   - 有参考图 → 走 /images/edits（图生图，AI 严格按参考图）
+//   - 无参考图 → 走 /images/generations（纯文生图）
+// ============================================================
+async function generateImage(prompt, refs) {
   const cfg = store.getConfig();
   const key = cfg.imgApiKey || cfg.apiKey;
-  const url = (cfg.imgBaseUrl||"https://api.openai.com/v1").replace(/\/+$/,"") + "/images/generations";
+  const baseUrl = (cfg.imgBaseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
+  const model = cfg.imgModel || "dall-e-3";
+
+  // 规范化 refs：可以是单个 dataURL 字符串，也可以是 dataURL 数组
+  let refList = [];
+  if (typeof refs === "string" && refs.startsWith("data:")) refList = [refs];
+  else if (Array.isArray(refs)) refList = refs.filter(x => typeof x === "string" && x.startsWith("data:"));
+
+  // ===== 无参考图 → 纯文生图 =====
+  if (refList.length === 0) {
+    const url = baseUrl + "/images/generations";
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+      body: JSON.stringify({ model, prompt, n: 1, size: "1024x1024" })
+    });
+    if (!res.ok) throw new Error("生图失败: " + res.status);
+    const data = await res.json();
+    const item = data.data[0];
+    if (item.url) return item.url;
+    if (item.b64_json) {
+      const bin = atob(item.b64_json);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+    }
+    throw new Error("AI 返回的图片格式无法解析");
+  }
+
+  // ===== 有参考图 → 图生图 =====
+   // ★ 参考图模式：仅对"确定不支持 edits 接口"的模型做降级；
+  //   其余（gpt-image-1/2、dall-e-2、flux 系列、中转站的魔改模型等）一律按用户选的模型走
+  const knownNoEditModels = ["dall-e-3", "dall-e"];
+  const editModel = knownNoEditModels.includes(model.toLowerCase())
+    ? "gpt-image-2"
+    : model;
+
+  // 把 dataURL 转成 Blob
+  const dataUrlToBlob = (dataUrl) => {
+    const arr = dataUrl.split(",");
+    const mime = (arr[0].match(/:(.*?);/) || [])[1] || "image/png";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8 = new Uint8Array(n);
+    while (n--) u8[n] = bstr.charCodeAt(n);
+    return new Blob([u8], { type: mime });
+  };
+
+  // ★ 参考图是权威来源：强制 AI 按参考图的脸/造型生成，文字只作补充
+  const strictPrompt = `Use the provided reference image as the strict visual anchor for the character's face, hairstyle, body type, and outfit. Keep the character visually identical to the reference. ${prompt}`;
+
+  const form = new FormData();
+  form.append("model", editModel);
+  form.append("prompt", strictPrompt);
+  form.append("n", "1");
+  form.append("size", "1024x1024");
+  // OpenAI edits 接口：参考图最多 1 张（dall-e-2 只支持 1 张，gpt-image-1 可多张但这里只传 1 张最稳）
+  const firstRefBlob = dataUrlToBlob(refList[0]);
+  form.append("image", firstRefBlob, "reference.png");
+
+  const url = baseUrl + "/images/edits";
   const res = await fetch(url, {
-    method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-    body:JSON.stringify({model:cfg.imgModel||"dall-e-3", prompt:prompt, n:1, size:"1024x1024"})
+    method: "POST",
+    headers: { "Authorization": "Bearer " + key },
+    body: form
   });
-  if (!res.ok) throw new Error("生图失败: "+res.status);
+
+  if (!res.ok) {
+    let detail = "";
+    try { detail = await res.text(); } catch (_) {}
+    throw new Error("参考图生图失败: " + res.status + " | " + detail.slice(0, 300));
+  }
+
   const data = await res.json();
   const item = data.data[0];
-
-  // 如果直接返回的是 URL
   if (item.url) return item.url;
-
-  // 如果返回的是 base64，转成 Blob URL
   if (item.b64_json) {
     const bin = atob(item.b64_json);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const blob = new Blob([bytes], { type: "image/png" });
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
   }
-
   throw new Error("AI 返回的图片格式无法解析");
 }
 
@@ -3178,6 +3275,98 @@ function getAffinityOf(name) {
 }
 
 // ============================================================
+// 🕵️ 生成「MJ 眼中的玩家关系」描述
+// 铁律：不假设同校同学，一切以用户填的身份 + 好感度为准
+// ============================================================
+function buildMjRelationToPlayer() {
+  const profile = store.getProfile();
+  const playerName = profile.name || "玩家";
+  const playerPronoun = profile.gender === "male" ? "他" : "她";
+  const identityDesc = (profile.identity || "").trim();
+  const backgroundDesc = (profile.background || "").trim();
+  const mjAff = getAffinityOf("米歇尔·琼斯");
+  const peterAff = getAffinityOf("彼得·帕克");
+
+  // ==== 1. 判断"同校/同班"关键词（只在用户明确填了才认定）====
+  const sameSchoolKeywords = ["同班", "同校", "同年级", "同学", "中城高中", "midtown", "班级", "同桌"];
+  const combinedDesc = (identityDesc + " " + backgroundDesc).toLowerCase();
+  const isSameSchool = sameSchoolKeywords.some(k => combinedDesc.includes(k.toLowerCase()));
+
+  // ==== 2. 根据好感度 + 是否同校，算出 MJ 对玩家的"观察距离" ====
+  let watchDistance = "";
+  let watchMethod = "";
+
+  if (isSameSchool) {
+    // 同校：可以随时观察，日常细节多
+    if (mjAff >= 51) {
+      watchDistance = `你和 ${playerName} 是**同学 + 朋友**。你们经常在走廊、图书馆、教室碰到，会说话，会互相吐槽。你对 ta 的观察是近距离的、日常的。`;
+      watchMethod = `可以写：走廊里撞见、课间看 ta、图书馆对视、食堂里的细节、一起做项目时的怪事。`;
+    } else if (mjAff >= 21) {
+      watchDistance = `你和 ${playerName} 是**同校同学，但不算熟**。你认识 ta 的脸，知道 ta 和彼得走得近，偶尔在走廊点头。`;
+      watchMethod = `可以写：走廊里看到、教室里远远地注意、图书馆角落里的观察。不能写"我们一起做作业""我们聊天"。`;
+    } else {
+      watchDistance = `你和 ${playerName} 是**同校但几乎没说过话的同学**。你只知道 ta 和彼得混在一起。`;
+      watchMethod = `只能写"远远看到"的观察：走廊、教室、放学时的人群。不能写任何"说话"的场景。`;
+    }
+  } else {
+    // 非同校：MJ 只能"偶遇 + 彼得口中 + 社交平台"三种渠道
+    if (mjAff >= 51) {
+      watchDistance = `你和 ${playerName} **不是同校同学，但已经算朋友**（可能是通过彼得认识的，或者偶然熟起来的）。你们会发消息、偶尔见面。`;
+      watchMethod = `可以写：一起约出来见过、聊天时注意到的细节、ta 社交媒体上发的、彼得聊到的事。`;
+    } else if (mjAff >= 21) {
+      watchDistance = `你和 ${playerName} **不是同校，见过几面**（可能在彼得家、某个活动、或街上遇到）。你只知道 ta 是彼得身边那个人。`;
+      watchMethod = `只能写"见得少但印象深刻"的观察：一次偶遇、一个动作、一句简短的对话。不能写"我经常看到 ta"。`;
+    } else {
+      watchDistance = `你和 ${playerName} **几乎不认识**。你可能只在彼得那里听过 ta 的名字，或者在社交平台上刷到过。`;
+      watchMethod = `只能写"从彼得口中听到"或"社交媒体上注意到"的观察。绝不能写"我看到 ta 今天……"这种当面观察。`;
+    }
+  }
+
+  // ==== 3. 用户明确填了身份描述时，把它也塞进去 ====
+  let identityLine = "";
+  if (identityDesc) {
+    identityLine = `\n【用户在设置里填写的身份】${identityDesc}`;
+  }
+  if (backgroundDesc) {
+    identityLine += `\n【用户在设置里填写的背景】${backgroundDesc}`;
+  }
+
+  return {
+    playerName,
+    playerPronoun,
+    mjAff,
+    peterAff,
+    isSameSchool,
+    watchDistance,
+    watchMethod,
+    identityLine,
+    block: `
+【你和 ${playerName} 的真实关系 · 铁律 · 违反即失败】
+${watchDistance}
+${identityLine}
+
+【在这种关系下，你"能观察到什么"】
+${watchMethod}
+
+【绝对禁止 · 违反即失败】
+${isSameSchool
+  ? `- 严禁写成"陌生人""不认识 ta"——你明明认识 ta。
+- 严禁把 ta 当成"刚转来的新同学"。
+- 严禁编造"我们同桌""我们同班"之外的具体班级细节（除非用户在设置里写了）。`
+  : `- 严禁写成"我们同校""我们同班""我在学校里看到 ta"——你们不是同校的。
+- 严禁写"我们一起上课""我们一起做作业""食堂里"等校园场景。
+- 只能写"偶遇""从彼得口中听到""社交媒体上看到"这几种渠道。
+- 如果好感度低（<21），你甚至不能写"我今天看到 ta"——因为你根本没机会看到。`
+}
+
+【你与彼得的关系】
+你和彼得·帕克是**同学 + 好朋友**（中城高中十项全能队队友）。好感度：${peterAff}/200。
+你可以在笔记里吐槽彼得、调侃彼得、观察彼得，但**只能说"彼得"，不能说"那个男孩""一个叫彼得的人"**。
+`
+  };
+}
+
+// ============================================================
 // 🕵️ MJ 笔记本 · AI 生成一条观察
 // 铁律：MJ 只能"从外部观察"，绝不能看到彼得换战衣、不能听到彼得承认
 // ============================================================
@@ -3192,10 +3381,87 @@ async function generateMjClue() {
   const nb = store.getMjNotebook();
 
   // 从最近的行为日志里抽 4 条（不够就有多少用多少）
-  const recent = behaviorLog.slice(-4);
+let recent = behaviorLog.slice(-4);
 
-  if (!recent.length) {
-    return null; // 没有可观察的行为，不生成
+// ★ 如果行为日志太少（< 2 条），用主线剧情历史补足，避免 MJ 无料可写
+if (recent.length < 2) {
+  const history = s.history || [];
+  const recentHistory = history.slice(-3).map((h, i) => ({
+    date: `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`,
+    playerChoice: h.choice || "（玩家推进了剧情）",
+    storyExcerpt: (h.story || "").slice(0, 400)
+  }));
+  recent = [...recentHistory, ...recent];
+  // 去重，最多保留 4 条
+  recent = recent.slice(-4);
+}
+
+ if (!recent.length) {
+    // 兜底：没有行为日志时，也要把「关系 + 身份 + 阶段」喂给 AI，
+    // 否则 AI 会把 MJ 写成陌生人观察、写得很短、而且 OOC。
+    try {
+      const s2 = store.getState();
+      const phase2 = WORLD.timeline[s2.anchor] || WORLD.timeline[0];
+      const profile2 = store.getProfile();
+      const playerName2 = profile2.name || "玩家";
+      const playerPronoun2 = profile2.gender === "male" ? "他" : "她";
+      const peterAff2 = getAffinityOf("彼得·帕克");
+      const mjAff2 = getAffinityOf("米歇尔·琼斯");
+      const mjRelation = buildMjRelationToPlayer();
+
+      const fallbackPrompt = `你是漫威的「米歇尔·琼斯（MJ）」，中城高中的学生，彼得·帕克的同学兼好朋友。
+你有极强的观察力，冷幽默，说话一针见血，不喜欢废话。你有一个**只有你自己知道**的小笔记本，专门观察身边的人。
+
+【你和他们的关系 · 铁律 · 违反即失败】
+1. 你和「彼得·帕克」是**同学 + 好朋友**，不是陌生人。你对彼得的怪毛病早就见怪不怪了。
+2. **你和「${playerName2}」的关系，严格按下面的描述来写**，不要假设是同校同学：
+${mjRelation.block}
+3. **绝对禁止**出现"那个叫彼得的男孩""一个叫${playerName2}的人""我注意到一个陌生人"这类表述（除非上面明确说你不认识 ta）。
+4. **绝对禁止**把彼得当成刚认识的、需要"认识"的对象。你早就认识彼得。
+
+【当前游戏内日期】${s2.gameYear}年${s2.gameMonth}月${s2.gameDay}日
+【当前阶段】${phase2.name}
+【阶段说明】${phase2.summary}
+
+【当前关系数值】
+- 你对彼得的好感度：${peterAff2}/200（${affinityLevelHint(peterAff2)}）
+- 你对 ${playerName2} 的好感度：${mjAff2}/100
+
+【任务】写一条新的观察，第一人称，MJ 的口吻。
+【风格】短句、冷幽默、一针见血、偶尔自嘲。可以吐槽彼得，可以冷眼旁观 ${playerName2}。
+【铁律】只能写"外部可见、能解释得通的细节"，绝不能写"她看到战衣""听到承认超能力"等穿帮内容。
+【长度】100-300 字，可加 3 个 emoji（🕵️ 🤔 📓 这类，不要堆砌）。
+【格式】只输出观察本身，不要任何前缀、引号、括号包裹。
+
+【参考语气】
+"彼得今天又是体育课摔的。体育课。周四。他上周也是体育课。🕵️"
+"${playerName2}盯着窗外看了整整一节课。下课铃响的时候，ta 的动作比铃声还快。有意思。"
+
+直接输出观察本身。`;
+
+      const raw2 = await callAI([{ role: "user", content: "写一条新观察" }], fallbackPrompt);
+      const text2 = String(raw2 || "").trim();
+      if (!text2 || text2.length < 10) return null;
+
+      const nb2 = store.getMjNotebook();
+      const prev2 = nb2.clues.length ? (nb2.clues[nb2.clues.length - 1].suspicion || 0) : 0;
+      // ★ 怀疑度放缓：每次 +3~6，不再一次 +8~15
+      const bump2 = 3 + Math.floor(Math.random() * 4);
+      const clue2 = {
+        date: `${s2.gameYear}年${s2.gameMonth}月${s2.gameDay}日`,
+        text: text2,
+        suspicion: Math.min(100, prev2 + bump2),
+        type: /彼得/.test(text2) ? "peter" : (/${playerName2}/.test(text2) ? "user-ability" : "behavior"),
+        turn: s2.turn
+      };
+      nb2.clues.push(clue2);
+      nb2.lastGenTurn = s2.turn;
+      store.setMjNotebook(nb2);
+      return clue2;
+    } catch (e) {
+      console.warn("MJ 兜底生成失败:", e);
+      throw e;
+    }
   }
 
   // 玩家身份对应的"MJ 可能观察到的东西"
@@ -3211,8 +3477,19 @@ async function generateMjClue() {
   // 已生成的线索，避免重复
   const existingClues = (nb.clues || []).slice(-6).map(c => "· " + c.text).join("\n");
 
+  const peterAffNow = getAffinityOf("彼得·帕克");
+  const mjAffNow = getAffinityOf("米歇尔·琼斯");
+const mjRelation = buildMjRelationToPlayer();
+
   const sysPrompt = `你是漫威的「米歇尔·琼斯（MJ）」，中城高中的学生，彼得·帕克的同学兼好朋友。
 你有极强的观察力，冷幽默，说话一针见血，不喜欢废话。你有一个**只有你自己知道**的小笔记本，专门观察身边的人。
+
+【你和他们的关系 · 铁律 · 违反即失败】
+1. 你和「彼得·帕克」是**同学 + 好朋友**，不是陌生人。好感度 ${peterAffNow}/200。
+2. **你和「${playerName}」的关系，严格按下面的描述来写**，不要假设是同校同学：
+${mjRelation.block}
+3. **绝对禁止**出现"那个叫彼得的男孩""一个叫${playerName}的人""我注意到一个陌生人"这类表述（除非上面明确说你不认识 ta）。
+4. **绝对禁止**把彼得当成刚认识的、需要"认识"的对象。你早就认识彼得。
 
 【当前游戏内日期】${s.gameYear}年${s.gameMonth}月${s.gameDay}日
 【当前阶段】${phase.name}
@@ -3276,10 +3553,11 @@ ${existingClues || "（还没有）"}
   const text = String(raw || "").trim();
   if (!text || text.length < 10) return null;
 
-  // 生成"怀疑度"（0-100，逐渐攀升）
-  const prevSuspicion = nb.clues.length ? (nb.clues[nb.clues.length - 1].suspicion || 0) : 0;
-  const bump = 8 + Math.floor(Math.random() * 8); // 每次 +8~15
-  const newSuspicion = Math.min(100, prevSuspicion + bump);
+  // 生成"怀疑度"（0-100，缓慢攀升）
+const prevSuspicion = nb.clues.length ? (nb.clues[nb.clues.length - 1].suspicion || 0) : 0;
+// ★ 放缓：每次 +3~6，避免几条就冲到 80% 摊牌
+const bump = 3 + Math.floor(Math.random() * 4);
+const newSuspicion = Math.min(100, prevSuspicion + bump);
 
   // 判断这条线索是不是关于"用户身份"的
   const type = /(变种|魔法|改造|不像普通|不对劲|异常|不是普通人)/.test(text)
@@ -3858,16 +4136,21 @@ window.selectOption = (optText) => {
 // ★ 记录本回合玩家行为，供 MJ 笔记本推断（含用户身份判断）
         try {
           const profile = store.getProfile();
-          const playerName = profile.name || "玩家";
           const identityType = store.getPlayerIdentityType();
-          
-          // 从剧情里提取"彼得/玩家做了什么"
+
+          // 用 s.history 里最新那条（刚 push 进去的）作为 lastTurn
+          const historyArr = s.history || [];
+          const lastEntry = historyArr.length ? historyArr[historyArr.length - 1] : null;
+
+          // phase 用当前 anchor 从 WORLD.timeline 取，别引用外部未定义变量
+          const phaseNow = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+
           const behaviorEntry = {
             turn: s.turn,
             date: `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`,
-            playerChoice: lastTurn ? (lastTurn.choice || "") : "",
-            storyExcerpt: (s.currentStory || "").slice(0, 400), // 只存前 400 字，够 AI 推断
-            phase: phase.name,
+            playerChoice: (lastEntry && lastEntry.choice) ? lastEntry.choice : (optText || ""),
+            storyExcerpt: (s.currentStory || "").slice(0, 400),
+            phase: phaseNow.name,
             affinity: s.affinity,
             playerIdentityType: identityType
           };
@@ -4244,12 +4527,30 @@ Appearance: {
     
     // 默认生图提示词
     const defaultPrompts = {
-      peter: "cinematic portrait of Peter Parker, teenage boy, brown hair, warm smile, MCU style, natural lighting",
-      ned: "cinematic portrait of Ned Leeds, teenage boy, asian american, friendly smile, MCU style",
-      mj: "cinematic portrait of Michelle Jones, teenage girl, dark curly hair, serious but soft expression, MCU style",
-      may: "cinematic portrait of Aunt May, middle aged woman, kind eyes, warm smile, MCU style",
-      map: "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels."
-    };
+  peter: "Tom Holland as Peter Parker, British actor, early 20s, short curly brown hair, big dark brown eyes, boyish face, slight freckles, slim athletic build, wearing a Midtown School of Science and Technology hoodie or a blue-and-red Spider-Man suit, cinematic portrait, MCU Spider-Man Homecoming style, natural lighting, photorealistic",
+  ned: "Jacob Batalon as Ned Leeds, Filipino-American actor, early 20s, plus-size body, round friendly face, short black hair, warm smile, wearing a Midtown School hoodie and a Star Wars t-shirt, cinematic portrait, MCU Spider-Man style, natural lighting, photorealistic",
+  mj: "Zendaya as Michelle 'MJ' Jones, American actress, tall slim build, dark brown skin, big expressive brown eyes, long dark curly hair, usually in a hoodie or leather jacket, deadpan cool expression, cinematic portrait, MCU Spider-Man style, natural lighting, photorealistic",
+  may: "Marisa Tomei as Aunt May Parker, American actress, mid-40s, wavy brown hair, warm brown eyes, kind smile, slim build, casual cardigan or simple blouse, cinematic portrait, MCU Spider-Man style, natural lighting, photorealistic",
+  flash: "Tony Revolori as Flash Thompson, American actor, early 20s, slim build, short black hair, cocky expression, wearing an expensive jacket and sneakers, cinematic portrait, MCU Spider-Man style, natural lighting, photorealistic",
+  liz: "Laura Harrier as Liz Allan, American actress, early 20s, tall slim build, dark skin, straight black hair, elegant and confident smile, wearing a school uniform or a homecoming dress, cinematic portrait, MCU Spider-Man style, natural lighting, photorealistic",
+  happy: "Jon Favreau as Happy Hogan, American actor, mid-50s, stocky build, short grey hair, goatee, wearing a dark suit or casual polo, serious but friendly expression, cinematic portrait, MCU style, natural lighting, photorealistic",
+  tony: "Robert Downey Jr. as Tony Stark / Iron Man, American actor, mid-50s, short trimmed goatee, dark brown eyes, sharp features, wearing a black tailored suit or the red-gold Iron Man arm and sunglasses, cinematic portrait, MCU style, natural lighting, photorealistic",
+  cap: "Chris Evans as Steve Rogers / Captain America, American actor, late 30s, clean shaven or slight stubble, muscular build, blonde brown hair, wearing a navy blue Captain America suit or a plain white t-shirt, cinematic portrait, MCU style, natural lighting, photorealistic",
+  natasha: "Scarlett Johansson as Natasha Romanoff / Black Widow, American actress, mid-30s, short red hair, green eyes, slim athletic build, wearing a black tactical suit, serious expression, cinematic portrait, MCU style, natural lighting, photorealistic",
+  thor: "Chris Hemsworth as Thor, Australian actor, mid-30s, long blonde hair and beard, muscular build, blue eyes, wearing Asgardian armor or a casual shirt, cinematic portrait, MCU style, natural lighting, photorealistic",
+  hulk: "Mark Ruffalo as Bruce Banner / Hulk, American actor, early 50s, short curly grey-brown hair, glasses, clean shaven, wearing a purple shirt or lab coat, thoughtful expression, cinematic portrait, MCU style, natural lighting, photorealistic",
+  clint: "Jeremy Renner as Clint Barton / Hawkeye, American actor, early 50s, short brown hair, stubble, muscular build, wearing a black tactical vest and carrying a bow, cinematic portrait, MCU style, natural lighting, photorealistic",
+  wanda: "Elizabeth Olsen as Wanda Maximoff / Scarlet Witch, American actress, early 30s, long wavy auburn hair, green eyes, pale skin, wearing a dark red leather jacket or a textured red suit, cinematic portrait, MCU style, natural lighting, photorealistic",
+  bucky: "Sebastian Stan as Bucky Barnes / Winter Soldier, American actor, late 30s, shoulder-length dark brown hair, stubble, blue eyes, metal left arm, wearing a black tactical jacket, cinematic portrait, MCU style, natural lighting, photorealistic",
+  sam: "Anthony Mackie as Sam Wilson / Falcon, American actor, early 40s, short black hair, goatee, dark skin, wearing a winged Falcon suit or a casual bomber jacket, cinematic portrait, MCU style, natural lighting, photorealistic",
+  scott: "Paul Rudd as Scott Lang / Ant-Man, American actor, early 50s, short brown hair, friendly face, wearing the red-and-grey Ant-Man suit or a casual hoodie, cinematic portrait, MCU style, natural lighting, photorealistic",
+  tchalla: "Chadwick Boseman as T'Challa / Black Panther, American actor, late 30s, short black hair, goatee, dark skin, wearing a black panther habit suit with silver accents, regal expression, cinematic portrait, MCU style, natural lighting, photorealistic",
+  rhodey: "Don Cheadle as James Rhodes / War Machine, American actor, mid-50s, short black hair, moustache, dark skin, wearing a grey War Machine armor or a military uniform, cinematic portrait, MCU style, natural lighting, photorealistic",
+  loki: "Tom Hiddleston as Loki, British actor, tall slim build, pale skin, shoulder-length black hair slicked back, sharp cheekbones, green eyes, mischievous smirk, wearing a green-and-gold Asgardian leather outfit with a long cape or a black suit, cinematic portrait, MCU style, natural lighting, photorealistic",
+  strange: "Benedict Cumberbatch as Doctor Stephen Strange, British actor, mid-40s, dark hair with grey streaks, goatee, sharp cheekbones, wearing the blue Cloak of Levitation or a navy high-collar tunic, cinematic portrait, MCU style, natural lighting, photorealistic",
+  matt: "Charlie Cox as Matt Murdock / Daredevil, British-American actor, late 30s, short dark brown hair, stubble, wearing a dark red Daredevil suit or a grey suit and glasses, cinematic portrait, MCU style, natural lighting, photorealistic",
+  map: "Top-down illustrated map of Queens New York, MCU Spider-Man Homecoming style, roads, apartment blocks, Midtown School of Science and Technology, subway station, no text labels, clean line art, warm color palette"
+};
     const prompts = cfg.prompts || defaultPrompts;
 
     body.innerHTML = `<div style="padding:14px">
@@ -4286,19 +4587,39 @@ Appearance: {
       </div>
 
       <div class="card">
-        <h3>👥 联系人头像</h3>
-        ${contacts.filter(c => !c.isTheater).map(c => `
-          <div class="row" style="gap:12px;margin-bottom:12px;align-items:center;">
-            <div style="width:40px;height:40px;border-radius:50%;background:var(--panel-2);overflow:hidden;flex-shrink:0;">
-              ${c.avatar ? `<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
-            </div>
-            <div style="flex:1;font-size:13px;color:var(--text);">${esc(c.name)}</div>
-            <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
-              上传<input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
-            </label>
-          </div>
-        `).join("")}
+  <h3>👥 联系人头像与参考图</h3>
+  <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+    头像：显示在 App 里的小圆头像。<br>
+    参考图：生图 AI 会**严格按这张参考图**生成该角色的图（脸、衣服、气质都要对上）。
+  </p >
+  ${contacts.filter(c => !c.isTheater).map(c => `
+    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
+      <div class="row" style="gap:12px;align-items:center;margin-bottom:8px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
+          ${c.avatar ? `< img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+        </div>
+        <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
+        <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
+          换头像<input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
+        </label>
       </div>
+      <div class="row" style="gap:10px;align-items:center;">
+        <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          ${c.refImage ? `< img src="${c.refImage}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
+          <div style="display:flex;gap:6px;">
+            <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:11px;margin:0;">
+              上传<input type="file" class="c-ref-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
+            </label>
+            ${c.refImage ? `<button class="btn ghost c-ref-clear" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;color:#e62429;border-color:#e62429;">清除</button>` : ""}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join("")}
+</div>
 
       <div class="card">
         <h3>📝 自定义 CSS 主题</h3>
@@ -4309,14 +4630,44 @@ Appearance: {
 
       <div class="card">
         <h3>🎨 生图提示词 (Prompt)</h3>
-        <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">留空则使用默认提示词。生成 IG 帖子或地图时会调用这些词。</p >
-        
-        <div class="field"><label>彼得·帕克</label><textarea id="pr_peter" rows="2" style="font-size:12px;">${esc(prompts.peter || "")}</textarea></div>
-        <div class="field"><label>内德·利兹</label><textarea id="pr_ned" rows="2" style="font-size:12px;">${esc(prompts.ned || "")}</textarea></div>
-        <div class="field"><label>米歇尔·琼斯</label><textarea id="pr_mj" rows="2" style="font-size:12px;">${esc(prompts.mj || "")}</textarea></div>
-        <div class="field"><label>梅婶</label><textarea id="pr_may" rows="2" style="font-size:12px;">${esc(prompts.may || "")}</textarea></div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+          默认已填入「演员名 + 具体造型」，AI 会按电影里对应演员的脸生成。<br>
+          如果该角色上传了「参考图」，生图时会**严格以参考图为准**，此处的文字提示只作为补充。
+        </p >
+
+        <div style="font-size:11px;color:var(--accent-2);font-weight:600;margin:12px 0 6px;letter-spacing:0.5px;">🕷️ 主线角色</div>
+        <div class="field"><label>彼得·帕克（Tom Holland）</label><textarea id="pr_peter" rows="2" style="font-size:12px;">${esc(prompts.peter || "")}</textarea></div>
+        <div class="field"><label>内德·利兹（Jacob Batalon）</label><textarea id="pr_ned" rows="2" style="font-size:12px;">${esc(prompts.ned || "")}</textarea></div>
+        <div class="field"><label>米歇尔·琼斯 / MJ（Zendaya）</label><textarea id="pr_mj" rows="2" style="font-size:12px;">${esc(prompts.mj || "")}</textarea></div>
+        <div class="field"><label>梅婶（Marisa Tomei）</label><textarea id="pr_may" rows="2" style="font-size:12px;">${esc(prompts.may || "")}</textarea></div>
+        <div class="field"><label>Flash Thompson（Tony Revolori）</label><textarea id="pr_flash" rows="2" style="font-size:12px;">${esc(prompts.flash || "")}</textarea></div>
+        <div class="field"><label>Liz Allan（Laura Harrier）</label><textarea id="pr_liz" rows="2" style="font-size:12px;">${esc(prompts.liz || "")}</textarea></div>
+        <div class="field"><label>Happy Hogan（Jon Favreau）</label><textarea id="pr_happy" rows="2" style="font-size:12px;">${esc(prompts.happy || "")}</textarea></div>
+
+        <div style="font-size:11px;color:var(--accent-2);font-weight:600;margin:18px 0 6px;letter-spacing:0.5px;">🦸 复仇者联盟</div>
+        <div class="field"><label>托尼·斯塔克 / 钢铁侠（Robert Downey Jr.）</label><textarea id="pr_tony" rows="2" style="font-size:12px;">${esc(prompts.tony || "")}</textarea></div>
+        <div class="field"><label>美国队长（Chris Evans）</label><textarea id="pr_cap" rows="2" style="font-size:12px;">${esc(prompts.cap || "")}</textarea></div>
+        <div class="field"><label>娜塔莎·罗曼诺夫 / 黑寡妇（Scarlett Johansson）</label><textarea id="pr_natasha" rows="2" style="font-size:12px;">${esc(prompts.natasha || "")}</textarea></div>
+        <div class="field"><label>雷神（Chris Hemsworth）</label><textarea id="pr_thor" rows="2" style="font-size:12px;">${esc(prompts.thor || "")}</textarea></div>
+        <div class="field"><label>洛基（Tom Hiddleston）</label><textarea id="pr_loki" rows="2" style="font-size:12px;">${esc(prompts.loki || "")}</textarea></div>
+        <div class="field"><label>绿巨人 / 班纳（Mark Ruffalo）</label><textarea id="pr_hulk" rows="2" style="font-size:12px;">${esc(prompts.hulk || "")}</textarea></div>
+        <div class="field"><label>鹰眼（Jeremy Renner）</label><textarea id="pr_clint" rows="2" style="font-size:12px;">${esc(prompts.clint || "")}</textarea></div>
+        <div class="field"><label>绯红女巫（Elizabeth Olsen）</label><textarea id="pr_wanda" rows="2" style="font-size:12px;">${esc(prompts.wanda || "")}</textarea></div>
+        <div class="field"><label>冬兵（Sebastian Stan）</label><textarea id="pr_bucky" rows="2" style="font-size:12px;">${esc(prompts.bucky || "")}</textarea></div>
+        <div class="field"><label>猎鹰（Anthony Mackie）</label><textarea id="pr_sam" rows="2" style="font-size:12px;">${esc(prompts.sam || "")}</textarea></div>
+        <div class="field"><label>蚁人（Paul Rudd）</label><textarea id="pr_scott" rows="2" style="font-size:12px;">${esc(prompts.scott || "")}</textarea></div>
+        <div class="field"><label>黑豹（Chadwick Boseman）</label><textarea id="pr_tchalla" rows="2" style="font-size:12px;">${esc(prompts.tchalla || "")}</textarea></div>
+        <div class="field"><label>战争机器（Don Cheadle）</label><textarea id="pr_rhodey" rows="2" style="font-size:12px;">${esc(prompts.rhodey || "")}</textarea></div>
+        <div class="field"><label>奇异博士（Benedict Cumberbatch）</label><textarea id="pr_strange" rows="2" style="font-size:12px;">${esc(prompts.strange || "")}</textarea></div>
+        <div class="field"><label>夜魔侠（Charlie Cox）</label><textarea id="pr_matt" rows="2" style="font-size:12px;">${esc(prompts.matt || "")}</textarea></div>
+
+        <div style="font-size:11px;color:var(--accent-2);font-weight:600;margin:18px 0 6px;letter-spacing:0.5px;">🗺️ 其他</div>
         <div class="field"><label>蜘蛛终端地图</label><textarea id="pr_map" rows="2" style="font-size:12px;">${esc(prompts.map || "")}</textarea></div>
-        <button class="btn" id="save_prompts" style="margin-top:8px;">保存提示词</button>
+
+        <div class="row" style="gap:8px;margin-top:12px;">
+          <button class="btn" id="save_prompts" style="flex:1;">💾 保存提示词</button>
+          <button class="btn ghost" id="reset_prompts" style="flex:1;">🔄 恢复默认</button>
+        </div>
       </div>
     </div>`;
 
@@ -4381,24 +4732,61 @@ Appearance: {
     };
 
     // 联系人头像
-    body.querySelectorAll(".c-avatar-input").forEach(input => {
-      input.onchange = (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const name = input.dataset.name;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const list = store.getContacts();
-          const c = list.find(x => x.name === name);
-          if (c) {
-            c.avatar = ev.target.result;
-            store.setContacts(list);
-            this.render(body);
-            toast("头像已更新");
-          }
-        };
-        reader.readAsDataURL(file);
-      };
-    });
+body.querySelectorAll(".c-avatar-input").forEach(input => {
+  input.onchange = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const name = input.dataset.name;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const list = store.getContacts();
+      const c = list.find(x => x.name === name);
+      if (c) {
+        c.avatar = ev.target.result;
+        store.setContacts(list);
+        this.render(body);
+        toast("头像已更新");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+});
+
+// 联系人参考图上传
+body.querySelectorAll(".c-ref-input").forEach(input => {
+  input.onchange = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    if (file.size > 4 * 1024 * 1024) return toast("参考图不能超过 4MB");
+    const name = input.dataset.name;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const list = store.getContacts();
+      const c = list.find(x => x.name === name);
+      if (c) {
+        c.refImage = ev.target.result;
+        store.setContacts(list);
+        this.render(body);
+        toast("参考图已更新，生图时会严格使用");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+});
+
+// 联系人参考图清除
+body.querySelectorAll(".c-ref-clear").forEach(btn => {
+  btn.onclick = () => {
+    const name = btn.dataset.name;
+    if (!confirm(`确定清除「${name}」的参考图吗？`)) return;
+    const list = store.getContacts();
+    const c = list.find(x => x.name === name);
+    if (c) {
+      c.refImage = "";
+      store.setContacts(list);
+      this.render(body);
+      toast("参考图已清除");
+    }
+  };
+});
 
     // 自定义 CSS
     body.querySelector("#save_css").onclick = () => {
@@ -4408,18 +4796,35 @@ Appearance: {
       toast("CSS 已应用");
     };
 
-    // 提示词
+    // 提示词保存
     body.querySelector("#save_prompts").onclick = () => {
-      cfg.prompts = {
-        peter: body.querySelector("#pr_peter").value.trim() || defaultPrompts.peter,
-        ned: body.querySelector("#pr_ned").value.trim() || defaultPrompts.ned,
-        mj: body.querySelector("#pr_mj").value.trim() || defaultPrompts.mj,
-may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
-        map: body.querySelector("#pr_map").value.trim() || defaultPrompts.map,
-      };
+      const newPrompts = {};
+      const fields = [
+        "peter", "ned", "mj", "may", "flash", "liz", "happy",
+        "tony", "cap", "natasha", "thor", "loki", "hulk", "clint",
+        "wanda", "bucky", "sam", "scott", "tchalla", "rhodey",
+        "strange", "matt", "map"
+      ];
+      fields.forEach(key => {
+        const el = body.querySelector("#pr_" + key);
+        if (el) newPrompts[key] = el.value.trim() || defaultPrompts[key] || "";
+      });
+      cfg.prompts = newPrompts;
       store.set("sv_appearance", cfg);
       toast("提示词已保存");
     };
+
+    // 提示词恢复默认
+    const resetPromptsBtn = body.querySelector("#reset_prompts");
+    if (resetPromptsBtn) {
+      resetPromptsBtn.onclick = () => {
+        if (!confirm("确定恢复所有生图提示词为默认值吗？你自定义的内容会被清空。")) return;
+        cfg.prompts = JSON.parse(JSON.stringify(defaultPrompts));
+        store.set("sv_appearance", cfg);
+        this.render(body);
+        toast("已恢复默认提示词");
+      };
+    }
   }
 },
 
@@ -4540,19 +4945,46 @@ may: body.querySelector("#pr_may").value.trim() || defaultPrompts.may,
             </div>
            </div>
         </div>
-        <div class="card"><h3>生图 AI 接入</h3>
+        <div class="card"><h3>🎨 生图 AI 接入</h3>
           <div class="field">
-            <label>生图 Key（留空同上）</label>
+            <label>生图 Key（留空则用上方文本 AI 的 Key）</label>
             <div style="display:flex;gap:6px;">
               <input id="i_key" type="text" value="${esc(cfg.imgApiKey)}" style="flex:1;" autocomplete="off" spellcheck="false">
               <button type="button" id="i_key_toggle" class="btn ghost" style="width:auto;padding:0 12px;font-size:12px;">👁️ 隐藏</button>
             </div>
           </div>
-          <div class="field"><label>生图 URL</label><input id="i_url" value="${esc(cfg.imgBaseUrl)}"></div>
-          <div class="field"><label>生图模型</label>
-            <div class="row"><input id="i_model" value="${esc(cfg.imgModel)}" style="flex:1"><button class="btn ghost" id="fetchImgModel" style="width:auto;padding:0 12px">拉取</button></div>
+          <div class="field"><label>生图 URL</label><input id="i_url" value="${esc(cfg.imgBaseUrl)}" placeholder="例如：https://api.openai.com/v1"></div>
+          <div class="field">
+            <label>生图模型</label>
+            <div class="row" style="gap:6px;align-items:stretch;">
+              <input id="i_model" value="${esc(cfg.imgModel)}" style="flex:1;min-width:0;" placeholder="例如：gpt-image-1 / dall-e-3 / flux-dev">
+              <button class="btn ghost" id="fetchImgModel" style="width:auto;padding:0 12px;flex-shrink:0;">拉取</button>
+              <button class="btn ghost" id="manualImgModel" style="width:auto;padding:0 12px;flex-shrink:0;" title="手动修改模型名">✏️</button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;">
+              💡 点「拉取」会从服务商过滤出生图模型；点「✏️」可以手动输入任意模型名。
+            </div>
           </div>
+
           <button class="btn" id="saveI">保存生图配置</button>
+
+          <button class="btn ghost" id="testImgApiBtn" style="margin-top:8px;">🔍 测试生图连通性</button>
+          <div id="testImgApiResult" style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--muted);white-space:pre-wrap;word-break:break-all;"></div>
+
+          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">⚡ 生图预设（快速切换）</div>
+            <div id="imgPresetList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+            <button class="btn ghost" id="imgPresetAddBtn" style="font-size:12px;padding:6px 12px;">＋ 添加当前为预设</button>
+          </div>
+
+          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">💾 生图 API 档位（共 10 套）</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">保存不同站子的 URL + Key + 模型，一键切换。</div>
+            <div class="row" style="gap:8px;">
+              <button class="btn ghost" id="imgSlotSaveBtn" style="flex:1;font-size:12px;padding:6px 12px;">💾 存档</button>
+              <button class="btn ghost" id="imgSlotLoadBtn" style="flex:1;font-size:12px;padding:6px 12px;">📂 读档</button>
+            </div>
+          </div>
         </div>
 <div class="card">
   <h3>🧠 括号干预指令</h3>
@@ -4678,18 +5110,57 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
         } catch(err){toast(err.message);}
         e.target.textContent="拉取";
       };
-      body.querySelector("#fetchImgModel").onclick = async (e) => {
-        e.target.textContent="...";
+     body.querySelector("#fetchImgModel").onclick = async (e) => {
+        e.target.textContent = "...";
         try {
-          const url = body.querySelector("#i_url").value||body.querySelector("#c_url").value;
-          const key = body.querySelector("#i_key").value||body.querySelector("#c_key").value;
-          const m = await fetchModels(url, key);
-          if(!m.length) return toast("无模型");
-          body.querySelector("#i_model").outerHTML = `<select id="i_model" style="flex:1">${m.map(x=>`<option value="${x}">${x}</option>`).join('')}</select>`;
-          toast("拉取成功");
-        } catch(err){toast(err.message);}
-        e.target.textContent="拉取";
+          const url = body.querySelector("#i_url").value || body.querySelector("#c_url").value;
+          const key = body.querySelector("#i_key").value || body.querySelector("#c_key").value;
+          const all = await fetchModels(url, key);
+          if (!all.length) { e.target.textContent = "拉取"; return toast("无模型"); }
+
+          // ★ 只保留"生图模型"关键词命中的模型
+          const imageKeywords = ["image", "dall-e", "dalle", "flux", "sd", "stable-diffusion", "midjourney", "mj-", "playground", "ideogram", "kolors", "seedream", "jimeng", "kling", "qwen-image", "cogview", "glm-image", "nano-banana"];
+          const imageModels = all.filter(id => {
+            const low = id.toLowerCase();
+            return imageKeywords.some(k => low.includes(k));
+          });
+
+          // 同时保留用户当前填的模型（即使不在列表里），避免被筛掉
+          const currentModel = body.querySelector("#i_model")?.value || "";
+          const finalList = [...new Set([currentModel, ...imageModels].filter(Boolean))];
+
+          if (finalList.length === 0) {
+            toast("没有识别到生图模型，请手动输入模型名");
+            e.target.textContent = "拉取";
+            return;
+          }
+
+          body.querySelector("#i_model").outerHTML = `
+            <select id="i_model" style="flex:1">
+              ${finalList.map(x => `<option value="${x}" ${x === currentModel ? "selected" : ""}>${x}</option>`).join("")}
+            </select>`;
+          toast(`拉取成功（生图模型 ${finalList.length} 个）`);
+        } catch (err) { toast(err.message); }
+        e.target.textContent = "拉取";
       };
+// ✏️ 手动输入生图模型名
+      const manualImgBtn = body.querySelector("#manualImgModel");
+      if (manualImgBtn) {
+        manualImgBtn.onclick = () => {
+          const cur = body.querySelector("#i_model");
+          const currentVal = cur ? (cur.value || "") : "";
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = currentVal;
+          input.id = "i_model";
+          input.placeholder = "手动输入生图模型名";
+          input.style.cssText = "flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--accent-2);background:var(--panel-2);color:var(--text);font-size:14px;outline:none;";
+          cur.replaceWith(input);
+          input.focus();
+          input.select();
+          toast("已切换到手动输入，改完点「保存生图配置」");
+        };
+      }
 // 🧠 括号干预开关
       const bracketToggle = body.querySelector("#bracket_intervention_toggle");
       if (bracketToggle) {
@@ -5167,6 +5638,247 @@ body.querySelector("#testApiBtn").onclick = async () => {
   resultEl.textContent = lines.join("\n");
 };
       body.querySelector("#saveI").onclick = () => { store.setConfig({...cfg,imgApiKey:body.querySelector("#i_key").value,imgBaseUrl:body.querySelector("#i_url").value,imgModel:body.querySelector("#i_model").value}); toast("已保存"); };
+// ===== 🔍 生图连通性测试 =====
+      body.querySelector("#testImgApiBtn").onclick = async () => {
+        const resultEl = body.querySelector("#testImgApiResult");
+        const url = (body.querySelector("#i_url").value || body.querySelector("#c_url").value || "").trim().replace(/\/+$/, "");
+        const key = (body.querySelector("#i_key").value || body.querySelector("#c_key").value || "").trim();
+        const model = (body.querySelector("#i_model").value || "").trim();
+        if (!url) { resultEl.textContent = "❌ 生图 URL 为空"; return; }
+        if (!key) { resultEl.textContent = "❌ 生图 Key 为空"; return; }
+        if (!model) { resultEl.textContent = "❌ 生图模型为空"; return; }
+
+        const lines = [];
+        lines.push(`📅 测试时间：${new Date().toLocaleString()}`);
+        lines.push(`🌐 生图 URL：${url}`);
+        lines.push(`🤖 生图模型：${model}`);
+        lines.push(`🔑 Key：${key.slice(0, 6)}...${key.slice(-4)}（长度 ${key.length}）`);
+        lines.push("");
+        resultEl.textContent = lines.join("\n");
+
+        // ---- 测试 1：GET /models（能拉模型说明基础连通）----
+        lines.push("【1】GET " + url + "/models");
+        resultEl.textContent = lines.join("\n");
+        try {
+          const r1 = await fetch(url + "/models", {
+            method: "GET",
+            mode: "cors",
+            credentials: "omit",
+            cache: "no-store",
+            headers: { "Authorization": "Bearer " + key }
+          });
+          lines.push("  → HTTP " + r1.status + " " + r1.statusText);
+          if (r1.ok) {
+            const data1 = await r1.json().catch(() => null);
+            const ids = (data1 && data1.data) ? data1.data.map(x => x.id) : [];
+            lines.push("  ✅ 拉模型成功，数量：" + ids.length);
+            const hasTarget = ids.includes(model);
+            lines.push("  → 目标模型是否在列表里：" + (hasTarget ? "✅ 在" : "⚠️ 不在（部分站子不暴露全部模型）"));
+          } else if (r1.status === 401) {
+            lines.push("  ❌ 401 —— Key 无效");
+          } else if (r1.status === 403) {
+            lines.push("  ❌ 403 —— Cloudflare / WAF / CORS 拦截");
+          } else {
+            const t = await r1.text().catch(() => "");
+            lines.push("  ⚠️ " + r1.status + "：" + t.slice(0, 200));
+            lines.push("  （部分站子不支持 /models，可忽略，继续看下一步）");
+          }
+        } catch (e1) {
+          lines.push("  ❌ 网络错误：" + e1.message);
+          lines.push("  👉 可能是 CORS 预检失败 / DNS 解析失败");
+        }
+        lines.push("");
+        resultEl.textContent = lines.join("\n");
+
+        // ---- 测试 2：POST /images/generations（最小 1x1 测试图）----
+        lines.push("【2】POST " + url + "/images/generations（最小测试）");
+        resultEl.textContent = lines.join("\n");
+        try {
+          const isDalle2orImage1 = /dall-e-2|gpt-image/i.test(model);
+          const body2 = {
+            model: model,
+            prompt: "a single red dot on white background, minimal",
+            n: 1,
+            size: isDalle2orImage1 ? "1024x1024" : "1024x1024"
+          };
+          // dall-e-3 需要 quality / style 可选，一般不填也行
+          const r2 = await fetch(url + "/images/generations", {
+            method: "POST",
+            mode: "cors",
+            credentials: "omit",
+            cache: "no-store",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + key
+            },
+            body: JSON.stringify(body2)
+          });
+
+          lines.push("  → HTTP " + r2.status + " " + r2.statusText);
+
+          if (r2.ok) {
+            const data2 = await r2.json().catch(() => null);
+            const item = data2 && data2.data && data2.data[0];
+            if (item && item.url) {
+              lines.push("  ✅ 生图成功，返回 URL：" + item.url.slice(0, 80) + (item.url.length > 80 ? "..." : ""));
+            } else if (item && item.b64_json) {
+              lines.push("  ✅ 生图成功，返回 base64（长度 " + item.b64_json.length + "）");
+            } else {
+              lines.push("  ⚠️ 请求成功，但未识别到 url / b64_json 字段");
+              lines.push("  → 返回体前 300 字：" + JSON.stringify(data2).slice(0, 300));
+            }
+            lines.push("");
+            lines.push("🎉 结论：生图接口完全可用！");
+          } else if (r2.status === 401) {
+            lines.push("  ❌ 401 —— Key 无效");
+          } else if (r2.status === 403) {
+            lines.push("  ❌ 403 —— 被 Cloudflare / WAF 拦截（不是 Key 问题）");
+          } else if (r2.status === 404) {
+            lines.push("  ❌ 404 —— 模型不存在，或路径不对");
+            lines.push("  👉 检查模型名拼写、URL 是否少了 /v1");
+          } else if (r2.status === 429) {
+            lines.push("  ❌ 429 —— 频率超限或额度用尽");
+          } else {
+            const t2 = await r2.text().catch(() => "");
+            lines.push("  ❌ " + r2.status + "：" + t2.slice(0, 400));
+          }
+        } catch (e2) {
+          lines.push("  ❌ 网络错误：" + e2.message);
+          lines.push("  👉 可能是 CORS 预检失败（POST + 自定义 Header 会触发预检）");
+        }
+
+        lines.push("");
+        lines.push("【3】如果两步都失败：");
+        lines.push("  · 检查站子是否只支持文本模型");
+        lines.push("  · 检查站子是否需要把 /v1 加上");
+        lines.push("  · 检查 Key 是否属于这个站子（别混用文本 Key 和生图 Key）");
+
+        resultEl.textContent = lines.join("\n");
+      };
+// ===== ⚡ 生图预设 =====
+      const imgPresetListEl = body.querySelector("#imgPresetList");
+      const renderImgPresets = () => {
+        const presets = store.getImgApiPresets();
+        imgPresetListEl.innerHTML = presets.map((p, i) => `
+          <button class="btn ghost img-preset-chip" data-idx="${i}" style="width:auto;padding:6px 12px;font-size:12px;border-radius:20px;">
+            ${esc(p.name)}
+          </button>
+        `).join("");
+        imgPresetListEl.querySelectorAll(".img-preset-chip").forEach(el => {
+          el.onclick = () => {
+            const idx = parseInt(el.dataset.idx);
+            const preset = presets[idx];
+            if (!preset) return;
+            const iUrl = body.querySelector("#i_url");
+            const iModel = body.querySelector("#i_model");
+            if (iUrl && preset.baseUrl) iUrl.value = preset.baseUrl;
+            if (iModel && preset.model) iModel.value = preset.model;
+            toast("已填入预设：" + preset.name + "（记得点保存生图配置）");
+          };
+        });
+      };
+      renderImgPresets();
+
+      body.querySelector("#imgPresetAddBtn").onclick = () => {
+        const name = prompt("预设名称（比如：我的 OpenAI / 中转站A）");
+        if (!name || !name.trim()) return;
+        const presets = store.getImgApiPresets();
+        presets.push({
+          name: name.trim(),
+          baseUrl: body.querySelector("#i_url").value.trim(),
+          model: body.querySelector("#i_model").value.trim()
+        });
+        store.setImgApiPresets(presets);
+        renderImgPresets();
+        toast("生图预设已添加");
+      };
+// ===== 💾 生图 API 档位（存档）=====
+body.querySelector("#imgSlotSaveBtn").onclick = () => {
+  const slots = store.getImgApiSlots();
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+  div.innerHTML = `<h2 style="color:var(--text);margin-top:0;font-size:17px;">💾 生图 API 档位存档（共 10 格）</h2><div id="imgSlotList"></div><button class="btn ghost" style="margin-top:12px" id="imgSlotClose">关闭</button>`;
+  const list = div.querySelector("#imgSlotList");
+  slots.forEach((snap, i) => {
+    const filled = !!snap;
+    const label = filled
+      ? `<b>${esc(snap.name || "未命名")}</b><br><span style="color:var(--muted);font-size:11px;">${esc(snap.model || "")} · ${esc(snap.baseUrl || "")}</span><br><span style="color:var(--muted);font-size:11px;">${new Date(snap.timestamp).toLocaleString()}</span>`
+      : "（空白档）";
+    const row = document.createElement("div");
+    row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+    row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;min-width:0;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+      <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;flex-shrink:0;">${filled ? "覆盖" : "保存"}</button>`;
+    list.appendChild(row);
+  });
+  list.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-idx]");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+
+    const curUrl = (body.querySelector("#i_url").value || "").trim();
+    const curKey = (body.querySelector("#i_key").value || "").trim();
+    const curModel = (body.querySelector("#i_model").value || "").trim();
+
+    slots[idx] = {
+      name: (curModel || "未命名") + " @ " + curUrl.replace(/^https?:\/\//, "").slice(0, 20),
+      timestamp: Date.now(),
+      baseUrl: curUrl,
+      apiKey: curKey,
+      model: curModel
+    };
+    store.setImgApiSlots(slots);
+    toast(`已保存到生图档位 ${idx + 1}`);
+    div.remove();
+  });
+  div.querySelector("#imgSlotClose").onclick = () => div.remove();
+  document.querySelector(".device").appendChild(div);
+};
+
+// ===== 💾 生图 API 档位（读档）=====
+body.querySelector("#imgSlotLoadBtn").onclick = () => {
+  const slots = store.getImgApiSlots();
+  if (!slots.some(s => s)) return toast("还没有任何生图档位");
+
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+  div.innerHTML = `<h2 style="color:var(--text);margin-top:0;font-size:17px;">📂 生图 API 档位读档（共 10 格）</h2><div id="imgSlotList"></div><button class="btn ghost" style="margin-top:12px" id="imgSlotClose">关闭</button>`;
+  const list = div.querySelector("#imgSlotList");
+
+  slots.forEach((snap, i) => {
+    const filled = !!snap;
+    const label = filled
+      ? `<b>${esc(snap.name || "未命名")}</b><br><span style="color:var(--muted);font-size:11px;">${esc(snap.model || "")} · ${esc(snap.baseUrl || "")}</span><br><span style="color:var(--muted);font-size:11px;">${new Date(snap.timestamp).toLocaleString()}</span>`
+      : "（空白档）";
+    const row = document.createElement("div");
+    row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+    row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;min-width:0;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+      <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;flex-shrink:0;" ${filled ? "" : "disabled"}>读取</button>`;
+    list.appendChild(row);
+  });
+
+  list.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-idx]");
+    if (!btn || btn.disabled) return;
+    const idx = parseInt(btn.dataset.idx);
+    const snap = slots[idx];
+    if (!snap) return toast("该档位为空");
+    if (!confirm("读档会覆盖当前生图配置，确定继续？")) return;
+
+    const cfg = store.getConfig();
+    cfg.imgBaseUrl = snap.baseUrl || cfg.imgBaseUrl;
+    cfg.imgApiKey = snap.apiKey || cfg.imgApiKey;
+    cfg.imgModel = snap.model || cfg.imgModel;
+    store.setConfig(cfg);
+
+    toast("已读取生图档位 " + (idx + 1));
+    div.remove();
+    apps.settings.render(document.getElementById("appBody"));
+  });
+
+  div.querySelector("#imgSlotClose").onclick = () => div.remove();
+  document.querySelector(".device").appendChild(div);
+     };
     }
   },
 
@@ -7414,7 +8126,7 @@ REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
     phase3: ["托尼·斯塔克"],
     phase4: ["托尼·斯塔克", "奇异博士", "绿巨人", "王"],
     phase5: [],
-    phase6: ["奇异博士", "夜魔侠"]
+    phase6: ["奇异博士", "夜魔侠", "洛基"]
   };
   return map[key] || [];
 },
@@ -7423,13 +8135,26 @@ isAvengerDeceasedInPhase(name) {
   const s = store.getState();
   const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
   const key = phase.key;
+
   // 2023 年后（phase6）娜塔莎·罗曼诺夫、托尼·斯塔克已牺牲
   if (key === "phase6") {
     if (name === "娜塔莎·罗曼诺夫") return true;
     if (name === "托尼·斯塔克") return true;
   }
+
+  // 幻视永远已死（复联3后未复活）
   if (name === "幻视") return true;
-  if (name === "洛基") return true;
+
+  // ★ 洛基按阶段判断：
+  //   - phase1 / phase2 / phase2_5 / phase3：在地球之外（阿斯加德/被关押），不活跃但没死
+  //     → 不返回 true（"未死"），但因为不在 active 列表里，本来也不会发帖
+  //   - phase4 / phase5：复联3开头被灭霸掐死 → 已死
+  //   - phase6：2012 逃走的变体洛基在 TVA 之外活动 → 活着
+  if (name === "洛基") {
+    if (key === "phase4" || key === "phase5") return true;
+    return false;
+  }
+
   return false;
 },
 
@@ -8715,9 +9440,48 @@ instagram: {
         }).filter(x => x.user);
 
         body.innerHTML = `<div class="loader"><div class="spin"></div>绘制中...</div>`;
-        
-        let imgUrl = "";
-        try { imgUrl = await generateImage(imgPrompt); } catch(e) { imgUrl = "ERROR"; }
+
+// ★ 智能匹配参考图：如果生图提示词里出现某个角色的名字，自动带上该角色的参考图
+const allContactsForRef = store.getContacts();
+const matchedRef = (() => {
+  const lower = String(imgPrompt || "").toLowerCase();
+  const nameAliases = [
+    { zh: "彼得·帕克", en: ["peter parker", "peter", "spider-man", "spiderman"] },
+    { zh: "内德·利兹", en: ["ned leeds", "ned"] },
+    { zh: "米歇尔·琼斯", en: ["michelle jones", "mj"] },
+    { zh: "梅婶", en: ["aunt may", "may parker", "may"] },
+    { zh: "托尼·斯塔克", en: ["tony stark", "iron man"] },
+    { zh: "美国队长", en: ["steve rogers", "captain america", "cap"] },
+    { zh: "娜塔莎·罗曼诺夫", en: ["natasha romanoff", "black widow"] },
+    { zh: "雷神", en: ["thor"] },
+    { zh: "绿巨人", en: ["bruce banner", "hulk"] },
+    { zh: "鹰眼", en: ["clint barton", "hawkeye"] },
+    { zh: "绯红女巫", en: ["wanda maximoff", "scarlet witch"] },
+    { zh: "冬兵", en: ["bucky barnes", "winter soldier"] },
+    { zh: "猎鹰", en: ["sam wilson", "falcon"] },
+    { zh: "蚁人", en: ["scott lang", "ant-man", "antman"] },
+    { zh: "黑豹", en: ["t'challa", "tchalla", "black panther"] },
+    { zh: "战争机器", en: ["james rhodes", "war machine", "rhodey"] },
+    { zh: "奇异博士", en: ["stephen strange", "doctor strange"] },
+    { zh: "夜魔侠", en: ["matt murdock", "daredevil"] }
+  ];
+  for (const item of nameAliases) {
+    const hit = item.en.some(k => lower.includes(k));
+    if (hit) {
+      const c = allContactsForRef.find(x => x.name === item.zh);
+      if (c && c.refImage) return c.refImage;
+    }
+  }
+  return null;
+})();
+
+let imgUrl = "";
+try {
+  imgUrl = await generateImage(imgPrompt, matchedRef);
+} catch (e) {
+  imgUrl = "ERROR";
+  toast("生图失败：" + e.message);
+}
         
         // ★ 修复：保留历史，追加到最前面，并保存 imgPrompt 供重绘用
         const all = store.getPosts();
@@ -8833,10 +9597,45 @@ ${promptHint}
         if (newPosts.length === 0) throw new Error("AI 未按格式返回帖子，请重试");
 
         const finalPosts = [];
-        for (let i = 0; i < newPosts.length; i++) {
-          body.innerHTML = `<div class="loader"><div class="spin"></div>正在绘制第 ${i+1}/${newPosts.length} 张配图...</div>`;
-          let imgUrl = "ERROR";
-          try { imgUrl = await generateImage(newPosts[i].imgPrompt); } catch(e) {}
+const allContactsForRef2 = store.getContacts();
+const findRefByPrompt = (prompt) => {
+  const lower = String(prompt || "").toLowerCase();
+  const nameAliases = [
+    { zh: "彼得·帕克", en: ["peter parker", "peter", "spider-man", "spiderman"] },
+    { zh: "内德·利兹", en: ["ned leeds", "ned"] },
+    { zh: "米歇尔·琼斯", en: ["michelle jones", "mj"] },
+    { zh: "梅婶", en: ["aunt may", "may parker", "may"] },
+    { zh: "托尼·斯塔克", en: ["tony stark", "iron man"] },
+    { zh: "美国队长", en: ["steve rogers", "captain america", "cap"] },
+    { zh: "娜塔莎·罗曼诺夫", en: ["natasha romanoff", "black widow"] },
+    { zh: "雷神", en: ["thor"] },
+    { zh: "绿巨人", en: ["bruce banner", "hulk"] },
+    { zh: "鹰眼", en: ["clint barton", "hawkeye"] },
+    { zh: "绯红女巫", en: ["wanda maximoff", "scarlet witch"] },
+    { zh: "冬兵", en: ["bucky barnes", "winter soldier"] },
+    { zh: "猎鹰", en: ["sam wilson", "falcon"] },
+    { zh: "蚁人", en: ["scott lang", "ant-man", "antman"] },
+    { zh: "黑豹", en: ["t'challa", "tchalla", "black panther"] },
+    { zh: "战争机器", en: ["james rhodes", "war machine", "rhodey"] },
+    { zh: "奇异博士", en: ["stephen strange", "doctor strange"] },
+    { zh: "夜魔侠", en: ["matt murdock", "daredevil"] }
+  ];
+  for (const item of nameAliases) {
+    if (item.en.some(k => lower.includes(k))) {
+      const c = allContactsForRef2.find(x => x.name === item.zh);
+      if (c && c.refImage) return c.refImage;
+    }
+  }
+  return null;
+};
+
+for (let i = 0; i < newPosts.length; i++) {
+  body.innerHTML = `<div class="loader"><div class="spin"></div>正在绘制第 ${i+1}/${newPosts.length} 张配图...</div>`;
+  let imgUrl = "ERROR";
+  try {
+    const ref = findRefByPrompt(newPosts[i].imgPrompt);
+    imgUrl = await generateImage(newPosts[i].imgPrompt, ref);
+  } catch(e) {}
           finalPosts.push({
             name: newPosts[i].name,
             handle: newPosts[i].handle,
@@ -9006,7 +9805,8 @@ Spider_Terminal: {
           const cfgA = store.get("sv_appearance", {});
           const mapPrompt = (cfgA.prompts && cfgA.prompts.map) ? cfgA.prompts.map : "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels.";
           const prompt = `${mapPrompt}\nScene: ${ctx}. Year: ${sNow.gameYear}.`;
-          const url = await generateImage(prompt);
+         // 地图一般不带具体角色参考图，但保留 refs 参数兼容
+const url = await generateImage(prompt);
           const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
           area.innerHTML = `<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
         } catch(e) { area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`; }
@@ -10205,21 +11005,26 @@ MJNotebook: {
             <button class="btn" id="mjnGenFirst" style="margin-top:16px;">让 MJ 记下第一笔</button>
           </div>`;
         const btn = content.querySelector("#mjnGenFirst");
-        if (btn) btn.onclick = async () => {
-          content.innerHTML = `<div class="mjn-loading"><div class="mjn-loading-spin"></div>她正在写...</div>`;
-          try {
-            await generateMjClue();
-            this.render(body);
-          } catch (e) {
-            toast("生成失败：" + e.message);
-            this.render(body);
-          }
-        };
+       if (btn) btn.onclick = async () => {
+    content.innerHTML = `<div class="mjn-loading"><div class="mjn-loading-spin"></div>她正在写...</div>`;
+    try {
+      const clue = await generateMjClue();
+      if (!clue) {
+        content.innerHTML = `<div class="mjn-empty"><div class="mjn-empty-icon">📓</div><div class="mjn-empty-text">她这次没写出东西。<br>可能是缺少可观察的素材，先去世界线推进几回合再回来。</div></div>`;
         return;
       }
+      this.render(body);
+    } catch (e) {
+      toast("生成失败：" + (e.message || "未知错误"));
+      this.render(body);
+    }
+  };
 
-      content.innerHTML = `
-        <div class="mjn-clue-list">
+  return;
+}
+
+content.innerHTML = `
+  <div class="mjn-clue-list">
           ${[...clues].reverse().map((c, i) => `
             <div class="mjn-clue-card">
               <div class="mjn-clue-head">
@@ -10275,36 +11080,45 @@ MJNotebook: {
         other: "❓ 不太一样的人"
       }[identityType] || "👤 普通学生";
 
-      content.innerHTML = `
-        <div class="mjn-suspect-list">
-          <div class="mjn-suspect-card">
-            <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#e62429,#2d6bff);">P</div>
-            <div class="mjn-suspect-info">
-              <div class="mjn-suspect-name">彼得·帕克</div>
-              <div class="mjn-suspect-desc">中城高中学生 · 好友</div>
-              <div class="mjn-suspect-notes">MJ 的笔记：<b>最近总在忙</b>，说不清在忙什么</div>
-            </div>
-          </div>
+      const mjRelationForSuspects = buildMjRelationToPlayer();
+const playerDescForSuspects = mjRelationForSuspects.isSameSchool
+  ? `${esc(userTypeLabel)} · 同学`
+  : `${esc(userTypeLabel)} · ${esc((store.getProfile().identity || "校外认识的人"))}`;
 
-          <div class="mjn-suspect-card">
-            <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#8a2be2,#e62429);">${esc((playerName || "?")[0])}</div>
-            <div class="mjn-suspect-info">
-              <div class="mjn-suspect-name">${esc(playerName)}</div>
-              <div class="mjn-suspect-desc">${esc(userTypeLabel)} · 好友</div>
-              <div class="mjn-suspect-notes">MJ 的笔记：<b>${identityType === "human" ? "和彼得最近走得很近" : "总觉得 ta 和普通同学不太一样"}</b></div>
-            </div>
-          </div>
+content.innerHTML = `
+  <div class="mjn-suspect-list">
+    <div class="mjn-suspect-card">
+      <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#e62429,#2d6bff);">P</div>
+      <div class="mjn-suspect-info">
+        <div class="mjn-suspect-name">彼得·帕克</div>
+        <div class="mjn-suspect-desc">中城高中学生 · 好友</div>
+        <div class="mjn-suspect-notes">MJ 的笔记：<b>最近总在忙</b>，说不清在忙什么</div>
+      </div>
+    </div>
 
-          <div class="mjn-suspect-card mjn-suspect-self">
-            <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#3a3a4d,#1d1d28);color:#fff;">MJ</div>
-            <div class="mjn-suspect-info">
-              <div class="mjn-suspect-name">米歇尔·琼斯</div>
-              <div class="mjn-suspect-desc">观察者 · 记录人</div>
-              <div class="mjn-suspect-notes" style="font-style:italic;color:var(--muted);">"我什么都没做，我只是看着。"</div>
-            </div>
-          </div>
-        </div>
-      `;
+    <div class="mjn-suspect-card">
+      <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#8a2be2,#e62429);">${esc((playerName || "?")[0])}</div>
+      <div class="mjn-suspect-info">
+        <div class="mjn-suspect-name">${esc(playerName)}</div>
+        <div class="mjn-suspect-desc">${playerDescForSuspects}</div>
+        <div class="mjn-suspect-notes">MJ 的笔记：<b>${
+          mjRelationForSuspects.isSameSchool
+            ? (identityType === "human" ? "和彼得最近走得很近" : "总觉得 ta 和普通同学不太一样")
+            : (mjRelationForSuspects.mjAff >= 21 ? "校外认识的，和彼得有联系" : "彼得提过这个名字")
+        }</b></div>
+      </div>
+    </div>
+
+    <div class="mjn-suspect-card mjn-suspect-self">
+      <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#3a3a4d,#1d1d28);color:#fff;">MJ</div>
+      <div class="mjn-suspect-info">
+        <div class="mjn-suspect-name">米歇尔·琼斯</div>
+        <div class="mjn-suspect-desc">观察者 · 记录人</div>
+        <div class="mjn-suspect-notes" style="font-style:italic;color:var(--muted);">"我什么都没做，我只是看着。"</div>
+      </div>
+    </div>
+  </div>
+`;
     };
 
     const renderProfile = () => {
@@ -10407,6 +11221,7 @@ ${clueSummary}
 【玩家信息】
 名字：${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
 身份类型：${identityType === "human" ? "普通人" : "异能者/特殊背景"}
+${buildMjRelationToPlayer().block}
 
 【MJ 的性格】
 - 冷静、犀利、不爱废话
@@ -10427,7 +11242,11 @@ ${clueSummary}
    - 身体上解释不通的痕迹（伤疤、淤青、奇怪的污渍）
 4. **MJ 不会接受"含混敷衍"**。如果玩家撒谎，她会打断、会追问、会用下一个观察戳穿。
 5. MJ **没有恶意**，她只是想知道"你们是不是在瞒着我什么危险的事"。
-6. 这一场开头，MJ 坐在学校图书馆的角落，笔记本摊在桌上，抬头看着你们。她说了第一句话。
+6. 这一场开头，场景**必须符合你和 ${playerName} 的真实关系**：
+   - 如果你们同校：可以写学校图书馆、走廊、天台。
+   - 如果你们不同校：不能写"学校"，只能写"彼得约你们到某个地方见面""放学后在校门口等你们""你们约在一家咖啡馆".
+   - 如果好感度低（<21）：MJ 不会主动约你们，只能写"彼得把 ta 拉过来"，或者"她在街上叫住彼得，你刚好在旁边"。
+7. MJ 的开场第一句话，必须体现"她认识你们，认识很久了"——而不是"我们好像在哪见过"。
 
 【输出格式】
 写一段开头剧情，600-900 字。
