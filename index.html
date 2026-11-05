@@ -8225,6 +8225,11 @@ posts.forEach(post => {
     post.id = "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
     needSave = true;
   }
+// ★ 补 retweetCount（旧数据没有这个字段）
+if (typeof post.retweetCount !== "number" || post.retweetCount < 0) {
+  post.retweetCount = Math.floor(Math.random() * 500) + 10;
+  needSave = true;
+}
   // ★ 每次渲染都强制校正 feed（防 AI 误归）
   const shouldBeFollowing = isContactName(post.name);
   const correctFeed = shouldBeFollowing ? "following" : "foryou";
@@ -8438,26 +8443,50 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
       mask.onclick = close;
       modal.querySelector("#rt_cancel").onclick = close;
 
-      modal.querySelector("#rt_toFeed").onclick = () => {
-        const me = store.getProfile().name || "Me";
-        const allNow = store.getPosts();
-        allNow.twitter = allNow.twitter || [];
-        allNow.twitter.unshift({
-          id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-          name: me,
-          handle: "@me",
-          text: post.text,
-          retweetedBy: me,
-          feed: this.currentTab,
-          comments: [],
-          likes: 0,
-          retweetCount: 0
-        });
-        store.setPosts(allNow);
-        close();
-        toast("已转到主页");
-        this.render(body);
-      };
+      modal.querySelector("#rt_toFeed").onclick = async () => {
+  const me = store.getProfile().name || "Me";
+
+  // ★ 转帖本质：原帖主的名字/头像不变，只是"我"转了 ta 的帖
+  const retweetedPost = {
+    id: "tw_rt_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+    // 保留原帖主
+    name: post.name,
+    handle: post.handle || "@user",
+    // 保留原帖正文
+    text: post.text,
+    // 转帖标记
+    retweetedBy: me,
+    // 原帖的点赞/转帖数一并带过来
+    likes: post.likes || 0,
+    retweetCount: Math.floor(Math.random() * 500) + 10,
+    // 评论先空着，后面 AI 生成
+    comments: [],
+    feed: this.currentTab || "foryou"
+  };
+
+  const allNow = store.getPosts();
+  allNow.twitter = allNow.twitter || [];
+  allNow.twitter.unshift(retweetedPost);
+  store.setPosts(allNow);
+
+  close();
+  toast("已转到主页，正在生成评论...");
+  this.render(body);
+
+  // ★ 异步给转帖生成"联系人必出 + 陌生人 5 条"的评论
+  try {
+    const mixed = await this.generateMixedComments(post.text, post.name);
+    const all2 = store.getPosts();
+    const idx = all2.twitter.findIndex(x => x.id === retweetedPost.id);
+    if (idx !== -1) {
+      all2.twitter[idx].comments = mixed;
+      store.setPosts(all2);
+      this.render(body);
+    }
+  } catch (e) {
+    toast("评论生成失败：" + e.message);
+  }
+};
 
       modal.querySelector("#rt_toDM").onclick = () => {
         modal.querySelector("#rt_contacts").style.display = "block";
@@ -8672,15 +8701,15 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
   if (/[\u4e00-\u9fa5]/.test(myName)) myName = "Me";
 
   const newPost = {
-    id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-    name: myName,
-    handle: "@me",
-    text,
-    feed: "foryou",
-    comments: [],
-    likes: Math.floor(Math.random() * 20) + 2,
-    retweetCount: 0
-  };
+  id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+  name: myName,
+  handle: "@me",
+  text,
+  feed: "foryou",
+  comments: [],
+  likes: Math.floor(Math.random() * 20) + 2,
+  retweetCount: Math.floor(Math.random() * 50) + 2
+};
   all.twitter.unshift(newPost);
   store.setPosts(all);
   this.render($("#appBody"));
@@ -8813,28 +8842,47 @@ ${followingPrompt}
         const all = store.getPosts();
         all.twitter = all.twitter || [];
 
-        // ★ 清理 AI 返回的名字：去掉 "1." "2." "- " 等前缀
-        const cleanName = (raw) =>
-          String(raw || "")
-            .replace(/^\s*\d+[\.\、\)、]\s*/, "")   // 去掉开头的 "1." "2." "3、" 等
-            .replace(/^\s*[-•·]\s*/, "")             // 去掉开头的 "- " "• "
-            .trim();
+        // ★ 清理 AI 返回的名字：去掉 "1." "2." "- " 等前缀 + 去掉首尾的 @ 和 x|||
+const stripHandle = (s) => String(s || "").trim().replace(/^@+/, "").replace(/^@+/, "");
+const cleanName = (raw) => {
+  let n = String(raw || "").trim();
+  // 去掉开头的 "1." "2." "3、" 等编号
+  n = n.replace(/^\s*\d+[\.\、\)、]\s*/, "");
+  // 去掉开头的 "- " "• " "· "
+  n = n.replace(/^\s*[-•·]\s*/, "");
+  // 去掉整个 "x|||" 或 "x | | |" 占位符（AI 有时会多返回一个 x 列）
+  n = n.replace(/^x\s*\|{2,}\s*/i, "");
+  // 去掉名字里残留的 @ 前缀
+  n = n.replace(/^@+/, "");
+  return n.trim();
+};
 
        res.split('\n').filter(l => l.includes('|||')).forEach(line => {
-  const parts = line.split('|||').map(s => s.trim());
-  const [rawName, handle, text, likes, commentsStr] = parts;
+  let parts = line.split('|||').map(s => s.trim());
+
+  // ★ 如果第一列是"x"或空，说明 AI 多返回了一个占位列，直接删掉
+  if (parts[0] === "" || /^x$/i.test(parts[0])) {
+    parts = parts.slice(1);
+  }
+
+  const [rawName, rawHandle, text, likes, commentsStr] = parts;
   const name = cleanName(rawName);
   if (!name || !text) return;
+
+  // ★ handle 处理：去掉已有的 @ 前缀，然后统一补一个 @
+  let handle = stripHandle(rawHandle);
+  if (!handle) handle = "user";
+  if (!handle.startsWith("@")) handle = "@" + handle;
 
   all.twitter.unshift({
     id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
     name,
-    handle: handle || "@user",
+    handle,
     text,
     likes: parseInt(likes) || 0,
-    retweetCount: 0,
+    retweetCount: Math.floor(Math.random() * 500) + 10,  // ★ 随机转帖数
     feed: isFollowing ? "following" : "foryou",
-    comments: this.parseComments(`x ||| ${commentsStr || ""}`)  // 先用 AI 返回的
+    comments: this.parseComments(`x ||| ${commentsStr || ""}`)
   });
 });
 
@@ -8869,13 +8917,24 @@ for (const p of newPosts) {
     }
     finalComments.push(...mergedStrangers.slice(0, 5));
 
-    // 写回
-    const allNow = store.getPosts();
-    const idx = allNow.twitter.findIndex(x => x.id === p.id);
-    if (idx !== -1) {
-      allNow.twitter[idx].comments = finalComments;
-      store.setPosts(allNow);
-    }
+    // 写回：★ 保留原有"我"的评论，不让它被覆盖
+const allNow = store.getPosts();
+const idx = allNow.twitter.findIndex(x => x.id === p.id);
+if (idx !== -1) {
+  const oldComments = Array.isArray(allNow.twitter[idx].comments)
+    ? allNow.twitter[idx].comments
+    : [];
+
+  // 提取"我"发的评论（包括带 replies 的），原样保留
+  const myComments = oldComments.filter(c => c && (c.user === "我" || c.user === "Me"));
+
+  // 最终顺序：我的评论（按原顺序）+ 联系人评论 + 陌生人评论
+  allNow.twitter[idx].comments = [
+    ...myComments,
+    ...finalComments
+  ];
+  store.setPosts(allNow);
+}
   } catch (_) {}
 }
 
