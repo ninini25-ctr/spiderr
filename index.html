@@ -2763,24 +2763,33 @@ const dbHelper = {
   db: null,
   async init() {
     return new Promise((resolve) => {
-      const req = indexedDB.open("SpiderMusicDB", 1);
-      req.onupgradeneeded = e => { e.target.result.createObjectStore("tracks", { keyPath: "id" }); };
+      const req = indexedDB.open("SpiderMusicDB", 2);   // ★ 版本升到 2
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains("tracks")) {
+          db.createObjectStore("tracks", { keyPath: "id" });
+        }
+        // ★ 新增：图片库（头像、参考图、壁纸）
+        if (!db.objectStoreNames.contains("images")) {
+          db.createObjectStore("images", { keyPath: "id" });
+        }
+      };
       req.onsuccess = e => { this.db = e.target.result; resolve(); };
       req.onerror = () => resolve();
     });
   },
   async save(track) {
-  if (!this.db) await this.init();
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = this.db.transaction("tracks", "readwrite");
-      const req = tx.objectStore("tracks").put(track);
-      req.onsuccess = () => resolve();
-      req.onerror = (e) => reject(e);
-      tx.onabort = (e) => reject(new Error("事务被中止"));
-    } catch (e) { reject(e); }
-  });
-},
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = this.db.transaction("tracks", "readwrite");
+        const req = tx.objectStore("tracks").put(track);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e);
+        tx.onabort = (e) => reject(new Error("事务被中止"));
+      } catch (e) { reject(e); }
+    });
+  },
   async getAll() {
     if (!this.db) await this.init();
     return new Promise((resolve) => {
@@ -2796,8 +2805,47 @@ const dbHelper = {
       tx.objectStore("tracks").delete(id);
       tx.oncomplete = () => resolve();
     });
+  },
+
+  // ===== 图片相关 =====
+  async saveImage(id, dataUrl) {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = this.db.transaction("images", "readwrite");
+        tx.objectStore("images").put({ id, data: dataUrl });
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e);
+      } catch (e) { reject(e); }
+    });
+  },
+  async getImage(id) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction("images", "readonly");
+      const req = tx.objectStore("images").get(id);
+      req.onsuccess = () => resolve(req.result ? req.result.data : null);
+      req.onerror = () => resolve(null);
+    });
+  },
+  async deleteImage(id) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction("images", "readwrite");
+      tx.objectStore("images").delete(id);
+      tx.oncomplete = () => resolve();
+    });
+  },
+  async getAllImages() {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction("images", "readonly");
+      const req = tx.objectStore("images").getAll();
+      req.onsuccess = () => resolve(req.result || []);
+    });
   }
 };
+
 dbHelper.init(); // 初始化数据库
 // ===== 音频转码工具（FLAC → MP3/WebM/WAV 兜底）=====
 const audioConverter = {
@@ -3127,6 +3175,16 @@ async function generateImage(prompt, refs) {
     throw new Error("AI 返回的图片格式无法解析");
   }
 
+// ★ 如果 refs 是 idb:key，先解析成 dataURL
+  refList = await Promise.all(refList.map(async (v) => {
+    if (v.startsWith("idb:")) {
+      const data = await dbHelper.getImage(v.slice(4));
+      return data || "";
+    }
+    return v;
+  }));
+  refList = refList.filter(x => x && x.startsWith("data:"));
+
   // ===== 有参考图 → 图生图 =====
    // ★ 参考图模式：仅对"确定不支持 edits 接口"的模型做降级；
   //   其余（gpt-image-1/2、dall-e-2、flux 系列、中转站的魔改模型等）一律按用户选的模型走
@@ -3451,7 +3509,7 @@ ${mjRelation.block}
         date: `${s2.gameYear}年${s2.gameMonth}月${s2.gameDay}日`,
         text: text2,
         suspicion: Math.min(100, prev2 + bump2),
-        type: /彼得/.test(text2) ? "peter" : (/${playerName2}/.test(text2) ? "user-ability" : "behavior"),
+        type: /彼得/.test(text2) ? "peter" : (new RegExp(playerName2).test(text2) ? "user-ability" : "behavior"),
         turn: s2.turn
       };
       nb2.clues.push(clue2);
@@ -4449,6 +4507,109 @@ q.closed = isFinished || q.history.length >= maxTurns;
   }
 };
 
+// ============================================================
+// 🖼️ 通用图片压缩 / 裁剪工具
+//   - 头像：正方形居中裁剪 + 缩小到 256×256
+//   - 参考图：长边缩到 1024，不裁剪
+//   - 壁纸：长边缩到 1600，不裁剪
+//   - 输出统一 JPEG，质量 0.82~0.88
+// ============================================================
+function compressImage(file, options) {
+  const {
+    maxSize = 1024,        // 长边最大像素
+    square = false,        // 是否裁剪成正方形
+    quality = 0.85,        // JPEG 质量
+    maxBytes = 800 * 1024  // 目标体积上限（字节）
+  } = options || {};
+
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error("没有文件"));
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("读取文件失败"));
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("图片无法解码（可能是 HEIC 或损坏文件）"));
+      img.onload = () => {
+        // ---- 1. 计算目标尺寸 ----
+        let srcW = img.naturalWidth;
+        let srcH = img.naturalHeight;
+        let dstW, dstH;
+
+        if (square) {
+          // 正方形：取短边做裁剪，输出 maxSize × maxSize
+          const side = Math.min(srcW, srcH);
+          const sx = (srcW - side) / 2;
+          const sy = (srcH - side) / 2;
+          dstW = dstH = maxSize;
+
+          const canvas = document.createElement("canvas");
+          canvas.width = dstW;
+          canvas.height = dstH;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, sx, sy, side, side, 0, 0, dstW, dstH);
+          return finish(canvas, quality, maxBytes, resolve, reject);
+        } else {
+          // 非正方形：长边缩到 maxSize
+          const scale = Math.min(1, maxSize / Math.max(srcW, srcH));
+          dstW = Math.round(srcW * scale);
+          dstH = Math.round(srcH * scale);
+
+          const canvas = document.createElement("canvas");
+          canvas.width = dstW;
+          canvas.height = dstH;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, dstW, dstH);
+          return finish(canvas, quality, maxBytes, resolve, reject);
+        }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// 内部：从 canvas 逐步降质，直到 ≤ maxBytes
+function finish(canvas, quality, maxBytes, resolve, reject) {
+  let q = quality;
+  let dataUrl = canvas.toDataURL("image/jpeg", q);
+  // 体积兜底：如果超过 maxBytes，每次降 0.08 质量，最低 0.5
+  let tries = 0;
+  while (dataUrl.length * 0.75 > maxBytes && q > 0.5 && tries < 8) {
+    q -= 0.08;
+    dataUrl = canvas.toDataURL("image/jpeg", q);
+    tries++;
+  }
+  resolve(dataUrl);
+}
+
+// ============================================================
+// 🖼️ 图片 URL 解析器
+//   - 普通 dataURL → 原样返回
+//   - "idb:xxx" → 从 IndexedDB 读 dataURL
+// ============================================================
+async function resolveImageUrl(val) {
+  if (!val) return "";
+  if (val.startsWith("idb:")) {
+    const key = val.slice(4);
+    const data = await dbHelper.getImage(key);
+    return data || "";
+  }
+  return val;
+}
+
+// 同步版本：用于渲染前已经预加载过的场景（可以用 cache）
+const _imgCache = {};
+async function resolveImageUrlCached(val) {
+  if (!val) return "";
+  if (!val.startsWith("idb:")) return val;
+  const key = val.slice(4);
+  if (_imgCache[key]) return _imgCache[key];
+  const data = await dbHelper.getImage(key);
+  if (data) _imgCache[key] = data;
+  return data || "";
+}
+
 function applyAppearance() {
   const cfg = store.get("sv_appearance", {});
 
@@ -4463,14 +4624,19 @@ function applyAppearance() {
   let cssRules = "";
 
   if (cfg.wallpaper) {
-    cssRules += `
-      #desktop .wallpaper {
-        background: url('${cfg.wallpaper}') center/cover no-repeat !important;
-      }
-      #desktop .wallpaper::after {
+    const wp = cfg.wallpaper.startsWith("idb:")
+      ? (_imgCache[cfg.wallpaper.slice(4)] || "")
+      : cfg.wallpaper;
+    if (wp) {
+      cssRules += `
+        #desktop .wallpaper {
+          background: url('${wp}') center/cover no-repeat !important;
+        }
+        #desktop .wallpaper::after {
         display: none !important;
-      }
-    `;
+        }
+      `;
+    }
   }
 
   // 2. 字体
@@ -4499,6 +4665,22 @@ function applyAppearance() {
   styleEl.innerHTML = cssRules;
 }
 
+// 页面加载时预加载 idb 图片
+(async () => {
+  try {
+    const cfg = store.get("sv_appearance", {});
+    const keys = [];
+    if (cfg.wallpaper && cfg.wallpaper.startsWith("idb:")) keys.push(cfg.wallpaper.slice(4));
+    if (cfg.userAvatar && cfg.userAvatar.startsWith("idb:")) keys.push(cfg.userAvatar.slice(4));
+    store.getContacts().forEach(c => {
+      if (c.avatar && c.avatar.startsWith("idb:")) keys.push(c.avatar.slice(4));
+      if (c.refImage && c.refImage.startsWith("idb:")) keys.push(c.refImage.slice(4));
+    });
+    for (const k of keys) await resolveImageUrlCached("idb:" + k);
+  } catch (e) {}
+  applyAppearance();
+})();
+
 // 页面加载时自动应用一次
 setTimeout(applyAppearance, 100);
 
@@ -4521,10 +4703,28 @@ function setProfileSlots(slots) {
 const apps = {
 Appearance: {
   title: "外观",
-  render(body) {
+  async render(body) {
     const cfg = store.get("sv_appearance", {});
     const contacts = store.getContacts();
-    
+
+    // ★ 预加载本页所有 idb 图片到缓存
+    const preloadList = [
+      cfg.userAvatar,
+      cfg.wallpaper,
+      ...contacts.map(c => c.avatar),
+      ...contacts.map(c => c.refImage)
+    ].filter(v => v && v.startsWith("idb:"));
+    for (const v of preloadList) {
+      await resolveImageUrlCached(v);
+    }
+
+    // ★ 统一把 idb:xxx 解析成 dataURL，普通 dataURL 原样返回
+    const realOf = (v) => {
+      if (!v) return "";
+      if (v.startsWith("idb:")) return _imgCache[v.slice(4)] || "";
+      return v;
+    };
+
     // 默认生图提示词
     const defaultPrompts = {
   peter: "Tom Holland as Peter Parker, British actor, early 20s, short curly brown hair, big dark brown eyes, boyish face, slight freckles, slim athletic build, wearing a Midtown School of Science and Technology hoodie or a blue-and-red Spider-Man suit, cinematic portrait, MCU Spider-Man Homecoming style, natural lighting, photorealistic",
@@ -4580,46 +4780,46 @@ Appearance: {
         <h3>👤 用户头像</h3>
         <div class="row" style="gap:12px;">
           <div style="width:50px;height:50px;border-radius:50%;background:var(--panel-2);overflow:hidden;">
-            ${cfg.userAvatar ? `<img src="${cfg.userAvatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
+           ${realOf(cfg.userAvatar) ? `<img src="${realOf(cfg.userAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
           </div>
           <input type="file" id="ap_avatar" accept="image/*" style="flex:1;font-size:12px">
         </div>
       </div>
 
       <div class="card">
-  <h3>👥 联系人头像与参考图</h3>
-  <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
-    头像：显示在 App 里的小圆头像。<br>
-    参考图：生图 AI 会**严格按这张参考图**生成该角色的图（脸、衣服、气质都要对上）。
-  </p >
-  ${contacts.filter(c => !c.isTheater).map(c => `
-    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
-      <div class="row" style="gap:12px;align-items:center;margin-bottom:8px;">
-        <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
-          ${c.avatar ? `< img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
-        </div>
-        <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
-        <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
-          换头像<input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
-        </label>
-      </div>
-      <div class="row" style="gap:10px;align-items:center;">
-        <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-          ${c.refImage ? `< img src="${c.refImage}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
-          <div style="display:flex;gap:6px;">
-            <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:11px;margin:0;">
-              上传<input type="file" class="c-ref-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
-            </label>
-            ${c.refImage ? `<button class="btn ghost c-ref-clear" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;color:#e62429;border-color:#e62429;">清除</button>` : ""}
+        <h3>👥 联系人头像与参考图</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+          头像：显示在 App 里的小圆头像。<br>
+          参考图：生图 AI 会**严格按这张参考图**生成该角色的图（脸、衣服、气质都要对上）。
+        </p >
+        ${contacts.filter(c => !c.isTheater).map(c => `
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
+            <div class="row" style="gap:12px;align-items:center;margin-bottom:8px;">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
+                ${realOf(c.avatar) ? `<img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+              </div>
+              <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
+              <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
+                换头像<input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
+              </label>
+            </div>
+            <div class="row" style="gap:10px;align-items:center;">
+              <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                ${realOf(c.refImage) ? `<img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
+                <div style="display:flex;gap:6px;">
+                  <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:11px;margin:0;">
+                    上传<input type="file" class="c-ref-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
+                  </label>
+                  ${c.refImage ? `<button class="btn ghost c-ref-clear" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;color:#e62429;border-color:#e62429;">清除</button>` : ""}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        `).join("")}
       </div>
-    </div>
-  `).join("")}
-</div>
 
       <div class="card">
         <h3>📝 自定义 CSS 主题</h3>
@@ -4671,23 +4871,19 @@ Appearance: {
       </div>
     </div>`;
 
-    // 壁纸
-    body.querySelector("#ap_wall").onchange = (e) => {
+    // 壁纸（长边 → 1600，≤ 800KB）
+    body.querySelector("#ap_wall").onchange = async (e) => {
       const file = e.target.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        cfg.wallpaper = ev.target.result;
+      try {
+        const dataUrl = await compressImage(file, { maxSize: 1600, square: false, quality: 0.85, maxBytes: 800 * 1024 });
+        await dbHelper.saveImage("wallpaper", dataUrl);
+        cfg.wallpaper = "idb:wallpaper";
         store.set("sv_appearance", cfg);
         applyAppearance();
-        toast("壁纸已更新");
-      };
-      reader.readAsDataURL(file);
-    };
-    body.querySelector("#clear_wall").onclick = () => {
-      cfg.wallpaper = null;
-      store.set("sv_appearance", cfg);
-      applyAppearance();
-      this.render(body);
+        toast("壁纸已更新（已存 IndexedDB）");
+      } catch (err) {
+        toast("壁纸上传失败：" + err.message);
+      }
     };
 
     // 字体
@@ -4718,59 +4914,65 @@ Appearance: {
       applyAppearance();
     };
 
-    // 用户头像
-    body.querySelector("#ap_avatar").onchange = (e) => {
+    // 用户头像（自动裁剪 256×256 + 压缩）
+    body.querySelector("#ap_avatar").onchange = async (e) => {
       const file = e.target.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        cfg.userAvatar = ev.target.result;
+      try {
+        const dataUrl = await compressImage(file, { maxSize: 256, square: true, quality: 0.85, maxBytes: 60 * 1024 });
+        cfg.userAvatar = "idb:user_avatar";
         store.set("sv_appearance", cfg);
         this.render(body);
-        toast("头像已更新");
+        toast("头像已更新（已自动压缩）");
+      } catch (err) {
+        toast("头像上传失败：" + err.message);
+      }
+    };
+     
+    // 联系人头像（压缩 → 存 IDB → 只存 idb:key）
+    body.querySelectorAll(".c-avatar-input").forEach(input => {
+      input.onchange = async (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const name = input.dataset.name;
+        try {
+          const dataUrl = await compressImage(file, { maxSize: 256, square: true, quality: 0.85, maxBytes: 60 * 1024 });
+          const key = "avatar_" + name;
+          await dbHelper.saveImage(key, dataUrl);
+          const list = store.getContacts();
+          const c = list.find(x => x.name === name);
+          if (c) {
+            c.avatar = "idb:" + key;   // ★ 只存 key
+            store.setContacts(list);
+            this.render(body);
+            toast("头像已更新（已存 IndexedDB）");
+          }
+        } catch (err) {
+          toast("头像上传失败：" + err.message);
+        }
       };
-      reader.readAsDataURL(file);
-    };
+    });
 
-    // 联系人头像
-body.querySelectorAll(".c-avatar-input").forEach(input => {
-  input.onchange = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const name = input.dataset.name;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const list = store.getContacts();
-      const c = list.find(x => x.name === name);
-      if (c) {
-        c.avatar = ev.target.result;
-        store.setContacts(list);
-        this.render(body);
-        toast("头像已更新");
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-});
-
-// 联系人参考图上传
-body.querySelectorAll(".c-ref-input").forEach(input => {
-  input.onchange = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    if (file.size > 4 * 1024 * 1024) return toast("参考图不能超过 4MB");
-    const name = input.dataset.name;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const list = store.getContacts();
-      const c = list.find(x => x.name === name);
-      if (c) {
-        c.refImage = ev.target.result;
-        store.setContacts(list);
-        this.render(body);
-        toast("参考图已更新，生图时会严格使用");
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-});
+// 联系人参考图上传（长边 → 1024，≤ 500KB）
+   body.querySelectorAll(".c-ref-input").forEach(input => {
+      input.onchange = async (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const name = input.dataset.name;
+        try {
+          const dataUrl = await compressImage(file, { maxSize: 1024, square: false, quality: 0.85, maxBytes: 500 * 1024 });
+          const key = "ref_" + name;
+          await dbHelper.saveImage(key, dataUrl);
+          const list = store.getContacts();
+          const c = list.find(x => x.name === name);
+          if (c) {
+            c.refImage = "idb:" + key;
+            store.setContacts(list);
+            this.render(body);
+            toast("参考图已更新（已存 IndexedDB）");
+          }
+        } catch (err) {
+          toast("参考图上传失败：" + err.message);
+        }
+      };
+    });
 
 // 联系人参考图清除
 body.querySelectorAll(".c-ref-clear").forEach(btn => {
@@ -5006,6 +5208,8 @@ body.querySelectorAll(".c-ref-clear").forEach(btn => {
           <button class="btn ghost" id="importDataBtn" style="margin-bottom:8px;">📥 导入数据（JSON）</button>
           <input type="file" id="importFile" accept="application/json" style="display:none;">
           <button class="btn ghost" id="clearDataBtn" style="color:#e62429;border-color:#e62429;">🗑️ 清空全部数据</button>
+<button class="btn ghost" id="requestPersistBtn" style="margin-top:8px;">💾 申请持久化存储（防止浏览器清理）</button>
+          <div id="persistStatus" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;"></div>
         </div>
 
         <div class="card">
@@ -5392,6 +5596,66 @@ if (profileLoadBtn) {
         toast("已清空全部数据，即将刷新");
         setTimeout(() => location.reload(), 800);
       };
+// ===== 💾 申请持久化存储 =====
+      const requestPersistBtn = body.querySelector("#requestPersistBtn");
+      const persistStatusEl = body.querySelector("#persistStatus");
+      if (requestPersistBtn && persistStatusEl) {
+        // 初始化时显示当前状态
+        (async () => {
+          try {
+            if (navigator.storage && navigator.storage.persisted) {
+              const persisted = await navigator.storage.persisted();
+              let quotaText = "";
+              if (navigator.storage.estimate) {
+                const est = await navigator.storage.estimate();
+                const usedMB = (est.usage / 1024 / 1024).toFixed(1);
+                const quotaGB = (est.quota / 1024 / 1024 / 1024).toFixed(2);
+                quotaText = `｜已用 ${usedMB} MB / 上限约 ${quotaGB} GB`;
+              }
+              persistStatusEl.textContent = persisted
+                ? `✅ 已开启持久化存储${quotaText}`
+                : `⚠️ 未开启持久化存储（浏览器可能在空间紧张时清理本站数据）${quotaText}`;
+            } else {
+              persistStatusEl.textContent = "当前浏览器不支持持久化存储 API";
+            }
+          } catch (e) {
+            persistStatusEl.textContent = "";
+          }
+        })();
+
+        requestPersistBtn.onclick = async () => {
+          requestPersistBtn.disabled = true;
+          requestPersistBtn.textContent = "申请中...";
+          try {
+            if (!navigator.storage || !navigator.storage.persist) {
+              persistStatusEl.textContent = "❌ 当前浏览器不支持持久化存储 API";
+              return;
+            }
+            // 先请求
+            const granted = await navigator.storage.persist();
+            // 再查一次配额
+            let quotaText = "";
+            if (navigator.storage.estimate) {
+              const est = await navigator.storage.estimate();
+              const usedMB = (est.usage / 1024 / 1024).toFixed(1);
+              const quotaGB = (est.quota / 1024 / 1024 / 1024).toFixed(2);
+              quotaText = `｜已用 ${usedMB} MB / 上限约 ${quotaGB} GB`;
+            }
+            if (granted) {
+              persistStatusEl.textContent = `✅ 持久化存储已开启（浏览器不会自动清理本站数据）${quotaText}`;
+              toast("✅ 持久化存储已开启");
+            } else {
+              persistStatusEl.textContent = `⚠️ 浏览器拒绝了持久化请求（可能因为站点未被『安装』为 PWA，或访问权限不足）${quotaText}`;
+              toast("⚠️ 持久化存储未开启，可尝试把站点『添加到主屏幕』后再申请");
+            }
+          } catch (e) {
+            persistStatusEl.textContent = `❌ 申请失败：${e.message}`;
+          } finally {
+            requestPersistBtn.disabled = false;
+            requestPersistBtn.textContent = "💾 申请持久化存储（防止浏览器清理）";
+          }
+        };
+      }
 // ===== 快速预设 =====
       const presetListEl = body.querySelector("#apiPresetList");
       const renderPresets = () => {
@@ -5885,7 +6149,15 @@ body.querySelector("#imgSlotLoadBtn").onclick = () => {
 messages: {
   title: "信息", hasSettings: true, view: "list", currentUser: "", lastUserText: "", quoteData: null,
  renderSettings(body) {
-  const self = this;
+    const self = this;
+    // 异步预加载，但不 await（缓存已有就秒回）
+    (async () => {
+      const _keys = [];
+      store.getContacts().forEach(c => {
+        if (c.avatar && c.avatar.startsWith("idb:")) _keys.push(c.avatar.slice(4));
+      });
+      for (const k of _keys) await resolveImageUrlCached("idb:" + k);
+    })();
 
  // ========== 情况 A：在群聊里点设置 → 群聊设置面板 ==========
 const curC = store.getContacts().find(x => x.name === this.currentUser);
@@ -5910,7 +6182,10 @@ if (curC && curC.isGroup) {
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
         ${(curC.members||[]).map(m => {
           const mc = store.getContacts().find(x => x.name === m);
-          const av = mc && mc.avatar ? `<img src="${mc.avatar}" style="width:100%;height:100%;object-fit:cover;">` : esc(m[0].toUpperCase());
+          const _avSrc = (mc && mc.avatar && mc.avatar.startsWith("idb:"))
+            ? (_imgCache[mc.avatar.slice(4)] || "")
+            : (mc && mc.avatar) || "";
+          const av = _avSrc ? `<img src="${_avSrc}" style="width:100%;height:100%;object-fit:cover;">` : esc(m[0].toUpperCase());
           return `<div style="display:flex;align-items:center;gap:6px;background:var(--panel-2);padding:6px 12px 6px 6px;border-radius:20px;font-size:13px;color:var(--text);">
             <div style="width:24px;height:24px;border-radius:50%;background:var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:bold;color:var(--text);">${av}</div>
             ${esc(m)}
@@ -6199,6 +6474,11 @@ if (curC && curC.isGroup) {
 async render(body) {
     body.innerHTML = "";
     const self = this;
+    const realAv = (v) => {
+      if (!v) return "";
+      if (v.startsWith("idb:")) return _imgCache[v.slice(4)] || "";
+      return v;
+    };
     const sb = $("#appSettingsBtn");
    sb.style.display = "flex";
    sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
@@ -6263,7 +6543,7 @@ chatHtml += `<div id="chatThread">`;
       const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
       return `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
   <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
-    ${senderAvatar ? `< img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((senderName || "?")[0])}
+    ${realAv(senderAvatar) ? `<img src="${realAv(senderAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : esc((senderName || "?")[0])}
   </div>
   <div style="max-width:72%;min-width:0;">
     <div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(senderName)}</div>
@@ -6377,8 +6657,11 @@ sbG.querySelector("#retryBtn").onclick = () => {
       const contactsWithNote = contacts.map(c => {
         const note = (c.note || "").trim();
         const displayName = note || c.name;
-        const avatarHtml = c.avatar
-          ? `<img src="${c.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+        const _avSrc = (c.avatar && c.avatar.startsWith("idb:"))
+          ? (_imgCache[c.avatar.slice(4)] || "")
+          : (c.avatar || "");
+        const avatarHtml = _avSrc
+          ? `<img src="${_avSrc}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
           : `<div style="width:40px;height:40px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--text);flex-shrink:0;">${esc((c.name || "?")[0].toUpperCase())}</div>`;
         return `<div class="chat-row" data-user="${esc(c.name)}" style="padding:12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:12px;">
           ${avatarHtml}
@@ -6464,7 +6747,7 @@ let chatHtml = `<div id="chatPage" style="display:flex;flex-direction:column;hei
 // --- 标题栏 ---
 const curContact = store.getContacts().find(c => c.name === self.currentUser);
 const avatarHtml = curContact && curContact.avatar
-  ? `<img src="${curContact.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+  ? `<img src="${realAv(curContact.avatar)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
   : `<div style="width:28px;height:28px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
 
 const curContactTop = store.getContacts().find(c => c.name === self.currentUser);
@@ -6570,7 +6853,7 @@ chatHtml += msgs.map((m, idx) => {
   // ===== 单人聊天：对方消息带头像 =====
   if (!isGroupChat && m.role === "them") {
     const c = curContactForRow;
-    const av = (c && c.avatar) ? c.avatar : "";
+    const av = (c && c.avatar) ? realAv(c.avatar) : "";
     const firstChar = esc((c ? c.name : "?")[0]);
     return `<div class="msg-row them" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
       <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
@@ -6583,7 +6866,7 @@ chatHtml += msgs.map((m, idx) => {
  // ===== 玩家自己：右侧头像 =====
   if (m.role === "me") {
     const cfgA = store.get("sv_appearance", {});
-    const myAv = cfgA.userAvatar || "";
+    const myAv = realAv(cfgA.userAvatar || "");
     const myFirst = esc((store.getProfile().name || "我")[0]);
     return `<div class="msg-row me" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;justify-content:flex-end;">
       <div class="bubble me" data-idx="${idx}" style="cursor:pointer;max-width:72%;">${quoteHtml}${esc(m.content)}${transHtml}</div>
@@ -7090,6 +7373,11 @@ showTopicModal(body) {
 },
   async sendMessage(body, text, isRetry) {
   const self = this;
+const realAv = (v) => {
+    if (!v) return "";
+    if (v.startsWith("idb:")) return _imgCache[v.slice(4)] || "";
+    return v;
+  };
   // 识别群聊，直接走独立发送逻辑
   const c = store.getContacts().find(x => x.name === self.currentUser);
   if (c && c.isGroup) {
@@ -7216,7 +7504,11 @@ const memberAffinityMap = {};
 groupMembers.forEach(name => { memberAffinityMap[name] = getAffinityOf(name); });
 
 const memberAffinityBlock = "【群聊中不显示好感度，保持自然群聊氛围】";
-
+const groupContactForIntervention = store.getContacts().find(x => x.name === self.currentUser);
+        const groupInterventionText = (groupContactForIntervention && groupContactForIntervention.intervention || "").trim();
+        const groupInterventionRule = groupInterventionText
+          ? `\n【群聊干预指令 · 玩家亲自下达 · 绝对必须遵循】\n${groupInterventionText.split(/\n/).filter(Boolean).map(l => `- ${l}`).join("\n")}\n`
+          : "";
         const groupSysPrompt = `${langBrief}这是一个手机群聊，群成员有：${memberList}，以及「${playerName}」（${playerGender}，用「${playerPronoun}」指代）。
 
 【当前日期】${nowStr}
@@ -7327,7 +7619,7 @@ ${missName}：消息内容`;
             const memberC = store.getContacts().find(c => c.name === sender);
             const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
             const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
-  ${senderAvatar ? `< img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
+  ${realAv(senderAvatar) ? `<img src="${realAv(senderAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
 </div>`;
             const nameTagTmp = sender ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(sender)}</div>` : "";
             curThread.innerHTML += `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
@@ -7743,6 +8035,11 @@ ${isPeterHeart && heartAff >= 151 ? `【彼得深爱时的心声 · 铁律】\n�
 
 async sendGroupMessage(body, text, isRetry) {
     const self = this;
+const realAv = (v) => {
+      if (!v) return "";
+      if (v.startsWith("idb:")) return _imgCache[v.slice(4)] || "";
+      return v;
+    };
     const thread = body.querySelector("#chatThread");
     const contact = store.getContacts().find(x => x.name === self.currentUser);
     if (!contact || !contact.isGroup) return;
@@ -7902,7 +8199,7 @@ ${missName}：消息内容`;
           const memberC = store.getContacts().find(c => c.name === sender);
           const senderAvatar = (memberC && memberC.avatar) ? memberC.avatar : "";
           const avatarHtmlTmp = `<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:var(--text);">
-  ${senderAvatar ? `< img src="${senderAvatar}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
+  ${realAv(senderAvatar) ? `<img src="${realAv(senderAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : esc((sender || "?")[0])}
 </div>`;
           const nameTagTmp = sender ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">${esc(sender)}</div>` : "";
           curThread.innerHTML += `<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
@@ -8176,47 +8473,150 @@ const isContactName = (rawName) => {
   if (avengers.includes(n)) return true;
   // 英文别名兜底（AI 可能用英文原名）
   const aliases = {
-    "Peter Parker": "彼得·帕克",
-    "Peter": "彼得·帕克",
-    "Ned Leeds": "内德·利兹",
-    "Ned": "内德·利兹",
-    "Michelle Jones": "米歇尔·琼斯",
-    "MJ": "米歇尔·琼斯",
-    "Aunt May": "梅婶",
-    "May Parker": "梅婶",
-    "Tony Stark": "托尼·斯塔克",
-    "Iron Man": "托尼·斯塔克",
-    "Steve Rogers": "美国队长",
-    "Captain America": "美国队长",
-    "Natasha Romanoff": "娜塔莎·罗曼诺夫",
-    "Black Widow": "娜塔莎·罗曼诺夫",
-    "Thor": "雷神",
-    "Bruce Banner": "绿巨人",
-    "Hulk": "绿巨人",
-    "Clint Barton": "鹰眼",
-    "Hawkeye": "鹰眼",
-    "Wanda Maximoff": "绯红女巫",
-    "Scarlet Witch": "绯红女巫",
-    "Bucky Barnes": "冬兵",
-    "Winter Soldier": "冬兵",
-    "Sam Wilson": "猎鹰",
-    "Falcon": "猎鹰",
-    "Scott Lang": "蚁人",
-    "Ant-Man": "蚁人",
-    "T'Challa": "黑豹",
-    "Black Panther": "黑豹",
-    "James Rhodes": "战争机器",
-    "War Machine": "战争机器",
-    "Stephen Strange": "奇异博士",
-    "Doctor Strange": "奇异博士",
-    "Matt Murdock": "夜魔侠",
-    "Daredevil": "夜魔侠"
-  };
-  if (aliases[n]) {
-    const zhName = aliases[n];
-    return contactNames.includes(zhName) || avengers.includes(zhName);
+  // 彼得
+  "Peter Parker": "彼得·帕克",
+  "Peter": "彼得·帕克",
+  "Pete": "彼得·帕克",
+  "Spider-Man": "彼得·帕克",
+  "SpiderMan": "彼得·帕克",
+  "Spiderman": "彼得·帕克",
+  "peterparker": "彼得·帕克",
+  "peter_parker": "彼得·帕克",
+
+  // 内德
+  "Ned Leeds": "内德·利兹",
+  "Ned": "内德·利兹",
+  "nedleeds": "内德·利兹",
+  "ned_leeds": "内德·利兹",
+
+  // MJ
+  "Michelle Jones": "米歇尔·琼斯",
+  "Michelle": "米歇尔·琼斯",
+  "MJ": "米歇尔·琼斯",
+  "mj": "米歇尔·琼斯",
+  "michellejones": "米歇尔·琼斯",
+  "michelle_jones": "米歇尔·琼斯",
+
+  // 梅婶 
+  "Aunt May": "梅婶",
+  "May Parker": "梅婶",
+  "May": "梅婶",
+  "梅·帕克": "梅婶",
+  "梅帕克": "梅婶",
+  "梅姨": "梅婶arker梅婶",
+  "may_parker": "梅婶",
+  "auntmay": "梅婶",
+  "aunt_may": "梅婶",
+
+  // Flash
+  "Flash Thompson": "Flash Thompson",
+  "Flash": "Flash Thompson",
+  "flashthompson": "Flash Thompson",
+
+  // Liz
+  "Liz Allan": "Liz Allan",
+  "Liz": "Liz Allan",
+  "lizallan": "Liz Allan",
+
+  // Happy
+  "Happy Hogan": "Happy Hogan",
+  "Happy": "Happy Hogan",
+  "happyhogan": "Happy Hogan",
+
+  // 复联成员
+  "Tony Stark": "托尼·斯塔克",
+  "Iron Man": "托尼·斯塔克",
+  "IronMan": "托尼·斯塔克",
+  "tonystark": "托尼·斯塔克",
+
+  "Steve Rogers": "美国队长",
+  "Captain America": "美国队长",
+  "steve_rogers": "美国队长",
+
+  "Natasha Romanoff": "娜塔莎·罗曼诺夫",
+  "Black Widow": "娜塔莎·罗曼诺夫",
+  "natasharomanoff": "娜塔莎·罗曼诺夫",
+
+  "Thor": "雷神",
+  "thor": "雷神",
+
+  "Bruce Banner": "绿巨人",
+  "Hulk": "绿巨人",
+  "brucebanner": "绿巨人",
+
+  "Clint Barton": "鹰眼",
+  "Hawkeye": "鹰眼",
+  "clintbarton": "鹰眼",
+
+  "Wanda Maximoff": "绯红女巫",
+  "Scarlet Witch": "绯红女巫",
+  "wandamaximoff": "绯红女巫",
+
+  "Bucky Barnes": "冬兵",
+  "Winter Soldier": "冬兵",
+  "buckybarnes": "冬兵",
+
+  "Sam Wilson": "猎鹰",
+  "Falcon": "猎鹰",
+  "samwilson": "猎鹰",
+
+  "Scott Lang": "蚁人",
+  "Ant-Man": "蚁人",
+  "AntMan": "蚁人",
+  "scottlang": "蚁人",
+
+  "T'Challa": "黑豹",
+  "TChalla": "黑豹",
+  "Black Panther": "黑豹",
+  "blackpanther": "黑豹",
+
+  "James Rhodes": "战争机器",
+  "War Machine": "战争机器",
+  "Rhodey": "战争机器",
+  "jamesrhodes": "战争机器",
+
+  "Stephen Strange": "奇异博士",
+  "Doctor Strange": "奇异博士",
+  "Dr Strange": "奇异博士",
+  "stephenstrange": "奇异博士",
+
+  "Matt Murdock": "夜魔侠",
+  "Daredevil": "夜魔侠",
+  "mattmurdock": "夜魔侠",
+
+  "Loki": "洛基",
+  "loki": "洛基"
+};
+  // ★ 归一化：去空格、去 ·、去 . 、去下划线、转小写，再比对
+const norm = (s) => String(s || "")
+  .toLowerCase()
+  .replace(/[\s·\.\-_]/g, "")
+  .trim();
+
+const nNorm = norm(n);
+
+// 1. 先查别名表（直接命中）
+if (aliases[n]) {
+  const zhName = aliases[n];
+  if (contactNames.includes(zhName) || avengers.includes(zhName)) return true;
+}
+
+// 2. 别名表归一化命中
+for (const [alias, zhName] of Object.entries(aliases)) {
+  if (norm(alias) === nNorm) {
+    if (contactNames.includes(zhName) || avengers.includes(zhName)) return true;
   }
-  return contactNames.some(cn => n.includes(cn)) || avengers.some(av => n.includes(av));
+}
+
+// 3. 直接命中联系人中文名（归一化后）
+if (contactNames.some(cn => norm(cn) === nNorm)) return true;
+if (avengers.some(av => norm(av) === nNorm)) return true;
+
+// 4. 包含匹配兜底（归一化后包含）
+if (contactNames.some(cn => nNorm.includes(norm(cn)) || norm(cn).includes(nNorm))) return true;
+if (avengers.some(av => nNorm.includes(norm(av)) || norm(av).includes(nNorm))) return true;
+
+return false;
 };
 
 posts.forEach(post => {
@@ -12007,9 +12407,17 @@ ${affBehavior}
     title: "社交圈",
     currentTab: "people",
 
-    render(body) {
+    async render(body) {
       const self = this;
       const contacts = store.getContacts();
+
+      // ★ 预加载所有 idb 头像和参考图
+      const _keys = [];
+      contacts.forEach(c => {
+        if (c.avatar && c.avatar.startsWith("idb:")) _keys.push(c.avatar.slice(4));
+        if (c.refImage && c.refImage.startsWith("idb:")) _keys.push(c.refImage.slice(4));
+      });
+      for (const k of _keys) await resolveImageUrlCached("idb:" + k);
 const isGroupContact = (c) => c.isGroup === true || /^群聊\s*·/.test(c.name || "");
 const people = contacts.filter(c => !isGroupContact(c));
 const groups = contacts.filter(c => isGroupContact(c));
@@ -12153,11 +12561,14 @@ const groups = contacts.filter(c => isGroupContact(c));
       });
     },
 
-    renderContactRow(c) {
+   renderContactRow(c) {
       const note = c.note || "";
       const displayName = note || c.name;
-      const avatar = c.avatar
-        ? `<img src="${c.avatar}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">`
+      const _avSrc = (c.avatar && c.avatar.startsWith("idb:"))
+        ? (_imgCache[c.avatar.slice(4)] || "")
+        : (c.avatar || "");
+      const avatar = _avSrc
+        ? `<img src="${_avSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">`
         : `<div class="sc-avatar">${esc((c.name || "?")[0].toUpperCase())}</div>`;
       const aff = typeof c.affinity === "number" ? c.affinity : 0;
       const affCap = c.name === "彼得·帕克" ? 200 : 100;
@@ -12180,7 +12591,13 @@ const groups = contacts.filter(c => isGroupContact(c));
       const members = g.members || [];
       const avatars = members.slice(0, 3).map(m => {
         const mc = store.getContacts().find(x => x.name === m);
-        if (mc && mc.avatar) return `<img src="${mc.avatar}" class="sc-group-mini-av">`;
+        if (mc && mc.avatar) {
+          const _src = mc.avatar.startsWith("idb:")
+            ? (_imgCache[mc.avatar.slice(4)] || "")
+            : mc.avatar;
+          if (_src) return `<img src="${_src}" class="sc-group-mini-av">`;
+          return `<div class="sc-group-mini-av sc-group-mini-av-letter">${esc((m || "?")[0].toUpperCase())}</div>`;
+        }
         return `<div class="sc-group-mini-av sc-group-mini-av-letter">${esc((m || "?")[0].toUpperCase())}</div>`;
       }).join("");
       return `
