@@ -4699,7 +4699,23 @@ function getProfileSlots() {
 function setProfileSlots(slots) {
   localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
 }
+// ============================================================
+// 🖼️ 文件选择通用工具：显式触发 + 每次清空（解决 iOS / WebView 点不动）
+// ============================================================
+function bindFileTrigger(triggerSelector, inputSelector, scope) {
+  const root = scope || document;
+  const trigger = root.querySelector(triggerSelector);
+  const input = root.querySelector(inputSelector);
+  if (!trigger || !input) return;
 
+  trigger.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // ★ 关键：每次点击前清空 value，允许用户重复选同一个文件
+    input.value = "";
+    input.click();
+  });
+}
 const apps = {
 Appearance: {
   title: "外观",
@@ -4755,36 +4771,63 @@ Appearance: {
 
     body.innerHTML = `<div style="padding:14px">
       <div class="card">
-        <h3>🖼️ 桌面壁纸</h3>
-        <div class="field">
-          <label>上传图片（覆盖默认红色背景）</label>
-          <input type="file" id="ap_wall" accept="image/*" style="font-size:12px">
-        </div>
-        <button class="btn ghost" id="clear_wall" style="font-size:12px;margin-top:4px;">恢复默认壁纸</button>
-      </div>
+  <h3>🖼️ 桌面壁纸</h3>
+  <div class="field">
+    <label>上传图片（覆盖默认红色背景）</label>
+
+    <!-- ★ 可见按钮 -->
+    <button type="button" class="btn ghost" id="ap_wall_btn"
+            style="width:100%;font-size:13px;padding:10px;">
+      📁 选择壁纸图片
+    </button>
+
+    <!-- ★ 隐藏 input：用 position:absolute + opacity:0，不要用 display:none -->
+    <input type="file" id="ap_wall" accept="image/*"
+           style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
+  </div>
+  <button class="btn ghost" id="clear_wall" style="font-size:12px;margin-top:4px;">恢复默认壁纸</button>
+</div>
 
       <div class="card">
-        <h3>🔤 全局字体与大小</h3>
-        <div class="field">
-          <label>上传字体文件（.ttf / .otf / .woff）</label>
-          <input type="file" id="ap_font" accept=".ttf,.otf,.woff,.woff2" style="font-size:12px">
-        </div>
-        <div class="field">
-          <label>全局字号缩放 (${cfg.fontSize || 100}%)</label>
-          <input type="range" id="ap_fontsize" min="80" max="140" value="${cfg.fontSize || 100}" style="width:100%">
-        </div>
-        <button class="btn ghost" id="clear_font" style="font-size:12px;">恢复默认字体</button>
-      </div>
+  <h3>🔤 全局字体与大小</h3>
+  <div class="field">
+    <label>上传字体文件（.ttf / .otf / .woff）</label>
+
+    <!-- ★ 可见按钮 -->
+    <button type="button" class="btn ghost" id="ap_font_btn"
+            style="width:100%;font-size:13px;padding:10px;">
+      📁 选择字体文件
+    </button>
+
+    <!-- ★ 隐藏 input -->
+    <input type="file" id="ap_font" accept=".ttf,.otf,.woff,.woff2"
+           style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
+  </div>
+  <div class="field">
+    <label>全局字号缩放 (${cfg.fontSize || 100}%)</label>
+    <input type="range" id="ap_fontsize" min="80" max="140" value="${cfg.fontSize || 100}" style="width:100%">
+  </div>
+  <button class="btn ghost" id="clear_font" style="font-size:12px;">恢复默认字体</button>
+</div>
 
       <div class="card">
-        <h3>👤 用户头像</h3>
-        <div class="row" style="gap:12px;">
-          <div style="width:50px;height:50px;border-radius:50%;background:var(--panel-2);overflow:hidden;">
-           ${realOf(cfg.userAvatar) ? `<img src="${realOf(cfg.userAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
-          </div>
-          <input type="file" id="ap_avatar" accept="image/*" style="flex:1;font-size:12px">
-        </div>
-      </div>
+  <h3>👤 用户头像</h3>
+  <div class="row" style="gap:12px;align-items:center;">
+    <div style="width:50px;height:50px;border-radius:50%;background:var(--panel-2);overflow:hidden;flex-shrink:0;">
+     ${realOf(cfg.userAvatar) ? `< img src="${realOf(cfg.userAvatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;">👤</div>`}
+    </div>
+
+    <!-- ★ 可见按钮 -->
+    <button type="button" class="btn ghost" id="ap_avatar_btn"
+            style="width:auto;flex:1;font-size:13px;padding:10px;">
+      📁 更换头像
+    </button>
+
+    <!-- ★ 隐藏 input -->
+    <input type="file" id="ap_avatar" accept="image/*"
+           style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
+  </div>
+</div>
 
       <div class="card">
         <h3>👥 联系人头像与参考图</h3>
@@ -4793,32 +4836,39 @@ Appearance: {
           参考图：生图 AI 会**严格按这张参考图**生成该角色的图（脸、衣服、气质都要对上）。
         </p >
         ${contacts.filter(c => !c.isTheater).map(c => `
-          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
-            <div class="row" style="gap:12px;align-items:center;margin-bottom:8px;">
-              <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
-                ${realOf(c.avatar) ? `<img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
-              </div>
-              <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
-              <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
-                换头像<input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
-              </label>
-            </div>
-            <div class="row" style="gap:10px;align-items:center;">
-              <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                ${realOf(c.refImage) ? `<img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
-                <div style="display:flex;gap:6px;">
-                  <label class="btn ghost" style="width:auto;padding:4px 10px;font-size:11px;margin:0;">
-                    上传<input type="file" class="c-ref-input" data-name="${esc(c.name)}" accept="image/*" style="display:none;">
-                  </label>
-                  ${c.refImage ? `<button class="btn ghost c-ref-clear" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;color:#e62429;border-color:#e62429;">清除</button>` : ""}
-                </div>
-              </div>
-            </div>
-          </div>
-        `).join("")}
+  <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
+    <div class="row" style="gap:12px;align-items:center;margin-bottom:8px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
+        ${realOf(c.avatar) ? `< img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+      </div>
+      <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
+
+      <!-- ★ 头像：用 button 显式 click，input 用隐藏技巧 -->
+      <button type="button" class="btn ghost c-avatar-trigger" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">
+        换头像
+      </button>
+      <input type="file" class="c-avatar-input" data-name="${esc(c.name)}" accept="image/*"
+             style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
+    </div>
+
+    <div class="row" style="gap:10px;align-items:center;">
+      <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+        ${realOf(c.refImage) ? `< img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn ghost c-ref-trigger" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;margin:0;">
+            上传
+          </button>
+          <input type="file" class="c-ref-input" data-name="${esc(c.name)}" accept="image/*"
+                 style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">
+          ${c.refImage ? `<button type="button" class="btn ghost c-ref-clear" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:11px;color:#e62429;border-color:#e62429;">清除</button>` : ""}
+             </div>
+           </div>
+         </div>
+       </div>
+   `).join("")}
       </div>
 
       <div class="card">
@@ -4871,34 +4921,55 @@ Appearance: {
       </div>
     </div>`;
 
-    // 壁纸（长边 → 1600，≤ 800KB）
-    body.querySelector("#ap_wall").onchange = async (e) => {
-      const file = e.target.files[0]; if (!file) return;
-      try {
-        const dataUrl = await compressImage(file, { maxSize: 1600, square: false, quality: 0.85, maxBytes: 800 * 1024 });
-        await dbHelper.saveImage("wallpaper", dataUrl);
-        cfg.wallpaper = "idb:wallpaper";
-        store.set("sv_appearance", cfg);
-        applyAppearance();
-        toast("壁纸已更新（已存 IndexedDB）");
-      } catch (err) {
-        toast("壁纸上传失败：" + err.message);
-      }
-    };
+    // ============================================================
+// 🖼️ 壁纸：按钮显式触发 + onchange 保存
+// ============================================================
+bindFileTrigger("#ap_wall_btn", "#ap_wall", body);
 
-    // 字体
-    body.querySelector("#ap_font").onchange = (e) => {
-      const file = e.target.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        cfg.fontData = ev.target.result;
-        cfg.fontName = "CustomFont_" + Date.now();
-        store.set("sv_appearance", cfg);
-        applyAppearance();
-        toast("字体已更新");
-      };
-      reader.readAsDataURL(file);
-    };
+body.querySelector("#ap_wall").onchange = async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const btn = body.querySelector("#ap_wall_btn");
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⏳ 处理中...";
+  try {
+    const dataUrl = await compressImage(file, { maxSize: 1600, square: false, quality: 0.85, maxBytes: 800 * 1024 });
+    await dbHelper.saveImage("wallpaper", dataUrl);
+    cfg.wallpaper = "idb:wallpaper";
+    store.set("sv_appearance", cfg);
+    applyAppearance();
+    toast("壁纸已更新（已存 IndexedDB）");
+  } catch (err) {
+    toast("壁纸上传失败：" + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+    e.target.value = "";  // ★ 再次清空，避免同名文件无法重复触发
+  }
+};
+
+// ============================================================
+// 🔤 字体：按钮显式触发 + onchange 保存
+// ============================================================
+bindFileTrigger("#ap_font_btn", "#ap_font", body);
+
+body.querySelector("#ap_font").onchange = (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    cfg.fontData = ev.target.result;
+    cfg.fontName = "CustomFont_" + Date.now();
+    store.set("sv_appearance", cfg);
+    applyAppearance();
+    toast("字体已更新");
+    e.target.value = "";
+  };
+  reader.onerror = () => {
+    toast("字体文件读取失败");
+    e.target.value = "";
+  };
+  reader.readAsDataURL(file);
+};
     body.querySelector("#clear_font").onclick = () => {
       cfg.fontData = null;
       cfg.fontName = null;
@@ -4914,69 +4985,72 @@ Appearance: {
       applyAppearance();
     };
 
-    // 用户头像（自动裁剪 256×256 + 压缩）
-    body.querySelector("#ap_avatar").onchange = async (e) => {
+    // ============================================================
+// 👤 用户头像：按钮显式触发 + onchange 保存
+// ============================================================
+bindFileTrigger("#ap_avatar_btn", "#ap_avatar", body);
+
+body.querySelector("#ap_avatar").onchange = async (e) => {
   const file = e.target.files[0]; if (!file) return;
   try {
     const dataUrl = await compressImage(file, { maxSize: 256, square: true, quality: 0.85, maxBytes: 60 * 1024 });
-    // ★ 关键：先存进 IndexedDB
-    await dbHelper.saveImage("user_avatar", dataUrl);
-    // ★ 写进缓存，避免重新 render 时读不到
-    _imgCache["user_avatar"] = dataUrl;
+    await dbHelper.saveImage("user_avatar", dataUrl);   // ★ 顺手把图片真正存进 IndexedDB
     cfg.userAvatar = "idb:user_avatar";
     store.set("sv_appearance", cfg);
     this.render(body);
     toast("头像已更新（已自动压缩）");
   } catch (err) {
     toast("头像上传失败：" + err.message);
+  } finally {
+    e.target.value = "";
   }
 };
      
-    // 联系人头像（压缩 → 存 IDB → 只存 idb:key）
-    body.querySelectorAll(".c-avatar-input").forEach(input => {
-      input.onchange = async (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const name = input.dataset.name;
-        try {
-          const dataUrl = await compressImage(file, { maxSize: 256, square: true, quality: 0.85, maxBytes: 60 * 1024 });
-          const key = "avatar_" + name;
-          await dbHelper.saveImage(key, dataUrl);
-          const list = store.getContacts();
-          const c = list.find(x => x.name === name);
-          if (c) {
-            c.avatar = "idb:" + key;   // ★ 只存 key
-            store.setContacts(list);
-            this.render(body);
-            toast("头像已更新（已存 IndexedDB）");
-          }
-        } catch (err) {
-          toast("头像上传失败：" + err.message);
-        }
-      };
-    });
+    // 联系人头像
+body.querySelectorAll(".c-avatar-input").forEach(input => {
+  input.onchange = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const name = input.dataset.name;
+    try {
+      const dataUrl = await compressImage(file, { maxSize: 256, square: true, quality: 0.85, maxBytes: 60 * 1024 });
+      const key = "avatar_" + name;
+      await dbHelper.saveImage(key, dataUrl);
+      const list = store.getContacts();
+      const c = list.find(x => x.name === name);
+      if (c) {
+        c.avatar = "idb:" + key;
+        store.setContacts(list);
+        this.render(body);
+        toast("头像已更新（已存 IndexedDB）");
+      }
+    } catch (err) {
+      toast("头像上传失败：" + err.message);
+    }
+  };
+});
 
-// 联系人参考图上传（长边 → 1024，≤ 500KB）
-   body.querySelectorAll(".c-ref-input").forEach(input => {
-      input.onchange = async (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const name = input.dataset.name;
-        try {
-          const dataUrl = await compressImage(file, { maxSize: 1024, square: false, quality: 0.85, maxBytes: 500 * 1024 });
-          const key = "ref_" + name;
-          await dbHelper.saveImage(key, dataUrl);
-          const list = store.getContacts();
-          const c = list.find(x => x.name === name);
-          if (c) {
-            c.refImage = "idb:" + key;
-            store.setContacts(list);
-            this.render(body);
-            toast("参考图已更新（已存 IndexedDB）");
-          }
-        } catch (err) {
-          toast("参考图上传失败：" + err.message);
-        }
-      };
-    });
+// 联系人参考图
+body.querySelectorAll(".c-ref-input").forEach(input => {
+  input.onchange = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const name = input.dataset.name;
+    try {
+      const dataUrl = await compressImage(file, { maxSize: 1024, square: false, quality: 0.85, maxBytes: 500 * 1024 });
+      const key = "ref_" + name;
+      await dbHelper.saveImage(key, dataUrl);
+      const list = store.getContacts();
+      const c = list.find(x => x.name === name);
+      if (c) {
+        c.refImage = "idb:" + key;
+        store.setContacts(list);
+        this.render(body);
+        toast("参考图已更新（已存 IndexedDB）");
+      }
+    } catch (err) {
+      toast("参考图上传失败：" + err.message);
+    }
+  };
+});
 
 // 联系人参考图清除
 body.querySelectorAll(".c-ref-clear").forEach(btn => {
@@ -4993,7 +5067,34 @@ body.querySelectorAll(".c-ref-clear").forEach(btn => {
     }
   };
 });
+// ============================================================
+// 🖼️ 头像 / 参考图上传：显式触发 click（解决 iOS / WebView 无反应）
+// ============================================================
+body.querySelectorAll(".c-avatar-trigger").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const name = btn.dataset.name;
+    const input = body.querySelector(`.c-avatar-input[data-name="${CSS.escape(name)}"]`);
+    if (input) {
+      input.value = "";  // ★ 关键：清空，允许重复选同一个文件
+      input.click();
+    }
+  });
+});
 
+body.querySelectorAll(".c-ref-trigger").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const name = btn.dataset.name;
+    const input = body.querySelector(`.c-ref-input[data-name="${CSS.escape(name)}"]`);
+    if (input) {
+      input.value = "";
+      input.click();
+    }
+  });
+});
     // 自定义 CSS
     body.querySelector("#save_css").onclick = () => {
       cfg.customCss = body.querySelector("#ap_css").value;
