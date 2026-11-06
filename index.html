@@ -1084,7 +1084,12 @@ body.theme-light .diary-detail [style*="background:var(--panel-2)"][style*="colo
   border: 1px dashed var(--line);
 }
 .th-quest-closed-text { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-
+/* ===== 🕷️ 彼得一激灵 · 屏幕脉冲 ===== */
+@keyframes tinglePulse {
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
+  60% { opacity: 0.3; }
+}
 .th-error { padding: 20px; text-align: center; color: var(--accent); font-size: 13px; }
 /* 正在输入动画 */
 .typing-indicator .dot {
@@ -2137,6 +2142,11 @@ const VOICE_ASSETS = {
     duration: 6,
     label: "baby spider",
   },
+"tingle": {
+    src: "./audio/tingle.mp3",
+    duration: 1,
+    label: "彼得一激灵",
+ },
 };
 
 // 关键词匹配规则（大小写不敏感、忽略空格）
@@ -2501,6 +2511,57 @@ mcuWorldEvents: [
       desc: "大萧条时期的黑白纽约，彼得是记者，用枪和暗影行动，世界是黑白的。",
       background: "1933年纽约，大萧条时期。彼得·帕克是号角日报的记者，被神秘蜘蛛咬伤后成为暗影蜘蛛侠。世界是黑白色的，充满黑帮、腐败和爵士乐。",
       rules: "黑白世界、大萧条、用枪、爵士乐、无现代科技"
+    }
+  ],
+// ===== 🗺️ 城市巡逻 · 街区数据 =====
+  patrolDistricts: [
+    {
+      key: "queens",
+      name: "皇后区",
+      emoji: "🏘️",
+      danger: "低",
+      color: "#2d6bff",
+      desc: "彼得长大的地方。老街坊多，熟人社会，事件以日常纠纷、小偷小摸为主。"
+    },
+    {
+      key: "brooklyn",
+      name: "布鲁克林",
+      emoji: "🌉",
+      danger: "中",
+      color: "#e62429",
+      desc: "工厂区与码头多，黑市交易和走私偶尔在废弃仓库发生。"
+    },
+    {
+      key: "midtown",
+      name: "曼哈顿中城",
+      emoji: "🏙️",
+      danger: "高",
+      color: "#8a2be2",
+      desc: "复仇者大厦旧址附近，高楼林立，事件常跟高处坠落、抢劫、直升机相关。"
+    },
+    {
+      key: "harlem",
+      name: "哈莱姆",
+      emoji: "🎷",
+      danger: "中",
+      color: "#c9a15a",
+      desc: "爵士乐与街头文化，社区感强。事件多为帮派摩擦、街头冲突。"
+    },
+    {
+      key: "hellskitchen",
+      name: "地狱厨房",
+      emoji: "🌧️",
+      danger: "高",
+      color: "#555555",
+      desc: "夜魔侠的地盘。黑帮、军火、人口贩卖时有发生，属于高危巡逻区。"
+    },
+    {
+      key: "coneyisland",
+      name: "科尼岛",
+      emoji: "🎡",
+      danger: "低",
+      color: "#00bcd4",
+      desc: "海滩与游乐园，事件以游客遇险、迷路小孩、海边意外为主。"
     }
   ],
   // MJ 全局关系锁定
@@ -4042,6 +4103,114 @@ function parseTimeAdvance(res) {
   return parseInt(m[1]) || 0;
 }
 
+// ============================================================
+// 🕷️ 巡逻结算 · 玩家选完选项后生成结局 + 消耗一次巡逻
+// ============================================================
+window.resolvePatrolOption = async (choiceText) => {
+  const pending = store.get("sv_patrol_pending", null);
+  if (!pending) return toast("没有进行中的巡逻");
+
+  const body = $("#appBody");
+  body.innerHTML = `<div class="loader"><div class="spin"></div>处理中...</div>`;
+
+ try {
+    // ★ 从 pending 里取出本次巡逻的模式
+    const mode = pending.mode || "peter";
+    const isPeterOnly = (mode === "peter");
+    const profile = store.getProfile();
+    const playerName = profile.name || "玩家";
+    const playerGender = profile.gender === "male" ? "男" : (profile.gender === "nonbinary" ? "非二元" : "女");
+    const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
+
+    const viewRule = isPeterOnly
+      ? `【★ 视角 · 铁律 · 违反即失败 ★】
+- **巡逻者是「彼得·帕克」，不是你（玩家）。**
+- 用**第三人称**写彼得：全程用「彼得」或「他」。
+- 玩家「${playerName}」（${playerGender}）**不在现场**，不能出现在结局里。
+- 严禁写成"你/玩家 处理了……"，严禁写"你发现……"。
+- 结局要写**彼得的选择带来了什么结果**。
+`
+      : `【★ 视角 · 铁律 · 违反即失败 ★】
+- **巡逻者是「彼得·帕克」和「${playerName}」（${playerGender}，用「${playerPronoun}」指代），你们一起行动。**
+- 用**第三人称**写彼得（用「彼得」或「他」），用**第二人称**称呼玩家（用「你」）。
+- 结局必须体现"彼得和玩家一起承担结果"，**不能只有彼得一个人**。
+- 严禁写成"只有玩家处理了"，严禁写"彼得不在"。
+`;
+
+    const sysPrompt = buildSystem(`你正在续写一段**城市巡逻**的结局。
+${buildBlacklistBanText([])}
+
+${viewRule}
+
+【巡逻街区】${pending.districtEmoji} ${pending.districtName}
+【巡逻模式】${isPeterOnly ? "彼得独自巡逻" : "彼得和玩家一起巡逻"}
+
+【巡逻开场剧情】
+${pending.story}
+
+【玩家选择】
+${choiceText}
+
+【核心要求 · 铁律 · 违反即失败】
+1. 写一段 **200~350 字** 的结局剧情。
+2. 必须**承接玩家的选择**，写出这个选择带来的具体后果。
+3. 结局要**收束**：这一场巡逻到此结束，不开启新线索，不抛出连环事件。
+4. **不要标注好感度、不要提 MCU 主线、不要写"阶段"**。
+5. 语言用纯中文，对白可以用 *"English"*（中文翻译）格式。
+
+【文风】电影镜头感，纽约皇后区口音，严禁 AI 腔。`);
+
+    const res = await callAI([{ role: "user", content: "生成巡逻结局" }], sysPrompt);
+
+    // 存档这次巡逻到 log
+    const s = store.getState();
+    const todayStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+    let patrol = store.get("sv_patrol", { day: todayStr, used: 0, district: null, log: [] });
+    if (patrol.day !== todayStr) {
+      patrol = { day: todayStr, used: 0, district: null, log: patrol.log || [] };
+    }
+    patrol.used = Math.min(5, (patrol.used || 0) + 1);
+    patrol.district = null;
+    patrol.log = patrol.log || [];
+    patrol.log.unshift({
+      date: todayStr,
+      district: pending.districtName,
+      emoji: pending.districtEmoji,
+      isDanger: pending.isDanger,
+      choice: choiceText,
+      result: res.slice(0, 400),
+      ts: Date.now()
+    });
+    if (patrol.log.length > 50) patrol.log = patrol.log.slice(0, 50);
+    store.set("sv_patrol", patrol);
+    store.set("sv_patrol_pending", null);
+
+    // 渲染结局
+    body.innerHTML = `<div style="padding:14px">
+      <div class="card" style="padding:12px;margin-bottom:10px;border-left:3px solid #4caf50;background:var(--panel-2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);">✅ 巡逻结束</div>
+            <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">${pending.districtEmoji} ${esc(pending.districtName)}</div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);">今日已用 ${patrol.used} / 5</div>
+        </div>
+        <div style="margin-top:6px;font-size:10.5px;color:var(--muted);">
+          ${pending.mode === "together" ? "👥 一起巡逻" : "🕷️ 彼得独自巡逻"}
+        </div>
+      </div>
+
+      <div class="story-content" style="word-break:break-word;margin-bottom:16px;">${formatDialogue(res)}</div>
+
+      <button class="btn" onclick="openApp('Spider_Terminal')">← 返回蜘蛛终端</button>
+    </div>`;
+
+    toast("✅ 巡逻结束（今日 " + patrol.used + "/5）");
+  } catch (e) {
+    body.innerHTML = `<div style="padding:14px"><div class="card">失败：${esc(e.message)}</div></div>`;
+  }
+};
+
 // ===== 打开/渲染支线剧情 =====
 window.openSideQuestView = (id) => {
   const q = WORLD.getSideQuests().find(x => x.id === id);
@@ -5092,7 +5261,7 @@ Appearance: {
   <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;">
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
       <div style="width:40px;height:40px;border-radius:50%;background:var(--panel);overflow:hidden;flex-shrink:0;">
-        ${realOf(c.avatar) ? `< img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
+        ${realOf(c.avatar) ? `<img src="${realOf(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;">👤</div>`}
       </div>
       <div style="flex:1;font-size:13px;color:var(--text);font-weight:600;">${esc(c.name)}</div>
       <button type="button" class="btn ghost c-avatar-trigger" data-name="${esc(c.name)}" style="width:auto;padding:4px 10px;font-size:12px;margin:0;">换头像</button>
@@ -5100,7 +5269,7 @@ Appearance: {
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
       <div style="width:64px;height:64px;border-radius:8px;background:var(--panel);border:1px dashed var(--line);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-        ${realOf(c.refImage) ? `< img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
+        ${realOf(c.refImage) ? `<img src="${realOf(c.refImage)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2;">无<br>参考图</span>`}
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">参考图（用于生图 AI 锁定外形）</div>
@@ -7375,20 +7544,75 @@ chatHtml += msgs.map((m, idx) => {
     ? `<div style="font-size:11px;color:var(--muted);border-left:2px solid #666;padding-left:6px;margin-bottom:4px;opacity:0.8">引用: ${esc(m.quote)}</div>`
     : "";
 
-  // ===== 语音气泡 =====
-  if (m.type === "voice") {
-    const asset = VOICE_ASSETS[m.voiceKey] || {};
+  // ===== 语音气泡（带头像，跟普通消息结构一致） =====
+  if (m.type === "voice" || (m.content && m.content.startsWith("[语音]"))) {
+    const vk = m.voiceKey || (m.content || "").replace("[语音]", "").trim();
+    const asset = VOICE_ASSETS[vk] || {};
     const dur = asset.duration || 3;
-    return `<div class="bubble ${m.role} voice-bubble" data-idx="${idx}" data-voice="${esc(m.voiceKey)}" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;">
-      ${quoteHtml}
+
+    const voiceInner = `
       <span class="voice-icon" style="font-size:16px;">${m.role === "me" ? "🔊" : "🔈"}</span>
       <span class="voice-bar" style="flex:1;display:flex;gap:2px;align-items:center;">
         <i style="width:${Math.min(60, 12 + dur * 4)}px;height:2px;background:currentColor;opacity:.6;display:inline-block;border-radius:2px;"></i>
       </span>
       <span class="voice-dur" style="font-size:12px;opacity:.8;">${dur}"</span>
-    </div>`;
-  }
+    `;
 
+    const curContactForVoice = store.getContacts().find(c => c.name === self.currentUser);
+    const isGroupVoice = !!(curContactForVoice && curContactForVoice.isGroup);
+
+   // ===== 群聊语音：头像 + 名字 =====
+    if (isGroupVoice && m.role === "them") {
+      const senderName = m.groupSender || (curContactForVoice.members && curContactForVoice.members[0]) || "群成员";
+      const memberC = store.getContacts().find(c => c.name === senderName);
+      const senderAvatar = (memberC && memberC.avatar) ? realAv(memberC.avatar) : "";
+      const firstChar = esc((senderName || "?")[0]);
+      return '<div class="msg-row them" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
+        '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
+          (senderAvatar ? '< img src="' + senderAvatar + '" style="width:100%;height:100%;object-fit:cover;">' : firstChar) +
+        '</div>' +
+        '<div style="max-width:72%;min-width:0;">' +
+          '<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">' + esc(senderName) + '</div>' +
+          '<div class="bubble them voice-bubble" data-idx="' + idx + '" data-voice="' + esc(vk) + '" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;max-width:100%;">' +
+            quoteHtml + voiceInner +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // ===== 单人语音：对方 =====
+    if (!isGroupVoice && m.role === "them") {
+      const c = curContactForVoice;
+      const av = (c && c.avatar) ? realAv(c.avatar) : "";
+      const firstChar = esc((c ? c.name : "?")[0]);
+      return '<div class="msg-row them" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
+        '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
+          (av ? '< img src="' + av + '" style="width:100%;height:100%;object-fit:cover;">' : firstChar) +
+        '</div>' +
+        '<div class="bubble them voice-bubble" data-idx="' + idx + '" data-voice="' + esc(vk) + '" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;max-width:72%;">' +
+          quoteHtml + voiceInner +
+        '</div>' +
+      '</div>';
+    }
+
+    // ===== 玩家自己（me）语音：右侧头像 =====
+    if (m.role === "me") {
+      const cfgA = store.get("sv_appearance", {});
+      const myAv = realAv(cfgA.userAvatar || "");
+      const myFirst = esc((store.getProfile().name || "我")[0]);
+      return `<div class="msg-row me" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;justify-content:flex-end;">
+        <div class="bubble me voice-bubble" data-idx="${idx}" data-voice="${esc(vk)}" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;max-width:72%;">
+          ${quoteHtml}${voiceInner}
+        </div>
+        <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
+          ${myAv ? `<img src="${myAv}" style="width:100%;height:100%;object-fit:cover;">` : myFirst}
+        </div>
+      </div>`;
+    }
+
+    // 兜底
+    return `<div class="bubble ${m.role} voice-bubble" data-idx="${idx}" data-voice="${esc(vk)}" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;">${quoteHtml}${voiceInner}</div>`;
+  }
   // ===== 旧数据兼容 [语音] 前缀 =====
   if (m.content && m.content.startsWith("[语音]")) {
     const vk = m.voiceKey || m.content.replace("[语音]", "").trim();
@@ -10839,25 +11063,262 @@ facetime: {
 Spider_Terminal: {
     title: "蜘蛛终端",
     async render(body) {
+
+      // ============================================================
+      // 🗺️ 巡逻数据读写
+      // ============================================================
+      const s = store.getState();
+      const todayStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      let patrol = store.get("sv_patrol", { day: todayStr, used: 0, district: null, log: [] });
+
+      // 日期变了就重置
+      if (patrol.day !== todayStr) {
+        patrol = { day: todayStr, used: 0, district: null, log: patrol.log || [] };
+        store.set("sv_patrol", patrol);
+      }
+      const MAX_PATROL = 5;
+      const remaining = Math.max(0, MAX_PATROL - patrol.used);
+      const usedToday = patrol.used;
+// 🕷️ 巡逻模式（peter = 彼得独自；together = 我和彼得一起）
+      let patrolMode = store.get("sv_patrol_mode", "peter");
+      if (patrolMode !== "peter" && patrolMode !== "together") patrolMode = "peter";
+      // ============================================================
+      // 页面结构
+      // ============================================================
       body.innerHTML = `<div style="padding:14px">
+
+        <!-- 顶部：今日巡逻进度 -->
+        <div class="card" style="padding:14px;margin-bottom:12px;background:linear-gradient(135deg,rgba(45,107,255,.14),rgba(230,36,41,.08));border-left:3px solid var(--accent-2);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;">🗺️ 今日巡逻</div>
+              <div style="font-size:16px;font-weight:800;color:var(--text);margin-top:2px;">
+                ${usedToday} / ${MAX_PATROL}
+              </div>
+            </div>
+            <div style="display:flex;gap:4px;">
+              ${Array.from({ length: MAX_PATROL }).map((_, i) =>
+                `<div style="width:14px;height:22px;border-radius:3px;background:${i < usedToday ? 'var(--accent-2)' : 'var(--panel-2)'};border:1px solid ${i < usedToday ? 'var(--accent-2)' : 'var(--line)'};"></div>`
+              ).join("")}
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);">📅 ${todayStr} · 剩余 <b style="color:var(--accent-2);">${remaining}</b> 次</div>
+          <div style="height:4px;background:var(--panel-2);border-radius:2px;overflow:hidden;margin-top:8px;">
+            <div style="height:100%;width:${(usedToday / MAX_PATROL) * 100}%;background:linear-gradient(90deg,var(--accent-2),var(--accent));transition:width .3s;"></div>
+          </div>
+
+          <!-- 🕷️ 巡逻模式切换 -->
+          <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">巡逻模式（影响剧情视角）</div>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="patrol-mode-btn" data-mode="peter"
+                style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid ${patrolMode === 'peter' ? 'var(--accent-2)' : 'var(--line)'};background:${patrolMode === 'peter' ? 'rgba(45,107,255,.12)' : 'var(--panel-2)'};color:var(--text);">
+                🕷️ 彼得独自巡逻
+              </button>
+              <button type="button" class="patrol-mode-btn" data-mode="together"
+                style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid ${patrolMode === 'together' ? 'var(--accent-2)' : 'var(--line)'};background:${patrolMode === 'together' ? 'rgba(45,107,255,.12)' : 'var(--panel-2)'};color:var(--text);">
+                👥 我和彼得一起
+              </button>
+            </div>
+            <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5;">
+              ${patrolMode === 'peter'
+                ? "剧情以彼得为主视角展开，你是旁观的见证者。"
+                : "剧情里是彼得和你一起行动，你也能参与选择。"}
+            </div>
+          </div>
+        </div>
+
+        <!-- 街区选择 -->
+        <div class="card">
+          <h3 style="margin-bottom:10px;">🗺️ 选择巡逻街区</h3>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">
+            ${WORLD.patrolDistricts.map(d => `
+              <div class="patrol-district" data-key="${d.key}"
+                style="padding:10px;border-radius:12px;background:var(--panel-2);border:2px solid ${patrol.district === d.key ? d.color : 'var(--line)'};cursor:${remaining > 0 ? 'pointer' : 'not-allowed'};opacity:${remaining > 0 ? 1 : 0.5};transition:all .15s;position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                  <span style="font-size:20px;">${d.emoji}</span>
+                  <span style="font-size:13px;font-weight:700;color:var(--text);">${esc(d.name)}</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin-bottom:6px;">${esc(d.desc.slice(0, 28))}...</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;">
+                  <span style="color:${d.color};font-weight:700;">危险度：${d.danger}</span>
+                  ${patrol.district === d.key ? `<span style="color:${d.color};font-weight:700;">✓ 已选</span>` : ""}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+
+          <button class="btn" id="startPatrolBtn" ${remaining <= 0 || !patrol.district ? "disabled" : ""} style="width:100%;">
+            ${remaining <= 0 ? "🛌 今天已经巡逻 5 次，明天再来" : (patrol.district ? "🚀 开始巡逻" : "请先选择一个街区")}
+          </button>
+        </div>
+
+       <!-- 地图 / 支线（保留原功能） -->
         <div class="card">
           <h3>🗺️ 皇后区行动地图</h3>
-          <p style="font-size:12px;color:var(--muted);margin:0 0 10px">主线剧情之外，地图上随机刷新支线事件。点击下方「开始新支线」由 AI 生成一段独立剧情（独立于主线，不影响主线进度）。</p >
+          <p style="font-size:12px;color:var(--muted);margin:0 0 剧情支线事件。点击下方「开始新支线」由 AI 生成一段独立剧情（独立于主线，不影响主线进度）。</p >
           <button class="btn" id="genMapBtn" style="margin-bottom:8px;">🖼️ 生成地图</button>
           <button class="btn" id="startSideQuestBtn">✨ 开始新支线</button>
         </div>
+
         <div id="mapArea"></div>
+
         <div class="card" id="sideQuestListCard">
           <h3>🎬 支线档案（共 <span id="sqCount">0</span> 个）</h3>
           <div id="sqList" style="font-size:13px;color:var(--muted)">加载中...</div>
         </div>
       </div>`;
+// ============================================================
+      // 巡逻模式切换
+      // ============================================================
+      body.querySelectorAll(".patrol-mode-btn").forEach(btn => {
+        btn.onclick = () => {
+          const mode = btn.dataset.mode;
+          store.set("sv_patrol_mode", mode);
+          this.render(body);
+        };
+      });
+      // ============================================================
+      // 街区选择
+      // ============================================================
+      body.querySelectorAll(".patrol-district").forEach(el => {
+        el.onclick = () => {
+          if (remaining <= 0) return toast("今天已经巡逻 5 次，明天再来");
+          const key = el.dataset.key;
+          patrol.district = key;
+          store.set("sv_patrol", patrol);
+          this.render(body);
+        };
+      });
 
+      // ============================================================
+      // 开始巡逻 → 触发 AI 生成随机事件
+      // ============================================================
+      const startBtn = body.querySelector("#startPatrolBtn");
+      if (startBtn) {
+        startBtn.onclick = async () => {
+          if (remaining <= 0) return toast("今天已经巡逻 5 次");
+          if (!patrol.district) return toast("请先选择一个街区");
+
+          const district = WORLD.patrolDistricts.find(d => d.key === patrol.district);
+          if (!district) return;
+
+          body.innerHTML = `<div class="loader"><div class="spin"></div>正在巡逻 ${district.emoji} ${district.name}...</div>`;
+
+          try {
+            // ★ 根据巡逻模式决定视角
+            const isPeterOnly = (patrolMode === "peter");
+            const profile = store.getProfile();
+            const playerName = profile.name || "玩家";
+            const playerGender = profile.gender === "male" ? "男" : (profile.gender === "nonbinary" ? "非二元" : "女");
+            const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
+
+            const viewRule = isPeterOnly
+              ? `【★ 视角 · 铁律 · 违反即失败 ★】
+- **巡逻者是「彼得·帕克」，不是你（玩家），也不是任何路人。**
+- 用**第三人称**写彼得：全程用「彼得」或「他」称呼彼得·帕克。
+- 玩家「${playerName}」（${playerGender}，用「${playerPronoun}」指代）**不在现场**，不能出现在剧情里。
+- 严禁写成"你/玩家 在巡逻"，严禁写"你发现了……"。
+- 严禁让彼得在剧情里给玩家发消息（这是巡逻，不是短信）。
+- 玩家是**旁观者**，看的是"彼得今晚巡逻遇到了什么"。
+- 结尾的【选项】是**彼得会怎么做**，不是玩家会怎么做。
+  例如："A. 彼得冲上去拽住劫匪" 或 "A. 彼得停下来观察"。
+`
+              : `【★ 视角 · 铁律 · 违反即失败 ★】
+- **巡逻者是「彼得·帕克」和「${playerName}」（${playerGender}，用「${playerPronoun}」指代），你们一起行动。**
+- 用**第三人称**写彼得（用「彼得」或「他」），用**第二人称**称呼玩家（用「你」）。
+- 剧情里必须有"彼得和玩家并肩/一前一后/一起出现"的具体描写，**不能只有彼得一个人**。
+- 严禁写成"只有玩家在巡逻"，严禁写"彼得不在"。
+- 结尾的【选项】是**你们会怎么做**（可以是彼得做什么 + 你做什么，也可以是一起决定）。
+  例如："A. 彼得去引开劫匪，你去报警" 或 "A. 你拉住彼得的胳膊让他别冲"。
+`;
+
+            const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的 DM，正在生成一段**城市巡逻**的随机事件开场。
+${buildBlacklistBanText([])}
+
+${viewRule}
+
+【当前巡逻街区】${district.emoji} ${district.name}
+【街区描述】${district.desc}
+【街区危险度】${district.danger}
+【当前游戏内日期】${todayStr}
+【今日剩余巡逻次数】${remaining - 1}
+【巡逻模式】${isPeterOnly ? "彼得独自巡逻" : "彼得和玩家一起巡逻"}
+
+【核心要求 · 铁律 · 违反即失败】
+1. 写一段 **200~350 字** 的巡逻开场剧情。
+2. 内容必须是**街头即时事件**，不能是主线级大事件（不能出现灭霸、不能出现多元宇宙）。
+3. 事件必须**符合该街区的特色**（皇后区：日常纠纷/小偷；地狱厨房：黑帮/军火；科尼岛：游客/海边）。
+4. 剧情要**在关键选择点停住**，不替玩家决定。
+5. 结尾必须用【选项】列出 A. B. C. D. 四个行动方向，每个选项各占一行。
+6. **不要标注好感度、不要提 MCU 主线、不要写"阶段"**。
+7. 语言用纯中文，对白可以用 *"English"*（中文翻译）格式。
+
+【危险判定的判定标准】
+如果事件属于以下类型，请在剧情里**明确提及**这些危险关键词（用于触发"彼得一激灵"）：
+- 劫匪 / 抢劫 / 枪 / 开枪 / 匕首
+- 爆炸 / 着火 / 起火
+- 绑架 / 劫持 / 人质
+- 外星 / 齐塔瑞 / 反击者
+- 追捕 / 逃犯 / 追车
+- 高楼 / 坠落 / 跳楼
+- 濒死 / 重伤 / 流血
+- 黑帮 / 军火 / 交易 / 走私
+
+【文风】电影镜头感，纽约皇后区口音，严禁 AI 腔。`);
+
+            const res = await callAI([{ role: "user", content: "生成巡逻事件" }], sysPrompt);
+
+            // ============================================================
+            // 判断是否是危险事件 → 触发「彼得一激灵」
+            // ============================================================
+            const DANGER_KEYWORDS = [
+              "劫匪", "抢劫", "枪", "开枪", "匕首", "刀",
+              "爆炸", "着火", "起火", "火焰",
+              "绑架", "劫持", "人质",
+              "外星", "齐塔瑞", "反击者",
+              "追捕", "逃犯", "追车", "飙车",
+              "高楼", "坠落", "跳楼", "顶楼",
+              "濒死", "重伤", "流血", "血",
+              "黑帮", "军火", "交易", "走私", "毒"
+            ];
+            const isDanger = DANGER_KEYWORDS.some(k => res.includes(k));
+
+            // 先保存到 state，等玩家选完后用
+            const pending = {
+              district: district.key,
+              districtName: district.name,
+              districtEmoji: district.emoji,
+              story: "",
+              options: "",
+              isDanger,
+              date: todayStr,
+              mode: patrolMode   // ★ 记录本次巡逻的模式
+            };
+
+            const optionsIdx = res.indexOf("【选项】");
+            pending.story = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
+              .replace("【剧情】", "")
+              .trim();
+            pending.options = optionsIdx > -1 ? res.slice(optionsIdx + 4).trim() : "";
+
+            store.set("sv_patrol_pending", pending);
+
+            // ★ 显示剧情 + 播放 tingle（如果是危险事件）
+            this.renderPatrolEvent(body, pending);
+          } catch (e) {
+            body.innerHTML = `<div style="padding:14px"><div class="card">失败：${esc(e.message)}</div></div>`;
+          }
+        };
+      }
+
+      // ============================================================
+      // 原有地图 & 支线功能（保留）
+      // ============================================================
       const area = body.querySelector("#mapArea");
       const sqListEl = body.querySelector("#sqList");
       const sqCountEl = body.querySelector("#sqCount");
 
-      // ===== 1. 地图生成 =====
       const renderMap = async () => {
         area.innerHTML = `<div class="loader"><div class="spin"></div>生成地图中...</div>`;
         try {
@@ -10866,15 +11327,13 @@ Spider_Terminal: {
           const cfgA = store.get("sv_appearance", {});
           const mapPrompt = (cfgA.prompts && cfgA.prompts.map) ? cfgA.prompts.map : "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels.";
           const prompt = `${mapPrompt}\nScene: ${ctx}. Year: ${sNow.gameYear}.`;
-         // 地图一般不带具体角色参考图，但保留 refs 参数兼容
-const url = await generateImage(prompt);
+          const url = await generateImage(prompt);
           const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
           area.innerHTML = `<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
-        } catch(e) { area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`; }
+        } catch (e) { area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`; }
       };
       body.querySelector("#genMapBtn").onclick = renderMap;
 
-      // ===== 2. 渲染支线列表 =====
       const renderSideQuests = () => {
         const list = WORLD.getSideQuests();
         sqCountEl.textContent = list.length;
@@ -10885,8 +11344,8 @@ const url = await generateImage(prompt);
         sqListEl.innerHTML = list.map((q) => `
           <div style="padding:10px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;">
             <div style="flex:1;min-width:0;">
-              <div style="font-weight:bold;color: var(--sidebar-title-color);font-size:13px;">${esc(q.title)}</div>
-              <div style="font-size:11px;color:var(--muted) ;margin-top:2px;">${q.closed ? "✅ 已完结" : "▶ 进行中"} · ${q.date}</div>
+              <div style="font-weight:bold;color:var(--sidebar-title-color);font-size:13px;">${esc(q.title)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${q.closed ? "✅ 已完结" : "▶ 进行中"} · ${q.date}</div>
             </div>
             <button class="btn ghost" data-open="${q.id}" style="width:auto;padding:4px 10px;font-size:12px;">查看</button>
           </div>
@@ -10896,7 +11355,6 @@ const url = await generateImage(prompt);
         });
       };
 
-      // ===== 3. 开始新支线 =====
       body.querySelector("#startSideQuestBtn").onclick = async () => {
         const active = WORLD.getActiveSideQuest();
         if (active) {
@@ -10928,16 +11386,16 @@ const url = await generateImage(prompt);
           const title = titleMatch ? titleMatch[1].trim() : WORLD.makeSideQuestTitle(storyText);
 
           const q = {
-  id: "sq_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-  title: title,
-  date: date,
-  story: storyText,
-  options: optionsText,
-  choices: [],
-  closed: false,
-  createdAt: Date.now()
-};
-WORLD.addSideQuest(q);
+            id: "sq_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            title: title,
+            date: date,
+            story: storyText,
+            options: optionsText,
+            choices: [],
+            closed: false,
+            createdAt: Date.now()
+          };
+          WORLD.addSideQuest(q);
 
           window.openSideQuestView(q.id);
           toast("新支线已开始：" + title);
@@ -10948,6 +11406,70 @@ WORLD.addSideQuest(q);
 
       renderMap();
       renderSideQuests();
+    },
+
+    // ============================================================
+    // 🕷️ 渲染巡逻事件（含彼得一激灵）
+    // ============================================================
+    renderPatrolEvent(body, pending) {
+      const self = this;
+
+      // 危险事件 → 播放 tingle 语音 + 红色脉冲
+      if (pending.isDanger) {
+        // 屏幕红色径向脉冲
+        const flash = document.createElement("div");
+        flash.style.cssText = "position:fixed;inset:0;background:radial-gradient(circle at 50% 50%, rgba(230,36,41,.35), rgba(0,0,0,.1));pointer-events:none;z-index:9998;animation:tinglePulse 1.2s ease-in-out 2;";
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 2600);
+
+        // tingle 语音
+        try { apps.messages.playVoice("tingle"); } catch (_) {}
+
+        // 顶部提示条
+        const tip = document.createElement("div");
+        tip.style.cssText = "position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(230,36,41,.95);color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:700;z-index:99999;box-shadow: 8px 24px rgba(0,0,0,.5);animation:fadeInOut 3s forwards;letter-spacing:2px;white-space:nowrap;";
+        tip.textContent = "🕷️ 彼得一激灵！";
+        document.body.appendChild(tip);
+        setTimeout(() => tip.remove(), 3000);
+      }
+
+      const district = WORLD.patrolDistricts.find(d => d.key === pending.district) || { emoji: "🚶", name: "未知街区", color: "var(--accent-2)" };
+
+      body.innerHTML = `<div style="padding:14px">
+        <div class="card" style="padding:12px;margin-bottom:10px;border-left:3px solid ${district.color};background:var(--panel-2);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:11px;color:var(--muted);">🗺️ 巡逻中</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">${district.emoji} ${esc(pending.districtName)}</div>
+            </div>
+            ${pending.isDanger ? `<div style="font-size:11px;font-weight:700;color:#e62429;background:rgba(230,36,41,.15);padding:4px 10px;border-radius:10px;">⚠️ 危险</div>` : `<div style="font-size:11px;color:var(--accent-2);background:rgba(45,107,255,.12);padding:4px 10px;border-radius:10px;">🚶 日常</div>`}
+          </div>
+          <div style="margin-top:8px;font-size:10.5px;color:var(--muted);">
+            ${pending.mode === "together" ? "👥 你和彼得一起巡逻" : "🕷️ 彼得独自巡逻"}
+          </div>
+        </div>
+
+        <div class="story-content" style="word-break:break-word;">${formatDialogue(pending.story)}</div>
+
+        <div id="patrolOptions" style="margin-top:10px;margin-bottom:14px;"></div>
+      </div>`;
+
+      const optsEl = body.querySelector("#patrolOptions");
+      const opts = (pending.options || "").split("\n").filter(l => /^[A-D][\.\、]/.test(l.trim()));
+
+      optsEl.innerHTML = opts.map(o => {
+        const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+        return '<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;width:100%;" onclick="window.resolvePatrolOption(\'' + safe + '\')">' + esc(o) + '</button>';
+      }).join("");
+
+      if (!opts.length) {
+        // 兜底：AI 没按格式返回选项
+        optsEl.innerHTML = `
+          <button class="btn ghost" style="margin-bottom:8px;text-align:left;" onclick="window.resolvePatrolOption('（继续处理现场）')">继续处理现场</button>
+          <button class="btn ghost" style="margin-bottom:8px;text-align:left;" onclick="window.resolvePatrolOption('（先观察四周）')">先观察四周</button>
+          <button class="btn ghost" style="margin-bottom:8px;text-align:left;" onclick="window.resolvePatrolOption('（撤离现场，叫警察）')">撤离现场，叫警察</button>
+        `;
+      }
     }
   },
 
@@ -14002,23 +14524,32 @@ music: {
     // 同步全局 <audio> → App 内 <audio>
   const mirrorGlobal = () => {
       if (!globalMusic.audio || !globalMusic.audio.src) return;
+      // ★ 只有在音乐 App 页面时才做镜像，避免离开页面时误操作
+      if (currentApp !== "music") return;
+
       const gSrc = globalMusic.audio.src.split('#')[0].split('?')[0];
       const iSrc = inlineAudio.src.split('#')[0].split('?')[0];
-      
-      // 只有当 src 确实不同的时候，才去替换
+
       if (gSrc !== iSrc) {
+        _syncLock = true;
         inlineAudio.src = globalMusic.audio.src;
-        inlineAudio.load(); // 强制重新加载新源
+        inlineAudio.load();
+        setTimeout(() => { _syncLock = false; }, 100);
       }
-      
-      // 如果全局在播放，但 App 内没播放，才去触发 play
+
       if (!globalMusic.audio.paused) {
         if (inlineAudio.paused) {
+          _syncLock = true;
           inlineAudio.currentTime = globalMusic.audio.currentTime;
-          inlineAudio.play().catch(()=>{});
+          inlineAudio.play().catch(() => {});
+          setTimeout(() => { _syncLock = false; }, 100);
         }
       } else {
-        if (!inlineAudio.paused) inlineAudio.pause();
+        if (!inlineAudio.paused) {
+          _syncLock = true;
+          inlineAudio.pause();
+          setTimeout(() => { _syncLock = false; }, 100);
+        }
       }
     };
 
@@ -14066,17 +14597,40 @@ music: {
     };
 
     // 双向同步：App 内 <audio> → 全局 <audio>
+    // ★ 关键修复：只同步"用户主动操作"，不同步"DOM 卸载导致的隐式 pause/play"
+    let _syncLock = false;   // 防止循环触发
+
     inlineAudio.onplay = () => {
+      if (_syncLock) return;
+      // 只有当前确实在音乐 App 页面上时，才允许反向同步
+      if (currentApp !== "music") return;
       if (globalMusic.audio.paused && globalMusic.currentId) {
+        _syncLock = true;
         globalMusic.audio.currentTime = inlineAudio.currentTime;
-        globalMusic.audio.play().catch(()=>{});
+        globalMusic.audio.play().catch(() => {});
+        setTimeout(() => { _syncLock = false; }, 100);
       }
     };
+
     inlineAudio.onpause = () => {
-      if (!globalMusic.audio.paused) globalMusic.audio.pause();
+      if (_syncLock) return;
+      // ★ 关键：如果当前已经不在音乐 App 页面了（DOM 被卸载触发的隐式 pause），
+      //    绝对不要暂停全局音乐
+      if (currentApp !== "music") return;
+      // 只有用户主动点暂停（inlineAudio 有 src 且当前确实在播放）才同步
+      if (inlineAudio.src && !globalMusic.audio.paused) {
+        _syncLock = true;
+        globalMusic.audio.pause();
+        setTimeout(() => { _syncLock = false; }, 100);
+      }
     };
+
     inlineAudio.onseeked = () => {
-      globalMusic.audio.currentTime = inlineAudio.currentTime;
+      if (_syncLock) return;
+      if (currentApp !== "music") return;
+      if (globalMusic.audio && globalMusic.audio.src) {
+        globalMusic.audio.currentTime = inlineAudio.currentTime;
+      }
     };
 
     renderList();
@@ -14206,6 +14760,7 @@ $("#backBtn").onclick=()=>{
     return;
   }
   if(currentApp&&apps[currentApp].onBack&&apps[currentApp].onBack()) return;
+currentApp = null;
   $("#appView").classList.remove("active");
   $("#desktop").classList.add("active");
 };
