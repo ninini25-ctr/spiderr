@@ -7900,7 +7900,7 @@ if (gLabel) {
     const thread=body.querySelector("#chatThread");
     thread.scrollTop=thread.scrollHeight;
     
-    thread.querySelectorAll(".bubble").forEach(el => {
+    thread.querySelectorAll(".bubble, .msg-row").forEach(el => {
   if (el.dataset.voice) {
     el.addEventListener("click", (e) => {
       e.preventDefault();
@@ -7911,10 +7911,18 @@ if (gLabel) {
       let pressTimer;
       const showMenu = (e) => {
   e.preventDefault();
-  const idx = parseInt(el.dataset.idx);
-  const latestMsgs = (store.getChats()[self.currentUser]) || [];
-  const msg = latestMsgs[idx];
-  if (!msg) return;
+  // ★ 兜底：如果 el 没有 data-idx（比如点到了外层 msg-row），
+    //   就往上/往下找最近的有 data-idx 的元素
+    let target = el;
+    if (!target.dataset.idx) {
+      target = target.closest("[data-idx]") || target.querySelector("[data-idx]");
+    }
+    if (!target || !target.dataset.idx) return;
+
+    const idx = parseInt(target.dataset.idx);
+    const latestMsgs = (store.getChats()[self.currentUser]) || [];
+    const msg = latestMsgs[idx];
+    if (!msg) return;
 
   const menu = document.createElement("div");
   menu.className = "__global_menu";
