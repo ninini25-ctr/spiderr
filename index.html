@@ -4102,7 +4102,120 @@ function parseTimeAdvance(res) {
   if (!m) return 0;
   return parseInt(m[1]) || 0;
 }
+// ============================================================
+// 🕷️ 巡逻结束后 · 彼得主动发短信
+// ============================================================
+window.sendPatrolFollowupSMS = async function(pending, resultText) {
+  try {
+    const s = store.getState();
+    const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+    const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
 
+    const profile = store.getProfile();
+    const playerName = profile.name || "玩家";
+    const playerGender = profile.gender === "male" ? "男" : (profile.gender === "nonbinary" ? "非二元" : "女");
+    const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
+
+    const aff = getAffinityOf("彼得·帕克");
+    const affBehavior = buildAffinityBehaviorBlock("彼得·帕克", aff);
+
+    const isPeterOnly = (pending.mode === "peter");
+    const isDanger = !!pending.isDanger;
+
+    // 话题方向（按模式 + 危险度）
+    let topicDirection = "";
+if (isPeterOnly && isDanger) {
+  topicDirection = '刚刚独自处理了一个高危事件，差点挨揍 / 差点出事。你现在心跳还没平复，但不想让她担心，于是嘴硬地"说反话"——先说"其实没什么"，但藏不住想跟她说。';
+} else if (isPeterOnly && !isDanger) {
+  topicDirection = '刚刚独自巡逻完一段日常小事（比如帮老太太找猫 / 拦了一个偷包贼 / 被小孩拍视频），你想跟她分享这件小事，语气轻松、有点得意、又有点碎碎念。';
+} else if (!isPeterOnly && isDanger) {
+  topicDirection = '刚刚和她一起处理了一个高危事件，你们差点一起出事。你现在又后怕又庆幸，想说"刚才那一瞬间我其实有点慌"——但又怕显得太软弱，话说一半收回去。';
+} else {
+  topicDirection = '刚刚和她一起巡逻完一段日常小事，你们配合挺默契的。你想跟她聊刚才那个画面——可能是个小细节，比如"你刚才那句吐槽"或者"那个小孩看你的眼神"。';
+}
+
+    const sysPrompt = `你是漫威的「彼得·帕克」，正在用手机给「${playerName}」（${playerGender}，用「${playerPronoun}」指代）发短信。
+${buildBlacklistBanText([])}
+
+【当前日期】${date}
+【当前阶段】${phase.name}
+【好感度】${aff}/200
+${affBehavior}
+
+【刚刚发生的事】
+${isPeterOnly ? "彼得独自巡逻" : "彼得和玩家一起巡逻"} · ${pending.districtEmoji || ""} ${pending.districtName || ""}
+${isDanger ? "⚠️ 高危事件" : "🚶 日常小事"}
+【事件剧情摘要】${(pending.story || "").slice(0, 400)}
+【玩家/彼得的选择】${pending.lastChoice || "（未知）"}
+【事件结局摘要】${(resultText || "").slice(0, 400)}
+
+【本次话题方向 · 铁律】
+${topicDirection}
+
+【短信风格 · 极其重要 · 违反即失败】
+1. **开头不要固定**。不要每封都从"嘿""在吗""喂"开头——可以是一句话、一个感叹、一个动作词、一个反问、一个语气词，甚至什么都不说先发个"……"。
+   参考开头（不要照抄）：
+   - "你相信吗，刚刚发生的事情——"
+   - "好吧其实也没啥，就是……"
+   - "我刚差点挨揍。"
+   - "猜猜我刚才遇到什么。"
+   - "别笑啊，我跟你说个事。"
+   - "呃……你现在有空吗。"
+   - "不行，我憋不住了我得跟你说。"
+2. **话痨 + 跑题 + 自嘲 + 突然认真**：这是彼得的核心风格。他会一条一条地发，中间插各种"等等""不对"——然后又拐回来。
+3. **至少 3 条，最多 6 条**。每条 10~40 字，不要长句。
+4. **必须用 || 分隔**（两个竖线，前后各一个空格）。
+5. 严禁动作描写、括号、星号、神态描写。
+6. 全部纯中文，可以夹少量英文口语词（okay、wow、fine 这类）。
+7. 不要每条都以"我"字开头，句子要碎片化，像真人发短信那样。
+8. 不要每一句都附上解释——有时候一句话就够。
+
+【输出格式 · 严格】
+只输出短信本身，多条用 || 分隔，不要任何前缀、编号、解释、引号。
+示例（不要照抄，只参考格式）：
+我刚差点挨揍。 || 真的差一点点。 || 算了其实也没那么夸张哈哈哈 || 但是那一瞬间我脑子里想的居然是这个被梅婶知道又要念叨了
+
+直接输出短信本身。`;
+
+    const res = await callAI([{ role: "user", content: "发一条短信" }], sysPrompt);
+    const msgs = String(res || "").split(/\|\|/).map(x => x.trim()).filter(Boolean);
+
+    // 兜底：如果 AI 没按格式分条，把整段按句号拆成 3 条
+    let finalMsgs = msgs;
+    if (finalMsgs.length < 3) {
+      const sentences = String(res || "").split(/[。！？!?]/).map(x => x.trim()).filter(Boolean);
+      finalMsgs = sentences.slice(0, 4);
+      if (finalMsgs.length < 3) {
+        finalMsgs = [
+          "嘿，刚巡逻完。",
+          "其实还挺顺利的没什么大事。",
+          "就是突然有点想跟你说话。"
+        ];
+      }
+    }
+
+    // 存入聊天记录
+    const chats = store.getChats();
+    const arr = chats["彼得·帕克"] || [];
+    finalMsgs.forEach(m => arr.push({ role: "them", content: m }));
+    chats["彼得·帕克"] = arr;
+    store.setChats(chats);
+
+    // 弹横幅
+    if (typeof showMsgBanner === "function") {
+      showMsgBanner("彼得·帕克", finalMsgs[0] || "发来了一条新消息");
+    } else {
+      toast("💬 彼得：" + (finalMsgs[0] || ""));
+    }
+
+    // 如果当前就在和彼得聊天，刷新界面
+    if (apps.messages.currentUser === "彼得·帕克" && apps.messages.view === "chat") {
+      apps.messages.render(document.getElementById("appBody"));
+    }
+  } catch (e) {
+    console.warn("[巡逻后短信] 失败：", e);
+  }
+};
 // ============================================================
 // 🕷️ 巡逻结算 · 玩家选完选项后生成结局 + 消耗一次巡逻
 // ============================================================
@@ -4162,28 +4275,32 @@ ${choiceText}
 
     const res = await callAI([{ role: "user", content: "生成巡逻结局" }], sysPrompt);
 
-    // 存档这次巡逻到 log
-    const s = store.getState();
-    const todayStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
-    let patrol = store.get("sv_patrol", { day: todayStr, used: 0, district: null, log: [] });
-    if (patrol.day !== todayStr) {
-      patrol = { day: todayStr, used: 0, district: null, log: patrol.log || [] };
-    }
-    patrol.used = Math.min(5, (patrol.used || 0) + 1);
-    patrol.district = null;
-    patrol.log = patrol.log || [];
-    patrol.log.unshift({
-      date: todayStr,
-      district: pending.districtName,
-      emoji: pending.districtEmoji,
-      isDanger: pending.isDanger,
-      choice: choiceText,
-      result: res.slice(0, 400),
-      ts: Date.now()
-    });
-    if (patrol.log.length > 50) patrol.log = patrol.log.slice(0, 50);
-    store.set("sv_patrol", patrol);
-    store.set("sv_patrol_pending", null);
+    // 存档这次巡逻到 log（★ 用现实时间）
+const now = new Date();
+const realDayStr =
+  now.getFullYear() + "年" +
+  (now.getMonth() + 1) + "月" +
+  now.getDate() + "日";
+
+let patrol = store.get("sv_patrol", { realDay: realDayStr, used: 0, district: null, log: [] });
+if (patrol.realDay !== realDayStr) {
+  patrol = { realDay: realDayStr, used: 0, district: null, log: patrol.log || [] };
+}
+patrol.used = Math.min(5, (patrol.used || 0) + 1);
+patrol.district = null;
+patrol.log = patrol.log || [];
+patrol.log.unshift({
+  date: realDayStr,
+  district: pending.districtName,
+  emoji: pending.districtEmoji,
+  isDanger: pending.isDanger,
+  choice: choiceText,
+  result: res.slice(0, 400),
+  ts: Date.now()
+});
+if (patrol.log.length > 50) patrol.log = patrol.log.slice(0, 50);
+store.set("sv_patrol", patrol);
+store.set("sv_patrol_pending", null);
 
     // 渲染结局
     body.innerHTML = `<div style="padding:14px">
@@ -4193,7 +4310,7 @@ ${choiceText}
             <div style="font-size:11px;color:var(--muted);">✅ 巡逻结束</div>
             <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">${pending.districtEmoji} ${esc(pending.districtName)}</div>
           </div>
-          <div style="font-size:11px;color:var(--muted);">今日已用 ${patrol.used} / 5</div>
+          <div style="font-size:11px;color:var(--muted);">今日已用 ${patrol.used} / 5 · ${realDayStr}</div>
         </div>
         <div style="margin-top:6px;font-size:10.5px;color:var(--muted);">
           ${pending.mode === "together" ? "👥 一起巡逻" : "🕷️ 彼得独自巡逻"}
@@ -4206,6 +4323,11 @@ ${choiceText}
     </div>`;
 
     toast("✅ 巡逻结束（今日 " + patrol.used + "/5）");
+// ★ 巡逻结束 → 触发彼得主动短信
+pending.lastChoice = choiceText;
+try {
+  await window.sendPatrolFollowupSMS(pending, res);
+} catch (e) { console.warn("巡逻短信触发失败:", e); }
   } catch (e) {
     body.innerHTML = `<div style="padding:14px"><div class="card">失败：${esc(e.message)}</div></div>`;
   }
@@ -7569,7 +7691,7 @@ chatHtml += msgs.map((m, idx) => {
       const firstChar = esc((senderName || "?")[0]);
       return '<div class="msg-row them" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
         '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
-          (senderAvatar ? '< img src="' + senderAvatar + '" style="width:100%;height:100%;object-fit:cover;">' : firstChar) +
+          (senderAvatar ? '<img src="' + senderAvatar + '" style="width:100%;height:100%;object-fit:cover;">' : firstChar) +
         '</div>' +
         '<div style="max-width:72%;min-width:0;">' +
           '<div style="font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:4px;">' + esc(senderName) + '</div>' +
@@ -7587,7 +7709,7 @@ chatHtml += msgs.map((m, idx) => {
       const firstChar = esc((c ? c.name : "?")[0]);
       return '<div class="msg-row them" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
         '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
-          (av ? '< img src="' + av + '" style="width:100%;height:100%;object-fit:cover;">' : firstChar) +
+          (av ? '<img src="' + av + '" style="width:100%;height:100%;object-fit:cover;">' : firstChar) +
         '</div>' +
         '<div class="bubble them voice-bubble" data-idx="' + idx + '" data-voice="' + esc(vk) + '" style="cursor:pointer;display:flex;align-items:center;gap:8px;min-width:90px;max-width:72%;">' +
           quoteHtml + voiceInner +
@@ -11068,15 +11190,22 @@ Spider_Terminal: {
       // 🗺️ 巡逻数据读写
       // ============================================================
       const s = store.getState();
-      const todayStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
-      let patrol = store.get("sv_patrol", { day: todayStr, used: 0, district: null, log: [] });
 
-      // 日期变了就重置
-      if (patrol.day !== todayStr) {
-        patrol = { day: todayStr, used: 0, district: null, log: patrol.log || [] };
-        store.set("sv_patrol", patrol);
-      }
-      const MAX_PATROL = 5;
+// ★ 巡逻日期用「现实时间」，跟游戏内日期完全解耦
+const now = new Date();
+const realDayStr =
+  now.getFullYear() + "年" +
+  (now.getMonth() + 1) + "月" +
+  now.getDate() + "日";
+
+let patrol = store.get("sv_patrol", { realDay: realDayStr, used: 0, district: null, log: [] });
+
+// ★ 现实日期变了就重置（游戏内日期变化不影响）
+if (patrol.realDay !== realDayStr) {
+  patrol = { realDay: realDayStr, used: 0, district: null, log: patrol.log || [] };
+  store.set("sv_patrol", patrol);
+}
+const MAX_PATROL = 5;
       const remaining = Math.max(0, MAX_PATROL - patrol.used);
       const usedToday = patrol.used;
 // 🕷️ 巡逻模式（peter = 彼得独自；together = 我和彼得一起）
@@ -11102,7 +11231,7 @@ Spider_Terminal: {
               ).join("")}
             </div>
           </div>
-          <div style="font-size:11px;color:var(--muted);">📅 ${todayStr} · 剩余 <b style="color:var(--accent-2);">${remaining}</b> 次</div>
+          <div style="font-size:11px;color:var(--muted);">📅 ${realDayStr}（现实）· 剩余 <b style="color:var(--accent-2);">${remaining}</b> 次</div>
           <div style="height:4px;background:var(--panel-2);border-radius:2px;overflow:hidden;margin-top:8px;">
             <div style="height:100%;width:${(usedToday / MAX_PATROL) * 100}%;background:linear-gradient(90deg,var(--accent-2),var(--accent));transition:width .3s;"></div>
           </div>
@@ -11126,6 +11255,11 @@ Spider_Terminal: {
                 : "剧情里是彼得和你一起行动，你也能参与选择。"}
             </div>
           </div>
+<!-- 📜 巡逻历史按钮 -->
+          <button type="button" class="btn ghost" id="showPatrolLogBtn"
+            style="width:100%;margin-top:10px;font-size:12px;padding:8px;">
+            📜 巡逻历史（最近 ${(patrol.log || []).length} 条）
+          </button>
         </div>
 
         <!-- 街区选择 -->
@@ -11178,6 +11312,117 @@ Spider_Terminal: {
           this.render(body);
         };
       });
+// ============================================================
+      // 📜 巡逻历史
+      // ============================================================
+      const logBtn = body.querySelector("#showPatrolLogBtn");
+      if (logBtn) {
+        logBtn.onclick = () => {
+          try {
+            const log = (patrol.log || []).slice(0, 30);
+
+            // ===== 1. 先创建面板 + 关闭按钮（保证一定能关） =====
+            const div = document.createElement("div");
+            div.className = "__patrol_log_panel";
+            div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+
+            const inner = document.createElement("div");
+            inner.style.cssText = "max-width:520px;margin:20px auto;";
+
+            // 头部（固定，一定渲染）
+            const header = document.createElement("div");
+            header.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;";
+            header.innerHTML =
+              '<h2 style="color:var(--text);margin:0;font-size:17px;">📜 巡逻历史</h2>' +
+              '<button id="patrolLogClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>';
+            inner.appendChild(header);
+
+            // 统计（固定）
+            const meta = document.createElement("div");
+            meta.style.cssText = "font-size:11px;color:var(--muted);margin-bottom:14px;";
+            meta.textContent = "共 " + log.length + " 条 · 最多保留 30 条";
+            inner.appendChild(meta);
+
+            // ===== 2. 列表（用数组 join，任何一条出错只影响它自己） =====
+            const listWrap = document.createElement("div");
+            if (log.length) {
+              log.forEach(item => {
+                try {
+                  const card = document.createElement("div");
+                  const borderColor = item && item.isDanger ? "#e62429" : "var(--accent-2)";
+                  card.style.cssText = "background:var(--panel);border:1px solid var(--line);border-left:3px solid " + borderColor + ";border-radius:12px;padding:12px;margin-bottom:10px;";
+
+                  const date = esc(String(item && item.date || ""));
+                  const emoji = esc(String(item && item.emoji || ""));
+                  const district = esc(String(item && item.district || ""));
+                  const dangerTag = (item && item.isDanger)
+                    ? '<span style="color:#e62429;font-weight:700;"> · ⚠️ 危险</span>'
+                    : "";
+                  const choiceText = esc(String(item && item.choice || "（未知选择）"));
+                  const resultRaw = String(item && item.result || "");
+                  const resultText = esc(resultRaw.slice(0, 150));
+                  const resultMore = resultRaw.length > 150 ? "..." : "";
+
+                  card.innerHTML =
+                    '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">' +
+                      date + " · " + emoji + " " + district + dangerTag +
+                    '</div>' +
+                    '<div style="font-size:12px;color:var(--accent-2);margin-bottom:6px;">➤ ' + choiceText + '</div>' +
+                    '<div style="font-size:12.5px;color:var(--text);line-height:1.6;opacity:.85;">' + resultText + resultMore + '</div>';
+
+                  listWrap.appendChild(card);
+                } catch (itemErr) {
+                  console.warn("[巡逻历史] 某条记录渲染失败：", itemErr, item);
+                }
+              });
+            } else {
+              const empty = document.createElement("div");
+              empty.style.cssText = "font-size:13px;color:var(--muted);text-align:center;padding:30px;";
+              empty.textContent = "还没有巡逻记录";
+              listWrap.appendChild(empty);
+            }
+            inner.appendChild(listWrap);
+
+            // 底部再放一个关闭按钮（长列表时方便）
+            const footer = document.createElement("div");
+            footer.style.cssText = "margin-top:16px;";
+            footer.innerHTML = '<button id="patrolLogCloseFooter" class="btn ghost" style="width:100%;">关闭</button>';
+            inner.appendChild(footer);
+
+            div.appendChild(inner);
+            document.querySelector(".device").appendChild(div);
+
+            // ===== 3. 绑定关闭（三处兜底） =====
+            const close = () => {
+              if (div && div.parentNode) div.remove();
+            };
+
+            const close1 = div.querySelector("#patrolLogClose");
+            if (close1) close1.onclick = close;
+
+            const close2 = div.querySelector("#patrolLogCloseFooter");
+            if (close2) close2.onclick = close;
+
+           // 点面板外（遮罩区域）也能关
+div.onclick = (e) => {
+  if (e.target === div) close();
+};
+
+// 兜底：按 ESC 也能关
+            const escHandler = (e) => {
+              if (e.key === "Escape") {
+                close();
+                document.removeEventListener("keydown", escHandler);
+              }
+            };
+            document.addEventListener("keydown", escHandler);
+
+          } catch (err) {
+            console.error("[巡逻历史] 打开失败：", err);
+            toast("巡逻历史打开失败：" + (err.message || "未知错误"));
+          }
+        };
+      }
       // ============================================================
       // 街区选择
       // ============================================================
@@ -11241,7 +11486,7 @@ ${viewRule}
 【当前巡逻街区】${district.emoji} ${district.name}
 【街区描述】${district.desc}
 【街区危险度】${district.danger}
-【当前游戏内日期】${todayStr}
+【当前游戏内日期】${realDayStr}
 【今日剩余巡逻次数】${remaining - 1}
 【巡逻模式】${isPeterOnly ? "彼得独自巡逻" : "彼得和玩家一起巡逻"}
 
@@ -11286,15 +11531,15 @@ ${viewRule}
 
             // 先保存到 state，等玩家选完后用
             const pending = {
-              district: district.key,
-              districtName: district.name,
-              districtEmoji: district.emoji,
-              story: "",
-              options: "",
-              isDanger,
-              date: todayStr,
-              mode: patrolMode   // ★ 记录本次巡逻的模式
-            };
+  district: district.key,
+  districtName: district.name,
+  districtEmoji: district.emoji,
+  story: "",
+  options: "",
+  isDanger,
+  date: realDayStr,
+  mode: patrolMode   // ★ 记录本次巡逻的模式
+};
 
             const optionsIdx = res.indexOf("【选项】");
             pending.story = (optionsIdx > -1 ? res.slice(0, optionsIdx) : res)
