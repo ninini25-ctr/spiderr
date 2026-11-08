@@ -2070,7 +2070,7 @@ body.theme-light #startMultiverseBtn {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 20% 100%, rgba(138, 43, transparent55%),
+  background: radial-gradient(circle at 20% 100%,rgba(138,43,226,0.15), transparent 55%) ,
               radial-gradient(circle at 90% 10%, rgba(45, 107, 255, 0.12), transparent 50%);
   pointer-events: none;
 }
@@ -3191,6 +3191,15 @@ function buildSpellMemoryRuleForChat(contactName) {
 
   // MJ / 内德 / 梅婶 / 其他：不记得彼得
   return `
+【如果玩家主动介绍"彼得就是蜘蛛侠" / "彼得·帕克是蜘蛛侠" / 把彼得领到你面前】
+1. 你会**相信**玩家（因为是 ta 亲口说的，你信任 ta）。
+2. 但你**完全不认识**这个叫彼得·帕克的人——对你来说这就是**第一次见面**。
+3. 你的反应应该是：
+   · 友好的陌生感："哦，是蜘蛛侠啊……等等，你叫彼得？彼得·帕克？"
+   · 好奇但生疏："我不记得我们认识过。但既然这么说，那就……嗨？"
+   · 不要抗拒、不要怀疑、不要说"这不可能"。
+4. 你不会突然想起旧回忆（魔咒还在），只是作为一个"新朋友"重新认识彼得。
+5. 可以表现出轻微的、说不清的既视感，但不要点破。
 
 【🕸️ 遗忘魔咒 · 你的记忆状态 · 铁律 · 违反即失败】
 奇异博士的遗忘魔咒已经生效，全世界都忘记了「彼得·帕克」这个人。
@@ -4934,6 +4943,19 @@ VIOLATION OF THIS RULE = FAILURE.
 ${globalLangRule} 
 ${bracketInterventionPrompt} 
 ${buildBlacklistBanText([])}
+【账号身份隔离 · 铁律 · 违反即失败】
+在任何社交平台（推特/Instagram/评论/转发/日报）里，"彼得·帕克"和"蜘蛛侠"是**两个完全独立的账号**：
+1. 「彼得·帕克」账号（@peterparker 等）= 一个普通的皇后区高中生/大学生。
+   - 发帖/评论只能是：作业、梅婶、内德、便利店、地铁、化学课、乐高、学业压力这类普通日常。
+   - **绝对禁止**说"我荡蛛丝""我抓坏人""我今天救了人""我战衣破了""皇后区蜘蛛侠就是我"等任何暴露/暗示自己是蜘蛛侠的话。
+   - **绝对禁止**在评论里以"彼得·帕克"身份调侃自己是蜘蛛侠（比如不能说"二十分钟够我从皇后区荡到中城了"这种）。
+   - 他可以作为一个普通网友去评论蜘蛛侠的新闻（口气要像粉丝/路人）。
+2. 「蜘蛛侠」账号（@friendlyneighborhood ，作为固定账号，不能出现其他相同意思的蜘蛛侠账号）= 匿名义警。
+   - 可以发救人、荡蛛丝、吐槽犯罪、调侃纽约交通。
+   - 署名只能是"蜘蛛侠 / Spider-Man"，**绝对不能**显示"彼得·帕克"。
+3. 两个账号**永远不互相承认是同一个人**，不互相 @，不转发对方。
+4. 这条铁律高于一切其它规则。
+
 【游戏内当前日期 · 死锚】${timeStr}
 【当前阶段】${phase.name}（${phase.year}年${phase.monthRange[0]}-${phase.monthRange[1]}月）
 
@@ -10214,15 +10236,23 @@ ${missName}：消息内容`;
         return flag;
       })();
 
-      const peterSecretRule = (self.currentUser === "彼得·帕克" && !peterIdentityRevealed)
+      const peterSecretRule = (self.currentUser === "彼得·帕克" && !peterIdentityRevealed && !(isSpellActiveNow() && store.getMemoryState().peterChatUnlocked))
         ? `
 【蜘蛛侠身份 · 绝对铁律 · 违反即失败】
 1. 你现在**还没有告诉玩家**你就是蜘蛛侠。玩家也还不知道。
 2. 在 REPLIES 里，你绝对**不能**承认、暗示、说漏"我就是蜘蛛侠""我昨晚在抓坏人"之类。
-3. 你会绕着弯子撒谎：说"我最近有点忙""我得帮梅婶办事""我临时有事"，用各种蹩脚借口搪塞。
+3. 你会绕着弯子撒谎：说"我最近有点忙""我临时有事"，用各种蹩脚借口搪塞。
 4. 你撒谎时会紧张、会心虚、会转移话题、会突然变得结巴——这是你的真实反应，写进 REPLIES 的措辞里。
-5. 但【HEART 心声】里，你**可以**焦虑地想着"完了完了差点说漏嘴""她要是知道了会怎么看我""不能让梅婶知道，更不能让她知道"。心声是你自己心里想，不对外说。
+5. 但【HEART 心声】里，你**可以**焦虑地想着"完了完了差点说漏嘴""她要是知道了会怎么看我"。心声是你自己心里想，不对外说。
 6. 如果玩家直接问"你是不是蜘蛛侠"，你必须在 REPLIES 里强烈否认或岔开话题，但 HEART 里慌得一批。
+`
+: (self.currentUser === "彼得·帕克" && isSpellActiveNow() && store.getMemoryState().peterChatUnlocked)
+  ? `
+【蜘蛛侠身份 · 已公开 · 铁律】
+1. 玩家已经重新认识你，并且知道你就是蜘蛛侠。
+2. 你不用再装作不是蜘蛛侠、不用再编借口。
+3. 可以自然地跟 ta 聊今晚巡逻、聊蛛丝、聊伤口、聊累。
+4. 但你仍然不会在短信里主动暴露"彼得·帕克 = 蜘蛛侠"给第三方——除非玩家主动向第三方介绍。
 `
         : "";
 
@@ -11073,7 +11103,7 @@ const isContactName = (rawName) => {
   "May": "梅婶",
   "梅·帕克": "梅婶",
   "梅帕克": "梅婶",
-  "梅姨": "梅婶arker梅婶",
+  "梅姨": "梅婶",
   "may_parker": "梅婶",
   "auntmay": "梅婶",
   "aunt_may": "梅婶",
