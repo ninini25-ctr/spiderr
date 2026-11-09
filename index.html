@@ -2091,6 +2091,60 @@ body.theme-light #startMultiverseBtn {
   border-color: var(--accent-2) !important;
   transform: translateX(2px);
 }
+/* ===== 🏫 中城高中 ===== */
+.sch-wrap { padding: 16px; }
+.sch-header {
+  background: linear-gradient(135deg, #1a2a4a 0%, #0f1829 100%);
+  border: 1px solid var(--line); border-radius: 16px;
+  padding: 18px 20px; margin-bottom: 14px; position: relative; overflow: hidden;
+}
+body.theme-light .sch-header { background: linear-gradient(135deg, #e8eef8 0%, #d5e0f0 100%); }
+.sch-header::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; background: linear-gradient(90deg,#c8a15a,#e0c070,#c8a15a); }
+.sch-header-label { font-size:10px; color:#e0c070; letter-spacing:4px; font-weight:700; }
+.sch-header-title { font-size:20px; font-weight:800; color:var(--text); letter-spacing:2px; margin-top:4px; }
+.sch-header-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+
+.sch-tabs { display:flex; gap:4px; background:var(--panel-2); border-radius:12px; padding:4px; margin-bottom:14px; }
+.sch-tab { flex:1; padding:9px 4px; text-align:center; font-size:12px; font-weight:600; color:var(--muted); cursor:pointer; border-radius:10px; transition:all .2s; }
+.sch-tab.active { background:var(--panel); color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,.15); }
+
+.sch-course-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.sch-course-card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; transition:all .15s; position:relative; overflow:hidden; }
+.sch-course-card:hover { border-color:var(--accent-2); transform:translateY(-2px); }
+.sch-course-card::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; background:var(--c-color,#2d6bff); }
+.sch-course-emoji { font-size:24px; margin-bottom:6px; }
+.sch-course-name { font-size:14px; font-weight:700; color:var(--text); }
+.sch-course-teacher { font-size:11px; color:var(--muted); margin-top:2px; }
+
+.sch-score-list { display:flex; flex-direction:column; gap:10px; }
+.sch-score-row { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+.sch-score-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.sch-score-name { font-size:13px; font-weight:700; color:var(--text); }
+.sch-score-num { font-size:18px; font-weight:800; }
+.sch-score-bar { height:6px; background:var(--panel-2); border-radius:3px; overflow:hidden; }
+.sch-score-fill { height:100%; border-radius:3px; transition:width .4s; }
+.sch-gpa-box { background:linear-gradient(135deg,rgba(45,107,255,.12),rgba(230,36,41,.06)); border:1px solid var(--accent-2); border-radius:14px; padding:16px; text-align:center; margin-bottom:14px; }
+.sch-gpa-num { font-size:32px; font-weight:800; color:var(--accent-2); line-height:1; }
+.sch-gpa-label { font-size:11px; color:var(--muted); margin-top:4px; }
+
+.sch-team-member { display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:8px; }
+.sch-team-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--accent-2),var(--accent)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; flex-shrink:0; }
+.sch-team-info { flex:1; min-width:0; }
+.sch-team-name { font-size:13px; font-weight:700; color:var(--text); }
+.sch-team-role { font-size:11px; color:var(--muted); }
+
+.sch-event-detail { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; }
+.sch-event-story { font-size:14px; line-height:1.8; color:var(--text); white-space:pre-wrap; margin-bottom:16px; }
+.sch-event-opt { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:13px 15px; color:var(--text); font-size:13px; line-height:1.5; text-align:left; cursor:pointer; width:100%; margin-bottom:8px; white-space:normal; word-break:break-word; transition:all .15s; }
+.sch-event-opt:hover { border-color:var(--accent-2); background:rgba(45,107,255,.05); }
+
+.sch-dance-card { background:linear-gradient(135deg,#2a1a3a 0%,#1a0f29 100%); border:1px solid rgba(138,43,226,.4); border-radius:16px; padding:24px 20px; text-align:center; position:relative; overflow:hidden; }
+body.theme-light .sch-dance-card { background:linear-gradient(135deg,#f3e8fb 0%,#e5d5f5 100%); }
+.sch-dance-logo { font-size:44px; margin-bottom:10px; }
+.sch-dance-title { font-size:20px; font-weight:800; color:var(--text); letter-spacing:2px; }
+.sch-dance-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+.sch-dance-desc { font-size:12px; color:var(--muted); line-height:1.6; margin:14px 0 18px; }
+.sch-empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; }
 </style>
 </head>
 <body>
@@ -2109,6 +2163,7 @@ body.theme-light #startMultiverseBtn {
       <button class="app-icon" data-app="Theater"><span>🎭</span><label>小剧场</label></button>
       <button class="app-icon" data-app="Diary"><span>📓</span><label>双人日记</label></button>
       <button class="app-icon" data-app="MJNotebook"><span>🕵️</span><label>MJ 笔记本</label></button>
+     <button class="app-icon" data-app="School"><span>🏫</span><label>中城高中</label></button>
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>社交圈</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
@@ -8063,7 +8118,7 @@ if (proacEnabled && proacSaveBtn) {
         if(sel.value==="deepseek"){body.querySelector("#c_url").value="https://api.deepseek.com/v1";body.querySelector("#c_model").value="deepseek-chat";}
       };
 body.querySelector("#resetStartNodeBtn").onclick = () => {
-  if (!confirm("⚠️ 重新选择开局会清空当前所有剧情进度（好感度、回合、聊天记录、推特等全部重置），确认继续？")) return;
+  if (!confirm("⚠️ 重新选择开局会清空当前所有剧情进度（回合、聊天记录、推特等全部重置，好感度不会重置），确认继续？")) return;
   localStorage.removeItem("sv_start_node");
   localStorage.removeItem("sv_start_node_chosen_v1");
   localStorage.removeItem("sv_state");
@@ -9580,13 +9635,15 @@ async render(body) {
     };
     const sb = $("#appSettingsBtn");
    sb.style.display = "flex";
+   sb.onclick = null;   // ★ 清掉父按钮残留的跳设置 onclick（openApp 里设的）
    sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
 
    // 设置按钮：进入设置面板
-sb.querySelector("#setBtn").onclick = () => self.renderSettings(body);
+sb.querySelector("#setBtn").onclick = (e) => { e.stopPropagation(); self.renderSettings(body); };
 
 // 🔄 重试按钮：只重发最后一条，不跳设置
-sb.querySelector("#retryBtn").onclick = () => {
+sb.querySelector("#retryBtn").onclick = (e) => {
+  e.stopPropagation();   // ★ 阻止冒泡到父按钮
   if (!self.lastUserText) {
     return toast("还没有可以重试的消息");
   }
@@ -9731,9 +9788,11 @@ chatHtml += `<div id="chatThread">`;
   // ★ 关键修复：群聊界面必须重新绑定设置按钮，指向 self.renderSettings
  const sbG = $("#appSettingsBtn");
 sbG.style.display = "flex";
+sbG.onclick = null;   // ★ 清掉父按钮 onclick
 sbG.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
-sbG.querySelector("#setBtn").onclick = () => self.renderSettings($("#appBody"));
-sbG.querySelector("#retryBtn").onclick = () => {
+sbG.querySelector("#setBtn").onclick = (e) => { e.stopPropagation(); self.renderSettings($("#appBody")); };
+sbG.querySelector("#retryBtn").onclick = (e) => {
+  e.stopPropagation();   // ★ 阻止冒泡
   if (!self.lastUserText) return toast("还没有可以重试的消息");
   const chatsNow = store.getChats();
   const arrNow = chatsNow[self.currentUser] || [];
@@ -10188,9 +10247,11 @@ body.innerHTML = chatHtml;
 // ★ 强制重绑右上角设置按钮，指向最新的 renderSettings
 const sbG = $("#appSettingsBtn");
 sbG.style.display = "flex";
+sbG.onclick = null;   // ★ 清掉父按钮 onclick
 sbG.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
-sbG.querySelector("#setBtn").onclick = () => self.renderSettings($("#appBody"));
-sbG.querySelector("#retryBtn").onclick = () => {
+sbG.querySelector("#setBtn").onclick = (e) => { e.stopPropagation(); self.renderSettings($("#appBody")); };
+sbG.querySelector("#retryBtn").onclick = (e) => {
+  e.stopPropagation();   // ★ 阻止冒泡
   if (!self.lastUserText) return toast("还没有可以重试的消息");
   const chatsNow = store.getChats();
   const arrNow = chatsNow[self.currentUser] || [];
@@ -10201,7 +10262,8 @@ sbG.querySelector("#retryBtn").onclick = () => {
     store.setChats(chatsNow);
   }
   self.render($("#appBody"));
-  setTimeout(() => self.sendGroupMessage($("#appBody"), self.lastUserText, true), 100);
+  // ★ 单聊分支：重试应该用 sendMessage，而不是 sendGroupMessage
+  setTimeout(() => self.sendMessage($("#appBody"), self.lastUserText, true), 100);
 };
 
     body.querySelector("#backToListBtn").onclick = () => {
@@ -15841,13 +15903,15 @@ ${povRule}
       $("#appTitle").textContent = "信息";
 
       const sb = $("#appSettingsBtn");
-      sb.style.display = "flex";
-      sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
-      sb.querySelector("#setBtn").onclick = () => apps.messages.renderSettings($("#appBody"));
-      sb.querySelector("#retryBtn").onclick = () => {
-        if (apps.messages.lastUserText) apps.messages.sendMessage($("#appBody"), apps.messages.lastUserText, true);
-        else toast("请先发送消息后再重试");
-      };
+sb.style.display = "flex";
+sb.onclick = null;   // ★ 清掉父按钮 onclick
+sb.innerHTML = `<span id="retryBtn" style="margin-right:15px;cursor:pointer">🔄</span><span id="setBtn" style="cursor:pointer">设置</span>`;
+sb.querySelector("#setBtn").onclick = (e) => { e.stopPropagation(); apps.messages.renderSettings($("#appBody")); };
+sb.querySelector("#retryBtn").onclick = (e) => {
+  e.stopPropagation();   // ★ 阻止冒泡
+  if (apps.messages.lastUserText) apps.messages.sendMessage($("#appBody"), apps.messages.lastUserText, true);
+  else toast("请先发送消息后再重试");
+};
 
       apps.messages.render($("#appBody"));
     };
@@ -16602,6 +16666,491 @@ ${buildMjRelationToPlayer().block}
       apps.Theater.openQuest(q.id);
     } catch (e) {
       body.innerHTML = `<div style="padding:20px;"><div class="card">失败：${esc(e.message)}</div></div>`;
+    }
+  }
+},
+
+School: {
+  title: "中城高中",
+  currentTab: "course", // course | score | team | dance
+
+  // 科目配置
+  COURSES: [
+    { key: "chem",    name: "化学",     emoji: "⚗️", teacher: "沃伦老师",   color: "#2d6bff" },
+    { key: "phys",    name: "物理",     emoji: "🔭", teacher: "科布老师",   color: "#8a2be2" },
+    { key: "span",    name: "西班牙语", emoji: "💬", teacher: "莫拉莱斯老师", color: "#e62429" },
+    { key: "pe",      name: "体育",     emoji: "🏃", teacher: "威尔逊教练",  color: "#4caf50" },
+    { key: "decath",  name: "十项全能", emoji: "🏆", teacher: "哈灵顿老师",  color: "#c8a15a" },
+    { key: "shop",    name: "技术课",   emoji: "🔧", teacher: "德尔·托罗老师", color: "#00bcd4" }
+  ],
+
+  getScores() {
+    return store.get("sv_school_scores", { chem: 85, phys: 82, span: 70, pe: 60, decath: 90, shop: 88 });
+  },
+  setScores(sc) { store.set("sv_school_scores", sc); },
+
+  getTeam() {
+    return store.get("sv_school_team", ["彼得·帕克", "米歇尔·琼斯", "内德·利兹", "Flash Thompson", "Liz Allan"]);
+  },
+
+  async render(body) {
+    const self = this;
+    $("#appSettingsBtn").style.display = "none";
+
+    body.innerHTML = `
+      <div class="sch-wrap">
+        <div class="sch-header">
+          <div class="sch-header-label">MIDTOWN SCHOOL</div>
+          <div class="sch-header-title">中城科学技术高中</div>
+          <div class="sch-header-sub">Science · Technology · Engineering</div>
+        </div>
+        <div class="sch-tabs">
+          <div class="sch-tab ${this.currentTab==='course'?'active':''}" data-tab="course">📚 课堂</div>
+          <div class="sch-tab ${this.currentTab==='score'?'active':''}" data-tab="score">📊 成绩</div>
+          <div class="sch-tab ${this.currentTab==='team'?'active':''}" data-tab="team">🏆 十项全能</div>
+          <div class="sch-tab ${this.currentTab==='dance'?'active':''}" data-tab="dance">💃 舞会</div>
+        </div>
+        <div id="schContent"></div>
+      </div>`;
+
+    const content = body.querySelector("#schContent");
+
+    if (this.currentTab === "course") this.renderCourse(content);
+    else if (this.currentTab === "score") this.renderScore(content);
+    else if (this.currentTab === "team") this.renderTeam(content);
+    else this.renderDance(content);
+
+    body.querySelectorAll(".sch-tab").forEach(el => {
+      el.onclick = () => { self.currentTab = el.dataset.tab; self.render(body); };
+    });
+  },
+
+  // ===== 模块 1：课堂 =====
+  renderCourse(content) {
+    const self = this;
+    const now = new Date();
+    const realDay = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+    let used = store.get("sv_school_class_used", { day: realDay, count: 0 });
+    if (used.day !== realDay) used = { day: realDay, count: 0 };
+    const MAX = 3;
+    const remaining = Math.max(0, MAX - used.count);
+
+    content.innerHTML = `
+      <div class="card" style="padding:12px;margin-bottom:12px;">
+        <div style="font-size:12px;color:var(--muted);">📅 今日课堂事件：${used.count} / ${MAX}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">点一节课，看看今天上课发生了什么。剩余 ${remaining} 次。</div>
+      </div>
+      <div class="sch-course-grid">
+        ${this.COURSES.map(c => `
+          <div class="sch-course-card" data-key="${c.key}" style="--c-color:${c.color};opacity:${remaining>0?1:0.5};cursor:${remaining>0?'pointer':'not-allowed'};">
+            <div class="sch-course-emoji">${c.emoji}</div>
+            <div class="sch-course-name">${c.name}</div>
+            <div class="sch-course-teacher">${c.teacher}</div>
+          </div>
+        `).join("")}
+      </div>`;
+
+    content.querySelectorAll(".sch-course-card").forEach(el => {
+      el.onclick = () => {
+        if (remaining <= 0) return toast("今天的课都上完了，明天再来");
+        const course = self.COURSES.find(c => c.key === el.dataset.key);
+        self.startClass(content, course);
+      };
+    });
+  },
+
+  async startClass(content, course) {
+    const self = this;
+    content.innerHTML = `<div class="loader"><div class="spin"></div>上课中 · ${course.name}...</div>`;
+    try {
+      const s = store.getState();
+      const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const profile = store.getProfile();
+      const playerName = profile.name || "你";
+      const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
+      const peterAff = getAffinityOf("彼得·帕克");
+      const mjAff = getAffinityOf("米歇尔·琼斯");
+
+      const sysPrompt = buildSystem(`你正在生成一段**中城高中的课堂小事件**（校园日常，独立于主线，不影响主线进度）。
+${buildBlacklistBanText([])}
+
+【当前课程】${course.name}（${course.teacher}）
+【当前游戏内日期】${date}
+【当前阶段】${phase.name}
+【玩家】${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
+【彼得好感度】${peterAff}/200
+【MJ好感度】${mjAff}/100
+
+【核心要求 · 铁律】
+1. 写一段 150~280 字的课堂小事件开场，贴近中城高中的真实校园氛围。
+2. 可以出现：彼得走神/被点名、内德传纸条、Flash 捣乱、小组作业分组、老师布置任务、同学间的小互动。
+3. 玩家是视角中心（用「${playerPronoun}」或第二人称），不替玩家做决定。
+4. **严禁出现蜘蛛侠战衣、超能力、主线大事件**，这是普通校园日常。
+5. 结尾必须用【选项】列出 A. B. C. D. 四个玩家的行动方向。
+6. 语言纯中文，对白可用 *"English"*（中文翻译）格式。
+
+【文风】轻松、有校园生活感，像青春校园小说，严禁 AI 腔。`);
+
+      const res = await callAI([{ role: "user", content: "生成课堂事件" }], sysPrompt);
+      const optIdx = res.indexOf("【选项】");
+      const story = (optIdx > -1 ? res.slice(0, optIdx) : res).replace("【剧情】", "").trim();
+      const optsText = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
+
+      store.set("sv_school_class_pending", { course: course.key, courseName: course.name, story, options: optsText });
+      self.renderClassEvent(content, { course, story, options: optsText });
+    } catch (e) {
+      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
+    }
+  },
+
+  renderClassEvent(content, pending) {
+    const self = this;
+    const course = pending.course;
+    content.innerHTML = `
+      <div class="card" style="padding:12px;margin-bottom:10px;border-left:3px solid ${course.color};">
+        <div style="font-size:11px;color:var(--muted);">${course.emoji} ${esc(course.name)} · ${esc(course.teacher)}</div>
+      </div>
+      <div class="sch-event-detail">
+        <div class="sch-event-story">${formatDialogue(pending.story)}</div>
+        <div id="schClassOpts"></div>
+      </div>`;
+
+    const optsEl = content.querySelector("#schClassOpts");
+    const opts = (pending.options || "").split("\n").filter(l => /^[A-D][\.\、]/.test(l.trim()));
+    if (opts.length) {
+      optsEl.innerHTML = opts.map(o => {
+        const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+        return `<button class="sch-event-opt" onclick="apps.School.resolveClass('${safe}')">${esc(o)}</button>`;
+      }).join("");
+    } else {
+      optsEl.innerHTML = `<button class="sch-event-opt" onclick="apps.School.resolveClass('（认真听课）')">认真听课</button>
+        <button class="sch-event-opt" onclick="apps.School.resolveClass('（走神发呆）')">走神发呆</button>
+        <button class="sch-event-opt" onclick="apps.School.resolveClass('（找同学聊天）')">找同学聊天</button>`;
+    }
+  },
+
+  async resolveClass(choice) {
+    const self = this;
+    const content = document.getElementById("schContent");
+    const pending = store.get("sv_school_class_pending", null);
+    if (!pending || !content) return;
+    const courseObj = self.COURSES.find(c => c.key === pending.course) || { name: pending.courseName, color: "#2d6bff", emoji: "📚", teacher: "" };
+
+    content.innerHTML = `<div class="loader"><div class="spin"></div>处理中...</div>`;
+    try {
+      const s = store.getState();
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+
+      const sysPrompt = buildSystem(`续写一段中城高中课堂小事件的结局。
+${buildBlacklistBanText([])}
+
+【课程】${courseObj.name}
+【开场】${pending.story}
+【玩家选择】${choice}
+
+【要求 · 铁律】
+1. 写 120~220 字结局，承接玩家选择，收束这节课。
+2. 校园日常，严禁超能力、蜘蛛侠、主线大事件。
+3. 末尾如果玩家的选择影响了彼得或 MJ 的关系，输出一行【好感度变动: 角色=+X】（X 为 -3~3，可选）。
+4. 末尾如果影响成绩，输出一行【成绩变动: 科目key=+X】（${courseObj.name} 的 key 见下，X 为 -5~5，可选）。科目 key 对应：化学=chem 物理=phys 西班牙语=span 体育=pe 十项全能=decath 技术课=shop。
+5. 语言纯中文。
+
+【文风】校园生活感，严禁 AI 腔。`);
+
+      const res = await callAI([{ role: "user", content: "生成课堂结局" }], sysPrompt);
+
+      // 解析好感度变动
+      const affM = [...res.matchAll(/【好感度变动[:：]\s*([^=]+)=\s*([+-]?\d+)】/g)];
+      affM.forEach(m => {
+        const name = m[1].trim();
+        let delta = parseInt(m[2]) || 0;
+        delta = Math.max(-3, Math.min(3, delta));
+        const target = { "彼得": "彼得·帕克", "彼得·帕克": "彼得·帕克", "MJ": "米歇尔·琼斯", "米歇尔·琼斯": "米歇尔·琼斯", "内德": "内德·利兹", "内德·利兹": "内德·利兹" }[name];
+        if (target && delta) {
+          const list = store.getContacts();
+          const c = list.find(x => x.name === target);
+          if (c) {
+            const cap = target === "彼得·帕克" ? 200 : 100;
+            c.affinity = Math.max(0, Math.min(cap, (c.affinity || 0) + delta));
+            store.setContacts(list);
+            if (target === "彼得·帕克") { const st = store.getState(); st.affinity = c.affinity; store.setState(st); }
+          }
+        }
+      });
+
+      // 解析成绩变动
+      const scM = [...res.matchAll(/【成绩变动[:：]\s*(\w+)=\s*([+-]?\d+)】/g)];
+      if (scM.length) {
+        const scores = self.getScores();
+        scM.forEach(m => {
+          const k = m[1].trim();
+          let delta = parseInt(m[2]) || 0;
+          delta = Math.max(-5, Math.min(5, delta));
+          if (scores[k] !== undefined && delta) scores[k] = Math.max(0, Math.min(100, scores[k] + delta));
+        });
+        self.setScores(scores);
+      }
+
+      const cleanRes = res.replace(/【好感度变动[:：][^】]*】/g, "").replace(/【成绩变动[:：][^】]*】/g, "").trim();
+
+      // 消耗一次
+      const now = new Date();
+      const realDay = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+      let used = store.get("sv_school_class_used", { day: realDay, count: 0 });
+      if (used.day !== realDay) used = { day: realDay, count: 0 };
+      used.count = Math.min(3, used.count + 1);
+      store.set("sv_school_class_used", used);
+      store.set("sv_school_class_pending", null);
+
+      content.innerHTML = `
+        <div class="card" style="padding:12px;margin-bottom:10px;border-left:3px solid ${courseObj.color};">
+          <div style="font-size:11px;color:var(--muted);">${courseObj.emoji} ${esc(courseObj.name)} · 下课了</div>
+        </div>
+        <div class="sch-event-detail">
+          <div class="sch-event-story">${formatDialogue(cleanRes)}</div>
+          <button class="btn" onclick="apps.School.currentTab='course';apps.School.render(document.getElementById('appBody'))">← 返回课堂</button>
+        </div>`;
+      toast("下课（今日 " + used.count + "/3）");
+    } catch (e) {
+      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
+    }
+  },
+
+  // ===== 模块 2：成绩 =====
+  renderScore(content) {
+    const self = this;
+    const scores = this.getScores();
+    const vals = Object.values(scores);
+    const gpa = vals.length ? (vals.reduce((a,b)=>a+b,0) / vals.length).toFixed(1) : "0";
+    const gradeOf = (v) => v >= 90 ? "A" : v >= 80 ? "B" : v >= 70 ? "C" : v >= 60 ? "D" : "F";
+    const colorOf = (v) => v >= 80 ? "#4caf50" : v >= 60 ? "#e0c070" : "#e62429";
+
+    content.innerHTML = `
+      <div class="sch-gpa-box">
+        <div class="sch-gpa-num">${gpa}</div>
+        <div class="sch-gpa-label">平均分 · ${gradeOf(parseFloat(gpa))}</div>
+      </div>
+      <div class="sch-score-list">
+        ${this.COURSES.map(c => {
+          const v = scores[c.key] ?? 0;
+          return `<div class="sch-score-row">
+            <div class="sch-score-head">
+              <span class="sch-score-name">${c.emoji} ${c.name}</span>
+              <span class="sch-score-num" style="color:${colorOf(v)};">${v} · ${gradeOf(v)}</span>
+            </div>
+            <div class="sch-score-bar"><div class="sch-score-fill" style="width:${v}%;background:${colorOf(v)};"></div></div>
+          </div>`;
+        }).join("")}
+      </div>
+      <div class="card" style="margin-top:14px;font-size:11px;color:var(--muted);line-height:1.7;">
+        💡 翘课去当蜘蛛侠会让成绩下滑；认真上课、完成作业会提分。成绩太低会触发梅婶签字、老师留堂等事件。
+      </div>
+      <button class="btn ghost" id="schScoreReset" style="margin-top:10px;font-size:12px;">🔄 重置成绩为初始值</button>`;
+
+    content.querySelector("#schScoreReset").onclick = () => {
+      if (!confirm("确定把所有成绩重置为初始值吗？")) return;
+      store.set("sv_school_scores", { chem: 85, phys: 82, span: 70, pe: 60, decath: 90, shop: 88 });
+      toast("成绩已重置");
+      self.render(document.getElementById("appBody"));
+    };
+  },
+
+  // ===== 模块 3：十项全能队 =====
+  renderTeam(content) {
+    const self = this;
+    const team = this.getTeam();
+    const roleMap = {
+      "彼得·帕克": "成员 · 经常迟到",
+      "米歇尔·琼斯": "队长 · 冷静犀利",
+      "内德·利兹": "技术担当",
+      "Flash Thompson": "成员 · 爱炫耀",
+      "Liz Allan": "前队长"
+    };
+
+    content.innerHTML = `
+      <div class="card" style="padding:12px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">🏆 学术十项全能队</div>
+        <div style="font-size:11px;color:var(--muted);">备战全国赛。点「开始训练」生成一段队内互动小剧场。</div>
+      </div>
+      <div style="margin-bottom:14px;">
+        ${team.map(name => `
+          <div class="sch-team-member">
+            <div class="sch-team-avatar">${esc((name || "?")[0])}</div>
+            <div class="sch-team-info">
+              <div class="sch-team-name">${esc(name)}</div>
+              <div class="sch-team-role">${esc(roleMap[name] || "队员")}</div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      <button class="btn" id="schTrainBtn">📖 开始一场训练</button>`;
+
+    content.querySelector("#schTrainBtn").onclick = () => self.startTraining();
+  },
+
+  async startTraining() {
+    const self = this;
+    const content = document.getElementById("schContent");
+    content.innerHTML = `<div class="loader"><div class="spin"></div>十项全能队集训中...</div>`;
+    try {
+      const s = store.getState();
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const profile = store.getProfile();
+      const playerName = profile.name || "你";
+      const team = self.getTeam().join("、");
+
+      // 复用小剧场系统：生成一个训练主题的小剧场
+      const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中十项全能队训练**的开场小剧场（校园日常，独立于主线）。
+${buildBlacklistBanText([])}
+
+【队员】${team}，以及玩家「${playerName}」
+【当前日期】${date}
+
+【要求 · 铁律】
+1. 写一段 400~700 字的训练开场：哈灵顿老师出题、队员抢答、MJ 冷幽默吐槽、Flash 炫耀、内德技术宅发言、彼得走神。
+2. 玩家是视角中心，不替玩家决定。
+3. 校园日常氛围，严禁超能力、蜘蛛侠、主线大事件。
+4. 结尾用【选项】列出 A. B. C. D.，每个一行。
+5. 最后一行：【小剧场标题: 十项全能训练】
+6. 对白用 *"English"*（中文翻译）格式。
+
+【文风】青春校园群像，人物鲜明。`);
+
+      const res = await callAI([{ role: "user", content: "生成训练" }], sysPrompt);
+      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+      const optIdx = res.indexOf("【选项】");
+      const story = (optIdx > -1 ? res.slice(0, optIdx) : res).replace("【剧情】", "").replace(/【小剧场标题[:：].*?】/g, "").trim();
+      const opts = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
+      const title = titleMatch ? titleMatch[1].trim() : "十项全能训练";
+
+      // 建一个小剧场存档，直接跳转到 Theater
+      const q = {
+        id: "th_sch_" + Date.now(),
+        title: "🏆 " + title,
+        background: `中城高中学术十项全能队训练。队员：${team}。校园日常，无超能力。`,
+        identity: "十项全能队员",
+        tone: "日常",
+        pov: s.pov || "second",
+        userName: playerName,
+        date,
+        story, options: opts,
+        history: [], closed: false, createdAt: Date.now(),
+        openingStory: story, openingOptions: opts
+      };
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      all.unshift(q);
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
+
+      toast("训练开始：" + title);
+      apps.Theater.openQuest(q.id);
+    } catch (e) {
+      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
+    }
+  },
+
+  // ===== 模块 4：舞会 =====
+  renderDance(content) {
+    const self = this;
+    const s = store.getState();
+    const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+    const danceHistory = store.get("sv_school_dance", []);
+
+    content.innerHTML = `
+      <div class="sch-dance-card">
+        <div class="sch-dance-logo">💃</div>
+        <div class="sch-dance-title">返校节舞会</div>
+        <div class="sch-dance-sub">HOMECOMING · MIDTOWN HIGH</div>
+        <div class="sch-dance-desc">体育馆挂满气球和彩带。穿上正装，邀请心仪的人，或者……被邀请。<br>一场关于勇气和心动的夜晚。</div>
+        <button class="btn primary" id="schDanceBtn" style="background:linear-gradient(135deg,#8a2be2,#e62429);">💃 参加舞会</button>
+      </div>
+      ${danceHistory.length ? `
+        <div style="margin-top:16px;font-size:12px;color:var(--muted);margin-bottom:8px;">📂 往届回忆</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${danceHistory.map((d, i) => `
+            <div class="card" style="padding:12px;cursor:pointer;" data-dh="${i}">
+              <div style="font-size:13px;font-weight:700;color:var(--text);">${esc(d.title)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">${esc(d.date)}</div>
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}`;
+
+    content.querySelector("#schDanceBtn").onclick = () => self.startDance();
+    content.querySelectorAll("[data-dh]").forEach(el => {
+      el.onclick = () => {
+        const d = danceHistory[parseInt(el.dataset.dh)];
+        if (d) apps.Theater.openQuest(d.questId);
+      };
+    });
+  },
+
+  async startDance() {
+    const self = this;
+    const content = document.getElementById("schContent");
+    content.innerHTML = `<div class="loader"><div class="spin"></div>走进返校节舞会...</div>`;
+    try {
+      const s = store.getState();
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const profile = store.getProfile();
+      const playerName = profile.name || "你";
+      const peterAff = getAffinityOf("彼得·帕克");
+
+      const confessHint = peterAff >= 151
+        ? `\n【告白氛围】彼得对玩家好感度已达 ${peterAff}，舞会是告白的天然舞台。如果氛围到位，可以让彼得紧张地靠近、欲言又止，为告白做铺垫（但不要强行告白，顺其自然）。`
+        : "";
+
+      const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中返校节舞会**的开场小剧场（校园日常/情感向）。
+${buildBlacklistBanText([])}
+
+【当前日期】${date}
+【玩家】${playerName}
+【彼得好感度】${peterAff}/200
+${confessHint}
+
+【要求 · 铁律】
+1. 写一段 400~700 字的舞会开场：体育馆布置、音乐、同学们跳舞、彼得穿着不合身的西装在角落紧张、MJ 在看书。
+2. 玩家是视角中心，不替玩家决定。
+3. 情感细腻、有青春气息，可以有心动瞬间。
+4. 结尾用【选项】列出 A. B. C. D.，每个一行。
+5. 最后一行：【小剧场标题: 返校节舞会】
+6. 对白用 *"English"*（中文翻译）格式。
+
+【文风】青春、浪漫、细腻，严禁 AI 腔。`);
+
+      const res = await callAI([{ role: "user", content: "生成舞会" }], sysPrompt);
+      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+      const optIdx = res.indexOf("【选项】");
+      const story = (optIdx > -1 ? res.slice(0, optIdx) : res).replace("【剧情】", "").replace(/【小剧场标题[:：].*?】/g, "").trim();
+      const opts = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
+      const title = titleMatch ? titleMatch[1].trim() : "返校节舞会";
+
+      const q = {
+        id: "th_dance_" + Date.now(),
+        title: "💃 " + title,
+        background: `中城高中返校节舞会。体育馆，音乐，正装。情感向校园夜晚。`,
+        identity: "舞会参加者",
+        tone: "情感",
+        pov: s.pov || "second",
+        userName: playerName,
+        date,
+        story, options: opts,
+        history: [], closed: false, createdAt: Date.now(),
+        openingStory: story, openingOptions: opts
+      };
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      all.unshift(q);
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
+
+      // 记到舞会历史
+      const danceHistory = store.get("sv_school_dance", []);
+      danceHistory.unshift({ title: q.title, date, questId: q.id });
+      store.set("sv_school_dance", danceHistory);
+
+      toast("舞会开始：" + title);
+      apps.Theater.openQuest(q.id);
+    } catch (e) {
+      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
     }
   }
 },
