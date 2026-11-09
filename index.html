@@ -2145,6 +2145,47 @@ body.theme-light .sch-dance-card { background:linear-gradient(135deg,#f3e8fb 0%,
 .sch-dance-sub { font-size:11px; color:var(--muted); margin-top:4px; }
 .sch-dance-desc { font-size:12px; color:var(--muted); line-height:1.6; margin:14px 0 18px; }
 .sch-empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; }
+/* ===== 📖 世界书 UI ===== */
+.wb-hero { background:linear-gradient(135deg,#1a1a2e,#0f0f1a); border:1px solid var(--line); border-radius:16px; padding:20px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden; }
+body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); }
+.wb-hero::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#8a2be2,#2d6bff,#8a2be2); }
+.wb-hero-icon { font-size:40px; margin-bottom:6px; }
+.wb-hero-title { font-size:20px; font-weight:800; color:var(--text); letter-spacing:2px; }
+.wb-hero-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+.wb-add-btn { margin-bottom:14px; }
+
+.wb-list { display:flex; flex-direction:column; gap:10px; }
+.wb-empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; line-height:1.8; }
+.wb-card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; transition:all .15s; position:relative; overflow:hidden; }
+.wb-card.on { border-color:rgba(45,107,255,.5); }
+.wb-card.on::before { content:""; position:absolute; top:0; left:0; bottom:0; width:3px; background:linear-gradient(to bottom,#2d6bff,#8a2be2); }
+.wb-card.off { opacity:.7; }
+.wb-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.wb-card-name { font-size:14px; font-weight:700; color:var(--text); flex:1; min-width:0; }
+.wb-card-scopes { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+.wb-scope-chip { font-size:10px; padding:2px 8px; border-radius:8px; background:var(--panel-2); color:var(--muted); border:1px solid var(--line); }
+.wb-scope-chip.global { background:rgba(138,43,226,.15); color:#8a2be2; border-color:rgba(138,43,226,.4); }
+.wb-card-preview { font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:10px; }
+.wb-card-actions { display:flex; gap:8px; }
+.wb-mini-btn { flex:1; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px; font-size:12px; cursor:pointer; transition:all .15s; }
+.wb-mini-btn:hover { border-color:var(--accent-2); }
+.wb-mini-btn.danger { color:#e62429; }
+.wb-mini-btn.danger:hover { border-color:#e62429; background:rgba(230,36,41,.08); }
+
+.wb-editor-head { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.wb-back { background:var(--panel-2); border:1px solid var(--line); color:var(--accent-2); border-radius:10px; padding:6px 12px; font-size:13px; cursor:pointer; }
+.wb-editor-title { font-size:17px; font-weight:800; color:var(--text); }
+.wb-field { margin-bottom:14px; }
+.wb-label { display:block; font-size:12px; font-weight:600; color:var(--text); margin-bottom:6px; }
+.wb-input, .wb-textarea { width:100%; box-sizing:border-box; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:11px 13px; color:var(--text); font-size:14px; outline:none; font-family:inherit; transition:border .2s; }
+.wb-input:focus, .wb-textarea:focus { border-color:var(--accent-2); }
+.wb-textarea { line-height:1.6; resize:vertical; min-height:180px; }
+.wb-scope-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.wb-scope-opt { background:var(--panel-2); border:2px solid var(--line); border-radius:12px; padding:10px; text-align:left; cursor:pointer; transition:all .15s; display:flex; flex-direction:column; gap:2px; }
+.wb-scope-opt.active { border-color:var(--accent-2); background:rgba(45,107,255,.1); }
+.wb-scope-opt.global.active { border-color:#8a2be2; background:rgba(138,43,226,.12); }
+.wb-scope-opt-label { font-size:12.5px; font-weight:600; color:var(--text); }
+.wb-scope-opt-desc { font-size:10px; color:var(--muted); line-height:1.3; }
 </style>
 </head>
 <body>
@@ -5456,7 +5497,8 @@ const newSuspicion = Math.min(100, prevSuspicion + bump);
   return clue;
 }
 
-function buildSystem(extra) {
+function buildSystem(extra, scope) {
+  scope = scope || "worldline";   // 默认世界线
   const p = store.getProfile();
   const s = store.getState();
   const personalityText = p.personality || "（未填写）";
@@ -5472,22 +5514,7 @@ const month = s.gameMonth || WORLD.startMonth;
 const day = s.gameDay || WORLD.startDay;
 const timeStr = `${year}年${month}月${day}日`;
 
-  let worldbookPrompt = "";
-try {
-  const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
-  const activeBooks = books.filter(b => b.enabled);
-  if (activeBooks.length > 0) {
-    const movieAnchor = activeBooks.find(b => (b.name || "").includes("电影原剧情锚点"));
-    const otherBooks = activeBooks.filter(b => !(b.name || "").includes("电影原剧情锚点"));
-
-    if (movieAnchor) {
-      worldbookPrompt += `\n\n【🎬 电影原剧情锚点 · 强制执行 · 违反即失败】\n你生成的所有剧情、小事件、日常，必须严格贴合原电影剧情锚点里对应阶段的内容。\n- 不得提前发生后面阶段的事件。\n- 不得让前面阶段已经发生过的事再发生一次。\n- 小事件必须与大事件自然衔接，让日常成为通往大事件的铺垫。\n- 以下锚点内容与当前阶段匹配的部分，必须被遵守：\n${movieAnchor.content}\n`;
-    }
-    if (otherBooks.length > 0) {
-      worldbookPrompt += "\n\n【世界书设定】" + otherBooks.map(b => `[${b.name}]\n${b.content}`).join("\n\n");
-    }
-  }
-} catch(e) {}
+ const worldbookPrompt = buildWorldbookPromptForScope(scope);
 // ★ 世界书：括号干预指令（可选开关）
 let bracketInterventionPrompt = "";
 try {
@@ -6214,7 +6241,7 @@ ${choiceText}
 4. **不要标注好感度、不要提 MCU 主线、不要写"阶段"**。
 5. 语言用纯中文，对白可以用 *"English"*（中文翻译）格式。
 
-【文风】电影镜头感，纽约皇后区口音，严禁 AI 腔。`);
+【文风】电影镜头感，纽约皇后区口音，严禁 AI 腔。`, "Spider_Terminal");
 
     const res = await callAI([{ role: "user", content: "生成巡逻结局" }], sysPrompt);
 
@@ -6370,7 +6397,7 @@ window.advanceSideQuest = async (id, choice) => {
 4. **如果这一轮剧情已经可以自然收尾，在末尾另写一行**：**【支线完结】**
    不要拖太长，支线一般 2-4 轮完结，最多 5 轮。
 
-【风格】电影镜头感，纽约皇后区，严禁 AI 腔。`);
+【风格】电影镜头感，纽约皇后区，严禁 AI 腔。`, "worldline");
 
     const res = await callAI([{role:"user",content:"继续"}], sysPrompt);
     const isFinished = /【支线完结】/.test(res);
@@ -6622,8 +6649,8 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
    - 如果评论用**中文**，**直接输出中文原文，不加任何括号翻译**。严禁 "中文（中文翻译）" 这种中文又翻译中文。
 【格式要求】
 姓名 ||| 评论内容
-每行一条，不要任何解释。`);
-    
+每行一条，不要任何解释。`, platform === "instagram" ? "instagram" : "twitter");   
+
     const res = await callAI([{role:"user",content:"生成回复"}], sysPrompt);
     const newAll = store.getPosts();
     const newList = newAll[platform] || [];
@@ -7230,6 +7257,56 @@ function migrateAnchorsForLegacy() {
     console.warn("[锚点迁移] 失败：", e);
   }
   localStorage.setItem(KEY, "1");
+}
+// ============================================================
+// 📖 世界书 · 作用域系统
+// ============================================================
+const WB_SCOPES = [
+  { key: "global",   label: "🌐 全局",      desc: "所有 AI 场景都强制读取" },
+  { key: "worldline", label: "🌐 世界线",   desc: "主线/支线剧情" },
+  { key: "messages",  label: "💬 信息",     desc: "聊天 / 短信" },
+  { key: "twitter",   label: "🐦 推特",     desc: "推特动态与评论" },
+  { key: "instagram", label: "📸 Instagram", desc: "IG 帖子与评论" },
+  { key: "Theater",   label: "🎭 小剧场",   desc: "平行宇宙剧场" },
+  { key: "Diary",     label: "📓 双人日记", desc: "日记生成与回应" },
+ { key: "MJNotebook", label: "🕵️ MJ笔记本", desc: "MJ 观察" },
+  { key: "contacts",  label: "👥 社交圈",   desc: "号角日报等" },
+  { key: "School",    label: "🏫 中城高中", desc: "课堂/训练/舞会" },
+  { key: "Spider_Terminal", label: "🕷️ 蜘蛛终端", desc: "巡逻事件" }
+];
+
+function getWorldbooks() {
+  try { return JSON.parse(localStorage.getItem("sv_worldbooks") || "[]"); }
+  catch (e) { return []; }
+}
+function setWorldbooks(books) {
+  localStorage.setItem("sv_worldbooks", JSON.stringify(books));
+}
+
+// 取某个作用域下、启用的世界书内容拼成一段 prompt
+// scope: "worldline" / "messages" / "twitter" ... 传入当前 App 的 scope
+function buildWorldbookPromptForScope(scope) {
+  const books = getWorldbooks();
+  const active = books.filter(b => {
+    if (!b.enabled) return false;
+    const sc = Array.isArray(b.scopes) ? b.scopes : (b.scope ? [b.scope] : ["global"]);
+    return sc.includes("global") || sc.includes(scope);
+  });
+  if (!active.length) return "";
+
+  // 电影锚点特殊处理（保持原有强制措辞）
+  const movieAnchor = active.find(b => (b.name || "").includes("电影原剧情锚点"));
+  const others = active.filter(b => !(b.name || "").includes("电影原剧情锚点"));
+
+  let out = "";
+  if (movieAnchor && (scope === "worldline" || scope === "global")) {
+    out += `\n\n【🎬 电影原剧情锚点 · 强制执行 · 违反即失败】\n你生成的所有剧情、小事件、日常，必须严格贴合原电影剧情锚点里对应阶段的内容。\n- 不得提前发生后面阶段的事件。\n- 不得让前面阶段已经发生过的事再发生一次。\n- 小事件必须与大事件自然衔接。\n${movieAnchor.content}\n`;
+  }
+  if (others.length) {
+    out += `\n\n【📖 世界书设定 · 强制遵守 · 违反即失败】\n以下设定是本场景的最高准则，必须严格遵守，不得违背：\n` +
+      others.map(b => `\n[${b.name}]\n${b.content}`).join("\n");
+  }
+  return out;
 }
 // ============================================================
 // 🚫 生成"黑名单禁令"文本，供所有 AI prompt 拼接使用
@@ -9871,7 +9948,7 @@ const descHtml = isLockedPeter
        if(name==="1") name="彼得·帕克"; else if(name==="2") name="内德·利兹"; else if(name==="3") name="米歇尔·琼斯"; else if(name==="4") name="梅婶";
         else if (name==="随机") {
           try { 
-            const res = await callAI([{role:"user",content:"生成一个"}], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)")); 
+            const res = await callAI([{role:"user",content:"生成一个"}], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)", "massages")); 
             const [n, d] = res.split('|||').map(x=>x.trim());
             name = n || "神秘人";
             const list=store.getContacts();
@@ -10846,6 +10923,7 @@ const langTail = isEn
   ? "\n\n=== FINAL REMINDER ===\nREPLIES MUST BE 100% ENGLISH. NO CHINESE CHARACTERS ALLOWED.\nHEART must be Chinese (inner thoughts), but REPLIES must be pure English.\n"
   : "";
 
+const worldbookPrompt = buildWorldbookPromptForScope("messages");
       const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
       const playerName = store.getProfile().name || "玩家";
@@ -10903,7 +10981,8 @@ ${groupInterventionRule}
 【输出格式 · 绝对禁止输出心声】
 直接输出群聊对话，不要输出任何 REPLIES:、HEART: 等前缀，不要输出任何心声、心理活动。
 只按以下格式输出一行：
-${groupMembers.map(n => n + "：消息内容").join(" || ")}`;
+${groupMembers.map(n => n + "：消息内容").join(" || ")}
+${worldbookPrompt}`;
 
         let replyRawGroup = "";
         try {
@@ -11201,6 +11280,7 @@ ${langRule}
 - 151-200：直白、坦率、在乎、想见。例：「唉，她一句话我就想跑过去。这算怎么回事啊。」
 
 ${(self.currentUser === "彼得·帕克" && contactAff >= 101) ? `【彼得专属 · 好感度 ≥101 时】\n你的心声不能冷漠、不能礼貌、不能像客服。你要：\n- 反复琢磨她的话，想太多\n- 自己吐槽自己"我在想什么啊""完了完了"\n- 冒出"想见她""刚才那句话是不是在撩我"的念头\n- 心里翻江倒海，但嘴上不说\n` : ""}
+${worldbookPrompt}
 `;
 
       // ★★★ 真正调用 AI ★★★
@@ -11491,6 +11571,7 @@ const langBrief = isEn
   ? "=== CRITICAL LANGUAGE RULE ===\nEvery member of this group chat MUST reply in ENGLISH ONLY.\nDO NOT write any Chinese characters in the messages.\n================================\n\n"
   : "【只用中文】\n\n";
       
+const worldbookPrompt = buildWorldbookPromptForScope("messages");
       const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
       const playerName = store.getProfile().name || "玩家";
@@ -11550,7 +11631,8 @@ ${isSpellActiveNow() ? `
 【输出格式 · 绝对禁止输出心声】
 直接输出群聊对话，不要输出任何 REPLIES:、HEART: 等前缀，不要输出任何心声、心理活动。
 只按以下格式输出一行：
-${groupMembers.map(n => n + "：" + (isEn ? "English message here" : "消息内容")).join(" || ")}${isEn ? "\n\n=== REMINDER: ALL MESSAGES MUST BE IN ENGLISH ===" : ""}`;
+${groupMembers.map(n => n + "：" + (isEn ? "English message here" : "消息内容")).join(" || ")}${isEn ? "\n\n=== REMINDER: ALL MESSAGES MUST BE IN ENGLISH ===" : ""}
+${worldbookPrompt}`;
       const replyRawGroup = await callAI(recent, groupSysPrompt);
       const loadG = body.querySelector("#loading");
       if (loadG) loadG.remove();
@@ -12433,7 +12515,7 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
 【格式 · 严格 · 每行一条】
 姓名 ||| 评论内容
 
-注意：只输出 ${contactsList.length} 行，不多不少。`);
+注意：只输出 ${contactsList.length} 行，不多不少。`, "twitter");
 
     try {
       const res = await callAI([{ role: "user", content: "生成联系人评论" }], contactPrompt);
@@ -12462,7 +12544,7 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
 要求：15-60字，符合 ta 的性格，真实感。
 
 只输出一行，不要任何前缀：
-评论内容`);
+评论内容`, "twitter");
 
         const missRes = await callAI([{ role: "user", content: "生成" }], missPrompt);
         let text = String(missRes || "").replace(/^.*?\|\|\|/, "").trim();
@@ -12494,7 +12576,7 @@ ${buildBlacklistBanText([postName])}
 【格式 · 严格 · 每行一条】
 网名(国家) ||| 评论内容
 
-只输出 5 行，不多不少。`);
+只输出 5 行，不多不少。`, "twitter");
 
     const res = await callAI([{ role: "user", content: "生成陌生人评论" }], strangerPrompt);
     const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
@@ -12715,7 +12797,7 @@ ${buildBlacklistBanText([myName])}
 【格式 · 严格 · 每行一条】
 发帖人名字 ||| @账号 ||| 正文 ||| 点赞数 ||| 评论者1:评论内容 ;; 评论者2:评论内容 ;; 评论者3:评论内容 ;; 评论者4:评论内容 ;; 评论者5:评论内容
 
-注意：评论之间必须用 " ;;" 分隔，且**至少 5 条评论**。`);
+注意：评论之间必须用 " ;;" 分隔，且**至少 5 条评论**。`, "twitter");
 
         const res = await callAI([{ role: "user", content: isFollowing ? "刷新正在关注" : "刷新为你推荐" }], sysPrompt);
         // ★ 代码级兜底过滤：如果 AI 还是提到了黑名单的人，直接过滤掉
@@ -13257,7 +13339,7 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
     - 同时，你可以在剧情末尾输出：【阶段完成】。
     - 你的本回合剧情，必须直接切入下一个大事件的开头。
 ${buildEventAnchorPrompt()}
-${contextStr}`);
+${contextStr}`, "worldline");
 
         let res = await callAI([{role:"user",content:"请生成接下来的剧情"}], sysPrompt);
 // ★ 解析锚点完成并标记
@@ -13795,7 +13877,7 @@ ${buildBlacklistBanText([myName])}
    - 外语评论 → 原文 + （中文翻译）
    - 评论用中文 → 直接写中文原文，不加括号翻译
 【格式要求】
-英文生图Prompt ||| 网名1(法文) ||| 评论1原文 ||| 评论1中文翻译 ;; 网名2(日文) ||| 评论2原文 ||| 评论2中文翻译 ;; 网名3(英文) ||| 评论3原文 ||| 评论3中文翻译`);
+英文生图Prompt ||| 网名1(法文) ||| 评论1原文 ||| 评论1中文翻译 ;; 网名2(日文) ||| 评论2原文 ||| 评论2中文翻译 ;; 网名3(英文) ||| 评论3原文 ||| 评论3中文翻译`, "instagram");
         const res = await callAI([{role:"user",content:"生成"}], sysPrompt);
         const parts = res.split('|||').map(s => s.trim());
         const imgPrompt = parts[0];
@@ -13955,7 +14037,7 @@ ${promptHint}
 【格式要求 · 严格】
 每条帖子一行，用 ||| 分隔，评论用 ;; 分隔：
 发帖人 ||| 账号 ||| 文案 ||| 英文生图Prompt ||| 评论1网名(语言) ||| 评论1原文 ||| 评论1中文翻译 ;; 评论2网名(语言) ||| 评论2原文 ||| 评论2中文翻译
-最少生成 5 行，不要任何解释性文字。`);
+最少生成 5 行，不要任何解释性文字。`, "instagram");
         const res = await callAI([{role:"user",content:"生成 5 条帖子"}], sysPrompt);
         // ★ 代码级兜底过滤
         const safeRes = sanitizeByBlacklist(res);
@@ -14854,7 +14936,7 @@ ${viewRule}
 - 濒死 / 重伤 / 流血
 - 黑帮 / 军火 / 交易 / 走私
 
-【文风】电影镜头感，纽约皇后区口音，严禁 AI 腔。`);
+【文风】电影镜头感，纽约皇后区口音，严禁 AI 腔。`, "Spider_Terminal");
 
             const res = await callAI([{ role: "user", content: "生成巡逻事件" }], sysPrompt);
 
@@ -14965,7 +15047,7 @@ ${viewRule}
 6. **不要在任何位置标注好感度变动**（支线不影响主线好感度）。
 
 【风格】
-电影镜头感，贴近纽约皇后区生活，严禁 AI 腔。`);
+电影镜头感，贴近纽约皇后区生活，严禁 AI 腔。`, "Spider_Terminal");
 
           const res = await callAI([{role:"user",content:"生成支线剧情"}], sysPrompt);
           const titleMatch = res.match(/【支线标题:\s*([\s\S]+?)】/);
@@ -16826,7 +16908,7 @@ ${buildBlacklistBanText([])}
 5. 结尾必须用【选项】列出 A. B. C. D. 四个玩家的行动方向。
 6. 语言纯中文，对白可用 *"English"*（中文翻译）格式。
 
-【文风】轻松、有校园生活感，像青春校园小说，严禁 AI 腔。`);
+【文风】轻松、有校园生活感，像青春校园小说，严禁 AI 腔。`, "School");
 
       const res = await callAI([{ role: "user", content: "生成课堂事件" }], sysPrompt);
       const optIdx = res.indexOf("【选项】");
@@ -16892,7 +16974,7 @@ ${buildBlacklistBanText([])}
 4. 末尾如果影响成绩，输出一行【成绩变动: 科目key=+X】（${courseObj.name} 的 key 见下，X 为 -5~5，可选）。科目 key 对应：化学=chem 物理=phys 西班牙语=span 体育=pe 十项全能=decath 技术课=shop。
 5. 语言纯中文。
 
-【文风】校园生活感，严禁 AI 腔。`);
+【文风】校园生活感，严禁 AI 腔。`, "School");
 
       const res = await callAI([{ role: "user", content: "生成课堂结局" }], sysPrompt);
 
@@ -17051,7 +17133,7 @@ ${buildBlacklistBanText([])}
 5. 最后一行：【小剧场标题: 十项全能训练】
 6. 对白用 *"English"*（中文翻译）格式。
 
-【文风】青春校园群像，人物鲜明。`);
+【文风】青春校园群像，人物鲜明。`, "School");
 
       const res = await callAI([{ role: "user", content: "生成训练" }], sysPrompt);
       const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
@@ -17152,7 +17234,7 @@ ${confessHint}
 5. 最后一行：【小剧场标题: 返校节舞会】
 6. 对白用 *"English"*（中文翻译）格式。
 
-【文风】青春、浪漫、细腻，严禁 AI 腔。`);
+【文风】青春、浪漫、细腻，严禁 AI 腔。`, "School");
 
       const res = await callAI([{ role: "user", content: "生成舞会" }], sysPrompt);
       const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
@@ -18055,7 +18137,7 @@ const groups = contacts.filter(c => isGroupContact(c));
       else if (name === "4") name = "梅婶";
       else if (name === "随机") {
         try {
-          const res = await callAI([{ role: "user", content: "生成一个" }], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)"));
+          const res = await callAI([{ role: "user", content: "生成一个" }], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)", "messages"));
           const [n, d] = res.split("|||").map(x => x.trim());
           name = n || "神秘人";
           const list = store.getContacts();
@@ -18156,7 +18238,7 @@ toast("群聊已创建");
     { "title": "小新闻标题2", "body": "正文 80-150字", "tag": "分类" }
   ]
 }
-只输出 JSON，不要任何解释。`;
+只输出 JSON，不要任何解释。` + buildWorldbookPromptForScope("contacts");
 
         const raw = await callAI([{ role: "user", content: "出今天的报纸" }], sysPrompt);
         const cleaned = String(raw || "").replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -18236,16 +18318,21 @@ ${(data.entries || []).map(e => `
   },
 
 worldbook: {
-    title: "世界书",
-    render(body) {
-      const books = JSON.parse(localStorage.getItem("sv_worldbooks") || "[]");
-// ★ 首次加载时自动注入"电影原剧情锚点"世界书（用户可编辑内容）
-      const MOVIE_ANCHOR_NAME = "🎬 电影原剧情锚点（可编辑）";
-      if (!books.find(b => b.name === MOVIE_ANCHOR_NAME)) {
-        books.push({
-          name: MOVIE_ANCHOR_NAME,
-          enabled: true,
-          content: `【使用说明】
+  title: "世界书",
+  editing: null,
+
+  render(body) {
+    const self = this;
+    const books = getWorldbooks();
+
+    // ===== 自动注入电影锚点=====
+    const MOVIE_ANCHOR_NAME = "🎬 电影原剧情锚点（可编辑）";
+    if (!books.find(b => b.name === MOVIE_ANCHOR_NAME)) {
+      books.push({
+        name: MOVIE_ANCHOR_NAME,
+        enabled: true,
+        scopes: ["worldline"],   // ★ 补这个字段
+        content: `【使用说明】
 这是一条给"想走原电影剧情"的用户使用的锚点设定。它按时间详细描述每个阶段电影里具体发生了什么（不含感情线），包含具体场景、地点、人物、对话片段和动作细节。AI 生成日常剧情、小事件时，必须参考对应阶段的内容，让小事件成为大事件的铺垫。用户可以自由修改下面每个阶段的细节。
 
 ==============================
@@ -18604,107 +18691,172 @@ worldbook: {
 · 彼得不再压抑自己的性格——话痨、自嘲、跑题慢慢回来了。
 · 他不再执着于独自背负一切,开始允许自己重新变得脆弱,重新拥有朋友。`
         });
-        localStorage.setItem("sv_worldbooks", JSON.stringify(books));
-      }
-      body.innerHTML = `<div style="padding:14px">
-        <div class="card">
-          <h3>新增世界书条目</h3>
-          <div class="field"><label>名称</label><input id="wb_name" placeholder="例如：法术指导"></div>
-          <div class="field"><label>设定内容（最高准则）</label><textarea id="wb_content" rows="5" placeholder="输入强制 AI 遵守的设定..."></textarea></div>
-          <button class="btn" id="add_wb">保存并启用</button>
+      setWorldbooks(books);   // ★ 原来是 localStorage.setItem，改成这个
+    }
+
+    if (this.editing !== null) { this.renderEditor(body, this.editing); return; }
+
+    body.innerHTML = `
+      <div style="padding:16px;">
+        <div class="wb-hero">
+          <div class="wb-hero-icon">📖</div>
+          <div class="wb-hero-title">世界书</div>
+          <div class="wb-hero-sub">为不同场景设定专属规则 · 开启即强制生效</div>
         </div>
-        <div class="card">
-  <h3>已保存条目 (${books.length})</h3>
-  ${books.map((b, i) => `
-    <div style="padding:12px;border-bottom:1px solid var(--line);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:bold;margin-bottom:4px;color:var(--text);">${esc(b.name)}</div>
-          <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc((b.content || "").slice(0, 60))}${(b.content || "").length > 60 ? "..." : ""}</div>
-        </div>
-      </div>
-      <div class="row" style="margin-top:10px;justify-content:space-between;align-items:center;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <label class="switch"><input type="checkbox" class="wb-toggle" data-idx="${i}" ${b.enabled?'checked':''}><span class="slider"></span></label>
-          <span style="font-size:12px;color:${b.enabled?'var(--accent-2)':'var(--muted)'};font-weight:600;">${b.enabled?'已启用':'已关闭'}</span>
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn ghost wb-edit" data-idx="${i}" style="width:auto;padding:4px 10px;font-size:12px;">✏️ 编辑</button>
-          <button class="btn ghost wb-del" data-idx="${i}" style="width:auto;padding:4px 10px;font-size:12px;color:#e62429;border-color:#e62429">删除</button>
-        </div>
-      </div>
-    </div>
-  `).join("") || '<p style="color:var(--muted);font-size:13px">暂无世界书条目</p >'}
-</div>
+
+        <button class="btn wb-add-btn" id="wbAddBtn">＋ 新建条目</button>
+
+        <div class="wb-list" id="wbList"></div>
       </div>`;
 
-      body.querySelector("#add_wb").onclick = () => {
-        const name = body.querySelector("#wb_name").value.trim();
-        const content = body.querySelector("#wb_content").value.trim();
-        if(!name || !content) return toast("请填写名称和内容");
-        books.push({ name, content, enabled: true });
-        localStorage.setItem("sv_worldbooks", JSON.stringify(books));
-        this.render(body);
-        toast("已添加并启用");
-      };
-
-      body.querySelectorAll(".wb-toggle").forEach(el => {
-        el.onchange = () => {
-          books[el.dataset.idx].enabled = el.checked;
-          localStorage.setItem("sv_worldbooks", JSON.stringify(books));
-          toast(el.checked ? "已启用" : "已禁用");
-        };
-      });
-
-      body.querySelectorAll(".wb-del").forEach(el => {
-      el.onclick = () => {
-        if(!confirm("确定删除这条世界书吗？")) return;
-        books.splice(el.dataset.idx, 1);
-        localStorage.setItem("sv_worldbooks", JSON.stringify(books));
-        this.render(body);
-      };
-    });
-
-    // ★ 编辑按钮
-    body.querySelectorAll(".wb-edit").forEach(el => {
-      el.onclick = () => {
-        const idx = parseInt(el.dataset.idx);
-        const b = books[idx];
-        if (!b) return;
-
-        const div = document.createElement("div");
-        div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
-        div.innerHTML = `
-          <div style="max-width:600px;margin:20px auto;">
-            <h2 style="color:var(--text);margin-top:0;font-size:17px;">✏️ 编辑世界书</h2>
-            <div class="field" style="margin-bottom:12px;">
-              <label style="font-size:12px;color:var(--muted);">名称</label>
-              <input id="wb_edit_name" value="${esc(b.name)}" style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;">
+    const listEl = body.querySelector("#wbList");
+    if (!books.length) {
+      listEl.innerHTML = `<div class="wb-empty">还没有世界书条目<br><span style="font-size:11px;opacity:.7;">点上方「新建条目」开始</span></div>`;
+    } else {
+      listEl.innerHTML = books.map((b, i) => {
+        const scopes = Array.isArray(b.scopes) ? b.scopes : (b.scope ? [b.scope] : ["global"]);
+        const scopeChips = scopes.map(sk => {
+          const sc = WB_SCOPES.find(x => x.key === sk);
+          return `<span class="wb-scope-chip ${sk === 'global' ? 'global' : ''}">${sc ? sc.label : sk}</span>`;
+        }).join("");
+        return `
+          <div class="wb-card ${b.enabled ? 'on' : 'off'}" data-idx="${i}">
+            <div class="wb-card-head">
+              <div class="wb-card-name">${esc(b.name)}</div>
+              <label class="switch wb-card-switch" onclick="event.stopPropagation()">
+                <input type="checkbox" class="wb-toggle" data-idx="${i}" ${b.enabled?'checked':''}>
+                <span class="slider"></span>
+              </label>
             </div>
-            <div class="field" style="margin-bottom:12px;">
-              <label style="font-size:12px;color:var(--muted);">内容（可自由修改）</label>
-              <textarea id="wb_edit_content" rows="20" style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;line-height:1.6;font-family:inherit;resize:vertical;">${esc(b.content || "")}</textarea>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button id="wb_edit_cancel" class="btn ghost" style="flex:1;">取消</button>
-              <button id="wb_edit_save" class="btn" style="flex:1;">保存</button>
+            <div class="wb-card-scopes">${scopeChips || '<span class="wb-scope-chip">未设定</span>'}</div>
+            <div class="wb-card-preview">${esc((b.content || "").slice(0, 70))}${(b.content||"").length>70?"…":""}</div>
+            <div class="wb-card-actions">
+              <button class="wb-mini-btn wb-edit" data-idx="${i}">✏️ 编辑</button>
+              <button class="wb-mini-btn danger wb-del" data-idx="${i}">🗑️ 删除</button>
             </div>
           </div>`;
-        document.querySelector(".device").appendChild(div);
-        div.querySelector("#wb_edit_cancel").onclick = () => div.remove();
-        div.querySelector("#wb_edit_save").onclick = () => {
-          const newName = div.querySelector("#wb_edit_name").value.trim();
-          const newContent = div.querySelector("#wb_edit_content").value.trim();
-          if (!newName) return toast("名称不能为空");
-          books[idx].name = newName;
-          books[idx].content = newContent;
-          localStorage.setItem("sv_worldbooks", JSON.stringify(books));
-          div.remove();
-          toast("已保存");
-          this.render(body);
-        };
+      }).join("");
+    }
+
+    body.querySelector("#wbAddBtn").onclick = () => {
+      const books2 = getWorldbooks();
+      books2.push({ name: "新条目", content: "", enabled: false, scopes: ["global"] });
+      setWorldbooks(books2);
+      self.editing = books2.length - 1;
+      self.render(body);
+    };
+
+    listEl.querySelectorAll(".wb-toggle").forEach(el => {
+      el.onchange = (e) => {
+        e.stopPropagation();
+        const b2 = getWorldbooks();
+        b2[el.dataset.idx].enabled = el.checked;
+        setWorldbooks(b2);
+        toast(el.checked ? "已启用 · 对应场景强制生效" : "已关闭");
+        self.render(body);
       };
     });
+    listEl.querySelectorAll(".wb-edit").forEach(el => {
+      el.onclick = (e) => { e.stopPropagation(); self.editing = parseInt(el.dataset.idx); self.render(body); };
+    });
+    listEl.querySelectorAll(".wb-del").forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (!confirm("确定删除这条世界书吗？")) return;
+        const b2 = getWorldbooks();
+        b2.splice(parseInt(el.dataset.idx), 1);
+        setWorldbooks(b2);
+        toast("已删除");
+        self.render(body);
+      };
+    });
+  },
+
+  renderEditor(body, idx) {
+    const self = this;
+    const books = getWorldbooks();
+    const b = books[idx];
+    if (!b) { this.editing = null; this.render(body); return; }
+    const scopes = Array.isArray(b.scopes) ? b.scopes : (b.scope ? [b.scope] : ["global"]);
+
+    body.innerHTML = `
+      <div style="padding:16px;">
+        <div class="wb-editor-head">
+          <button class="wb-back" id="wbBack">‹ 返回列表</button>
+          <div class="wb-editor-title">编辑条目</div>
+        </div>
+
+        <div class="wb-field">
+          <label class="wb-label">条目名称</label>
+          <input id="wbName" class="wb-input" value="${esc(b.name)}" placeholder="例如：魔法体系设定">
+        </div>
+
+        <div class="wb-field">
+          <label class="wb-label">作用范围 <span style="font-weight:400;color:var(--muted);font-size:11px;">（可多选；选「全局」则所有场景生效）</span></label>
+          <div class="wb-scope-grid" id="wbScopeGrid">
+            ${WB_SCOPES.map(sc => `
+              <button type="button" class="wb-scope-opt ${scopes.includes(sc.key)?'active':''} ${sc.key==='global'?'global':''}" data-scope="${sc.key}">
+                <span class="wb-scope-opt-label">${sc.label}</span>
+                <span class="wb-scope-opt-desc">${sc.desc}</span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="wb-field">
+          <label class="wb-label">设定内容 <span style="font-weight:400;color:var(--muted);font-size:11px;">（开启后作为最高准则强制执行）</span></label>
+          <textarea id="wbContent" class="wb-textarea" rows="14" placeholder="输入强制 AI 遵守的设定...">${esc(b.content || "")}</textarea>
+        </div>
+
+        <div class="wb-field" style="display:flex;justify-content:space-between;align-items:center;background:var(--panel-2);padding:12px 14px;border-radius:12px;">
+          <span style="font-size:13px;color:var(--text);">启用此条目</span>
+          <label class="switch"><input type="checkbox" id="wbEnabled" ${b.enabled?'checked':''}><span class="slider"></span></label>
+        </div>
+
+        <button class="btn" id="wbSave" style="margin-top:4px;">💾 保存</button>
+      </div>`;
+
+    let selScopes = [...scopes];
+    const grid = body.querySelector("#wbScopeGrid");
+    const refresh = () => {
+      grid.querySelectorAll(".wb-scope-opt").forEach(el => {
+        el.classList.toggle("active", selScopes.includes(el.dataset.scope));
+      });
+    };
+    grid.querySelectorAll(".wb-scope-opt").forEach(el => {
+      el.onclick = () => {
+        const k = el.dataset.scope;
+        if (k === "global") {
+          // 选全局 = 清掉其它，只留 global
+          selScopes = selScopes.includes("global") ? [] : ["global"];
+        } else {
+          selScopes = selScopes.filter(x => x !== "global"); // 选具体 App 时去掉全局
+          if (selScopes.includes(k)) selScopes = selScopes.filter(x => x !== k);
+          else selScopes.push(k);
+        }
+        refresh();
+      };
+    });
+
+    body.querySelector("#wbBack").onclick = () => { self.editing = null; self.render(body); };
+
+    body.querySelector("#wbSave").onclick = () => {
+      const name = body.querySelector("#wbName").value.trim();
+      const content = body.querySelector("#wbContent").value.trim();
+      if (!name) return toast("请填写条目名称");
+      if (!selScopes.length) return toast("请至少选择一个作用范围");
+      const b2 = getWorldbooks();
+      b2[idx] = {
+        ...b2[idx],
+        name, content,
+        scopes: selScopes,
+        enabled: body.querySelector("#wbEnabled").checked
+      };
+      setWorldbooks(b2);
+      self.editing = null;
+      self.render(body);
+      toast("已保存");
+    };
   }
 },
 
