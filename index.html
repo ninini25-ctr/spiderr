@@ -2476,13 +2476,14 @@ pacing: "本阶段跨度长、事件多（游学→神秘客→身份暴露→�
     pastEvents: ["灭霸响指已经发生过，彼得化灰又复活。", "托尼·斯塔克的葬礼已经结束。"]
   },
   {
-    key: "start_phase6_multiverse",
-    anchor: 6,
-    year: 2024, month: 10, day: 15,
-    label: "2024年10月 · 多元宇宙撕裂",
-    event: "神秘客事件已结束，身份暴露，奇异博士的咒语撕裂了多元宇宙。",
-    pastEvents: ["神秘客（昆汀·贝克）事件已经结束。", "彼得的蜘蛛侠身份已经彻底暴露。"]
-  },
+  key: "start_phase6_multiverse",
+  anchor: 6,
+  year: 2024, month: 10, day: 15,
+  label: "2024年10月 · 多元宇宙撕裂",
+  event: "神秘客事件已结束，身份暴露，奇异博士的咒语撕裂了多元宇宙。",
+  doneBeatCount: 12,   // ★ 只标记 phase6 前 12 个锚点为已发生（到"多元宇宙撕裂"为止）
+  pastEvents: ["神秘客（昆汀·贝克）事件已经结束。", "彼得的蜘蛛侠身份已经彻底暴露。"]
+},
 /* —— 遗忘之后 · 四年空白（2024.6 起） —— */
 {
   key: "start_phase6_5",
@@ -3086,6 +3087,16 @@ function markBeatsDoneByTitle(titles, storyText) {
   return hitTitles;
 }
 
+// 把某阶段的前 N 个锚点标记为已发生（从中间进入用）
+function markPhaseBeatsPartialDone(anchorIdx, count) {
+  const phase = WORLD.timeline[anchorIdx];
+  if (!phase) return;
+  const beats = (getEventAnchors()[phase.key]) || [];
+  const s = store.getState();
+  s.doneBeats = s.doneBeats || {};
+  beats.slice(0, count).forEach(b => { s.doneBeats[b.id] = true; });
+  store.setState(s);
+}
 // 把某阶段所有锚点标记为已完成（阶段推进/跳跃时用）
 function markPhaseBeatsAllDone(anchorIdx) {
   const phase = WORLD.timeline[anchorIdx];
@@ -5759,8 +5770,16 @@ resetBlank4yTurns();
   fresh.doneBeats = {};
   store.setState(fresh);
   markEarlierPhasesDone(chosen.anchor || 0);
-  const afterKeys = ["start_phase2_after", "start_phase3_homecoming", "start_phase6_multiverse"];
-  if (afterKeys.includes(chosen.key)) markPhaseBeatsAllDone(chosen.anchor || 0);
+
+  // ★ 从中间进入时的锚点标记
+  if (typeof chosen.doneBeatCount === "number") {
+    // 精确标记前 N 个锚点（多元宇宙撕裂等"阶段进行到一半"的节点）
+    markPhaseBeatsPartialDone(chosen.anchor || 0, chosen.doneBeatCount);
+  } else {
+    // 整阶段已发生的节点（事件已完整结束，当前阶段从头是"过去式"）
+    const afterKeys = ["start_phase2_after", "start_phase3_homecoming"];
+    if (afterKeys.includes(chosen.key)) markPhaseBeatsAllDone(chosen.anchor || 0);
+  }
 })();
   toast("✅ 已选择：" + chosen.label);
   setTimeout(() => location.reload(), 500);
