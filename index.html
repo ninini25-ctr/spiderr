@@ -13082,26 +13082,48 @@ if (window._worldlineMode === "main") {
 if (s.mainStoryEnded) {
   $("#appSettingsBtn").style.display = "none";
   body.innerHTML = `
-    <div id="endingPage" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;background:radial-gradient(ellipse at 50% 40%, #1a0a0e 0%, #0a0508 50%, #000 100%);opacity:0;transition:opacity 1.8s ease;">
-      <div style="font-size:56px;margin-bottom:20px;filter:drop-shadow(0 0 24px rgba(230,36,41,.6));animation:endingPulse 3s ease-in-out infinite;">🕸️</div>
-      <div style="font-size:12px;color:#8a8a99;letter-spacing:6px;margin-bottom:14px;">THE END</div>
-      <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:3px;margin-bottom:16px;font-family:'SimSun','宋体',serif;">到达结局</div>
-      <div style="font-size:14px;color:#c9d1e8;line-height:2;max-width:340px;font-family:'FangSong','仿宋',serif;margin-bottom:36px;">
-        带着伤疤，<br>
-        带着不再抗拒的自己，<br>
-        带着重新允许靠近的人。<br><br>
-        <span style="color:#8a8a99;font-size:12px;letter-spacing:4px;">—— 未完待续 ——</span>
+    <div id="endingPage" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:30px 20px 40px;text-align:center;background:radial-gradient(ellipse at 50% 40%, #1a0a0e 0%, #0a0508 50%, #000 100%);opacity:0;transition:opacity 1.8s ease;overflow-y:auto;">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60%;">
+        <div style="font-size:56px;margin-bottom:20px;filter:drop-shadow(0 0 24px rgba(230,36,41,.6));animation:endingPulse 3s ease-in-out infinite;">🕸️</div>
+        <div style="font-size:12px;color:#8a8a99;letter-spacing:6px;margin-bottom:14px;">THE END</div>
+        <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:3px;margin-bottom:16px;font-family:'SimSun','宋体',serif;">到达结局</div>
+        <div style="font-size:14px;color:#c9d1e8;line-height:2;max-width:340px;font-family:'FangSong','仿宋',serif;margin-bottom:28px;">
+          带着伤疤，<br>
+          带着不再抗拒的自己，<br>
+          带着重新允许靠近的人。<br><br>
+          <span style="color:#8a8a99;font-size:12px;letter-spacing:4px;">—— 未完待续 ——</span>
+        </div>
       </div>
-      <div style="font-size:11px;color:#555;letter-spacing:2px;margin-top:20px;">· 你仍可以在信息、小剧场、双人日记等app里继续生活 ·</div>
+
+      <!-- ★ 通关后仍保留：存档 / 读档 / 回忆 -->
+      <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+        <div style="display:flex;gap:8px;">
+          <button class="ending-btn" id="endingSaveBtn" style="flex:1;background:rgba(45,107,255,.12);border:1px solid rgba(45,107,255,.5);color:#c9d1e8;padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">💾 存档</button>
+          <button class="ending-btn" id="endingLoadBtn" style="flex:1;background:rgba(45,107,255,.12);border:1px solid rgba(45,107,255,.5);color:#c9d1e8;padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">📂 读档</button>
+        </div>
+        <button class="ending-btn" id="endingMemoryBtn" style="width:100%;background:rgba(230,36,41,.1);border:1px solid rgba(230,36,41,.45);color:#e8c9c9;padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">📜 回顾全部剧情</button>
+      </div>
+
+      <div style="font-size:11px;color:#555;letter-spacing:2px;">· 你仍可以在信息、小剧场、双人日记等app里继续生活 ·</div>
     </div>
     <style>
       @keyframes endingPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:.85} }
+      .ending-btn:active { transform:scale(.96); }
     </style>
   `;
   requestAnimationFrame(() => {
     const el = body.querySelector("#endingPage");
     if (el) el.style.opacity = "1";
   });
+
+  // ★ 绑定存档 / 读档 / 回忆（复用全局函数，不依赖 currentStory）
+  const saveBtn = body.querySelector("#endingSaveBtn");
+  const loadBtn = body.querySelector("#endingLoadBtn");
+  const memBtn = body.querySelector("#endingMemoryBtn");
+  if (saveBtn) saveBtn.onclick = () => window.openSlots("save");
+  if (loadBtn) loadBtn.onclick = () => window.openSlots("load");
+  if (memBtn) memBtn.onclick = () => window.showMemory();
+
   return;
 }
 
