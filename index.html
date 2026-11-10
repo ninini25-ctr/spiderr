@@ -3066,6 +3066,72 @@ phase6_mv: mk("p6mv", [
 const EVENT_ANCHORS_VERSION = 4; 
 const EVENT_ANCHORS_VER_KEY = "sv_event_anchors_ver";
 
+// ============================================================
+// 🧩 阶段覆盖系统（支持插入自定义阶段到任意位置 + 改名默认阶段）
+//   - sv_phase_overrides: { renames: {phaseKey: 新名字}, inserts: [{afterKey, phase}] }
+//   - 不直接修改 WORLD.timeline 源数组，运行时按覆盖规则重算"有效时间线"
+// ============================================================
+const PHASE_OVERRIDES_KEY = "sv_phase_overrides";
+
+function getPhaseOverrides() {
+  try {
+    const v = JSON.parse(localStorage.getItem(PHASE_OVERRIDES_KEY) || "null");
+    if (v && typeof v === "object") return { renames: v.renames || {}, inserts: v.inserts || [] };
+  } catch (e) {}
+  return { renames: {}, inserts: [] };
+}
+function setPhaseOverrides(ov) {
+  localStorage.setItem(PHASE_OVERRIDES_KEY, JSON.stringify(ov));
+}
+
+// 原始默认时间线的快照（页面加载时立刻存一份，后面改名/插入都不动它）
+let WORLD_DEFAULT_TIMELINE = null;
+function snapshotDefaultTimeline() {
+  if (!WORLD_DEFAULT_TIMELINE) {
+    WORLD_DEFAULT_TIMELINE = JSON.parse(JSON.stringify(WORLD.timeline));
+  }
+}
+
+// 计算"有效时间线"：默认阶段(应用改名) + 插入的自定义阶段，按 afterKey 定位插入
+function computeEffectiveTimeline() {
+  snapshotDefaultTimeline();
+  const ov = getPhaseOverrides();
+  const base = JSON.parse(JSON.stringify(WORLD_DEFAULT_TIMELINE));
+
+  // 应用改名
+  base.forEach(p => {
+    if (ov.renames[p.key]) p.name = ov.renames[p.key];
+  });
+
+  // 应用插入：afterKey = null 表示插在最前面；否则插在该 key 对应阶段之后
+  // 同一个 afterKey 可能插多个，按插入顺序依次排列
+  let result = [...base];
+  (ov.inserts || []).forEach(ins => {
+    const phase = { ...ins.phase, isCustom: true };
+    if (ins.afterKey === null) {
+      result.unshift(phase);
+    } else {
+      const idx = result.findIndex(p => p.key === ins.afterKey);
+      if (idx === -1) result.push(phase);
+      else result.splice(idx + 1, 0, phase);
+    }
+  });
+
+  return result;
+}
+
+// 应用到运行时的 WORLD.timeline（整体替换，供所有读取 WORLD.timeline 的地方使用）
+function refreshEffectiveTimeline() {
+  WORLD.timeline = computeEffectiveTimeline();
+}
+
+// 重置为默认（清覆盖、还原时间线）
+function resetPhaseOverrides() {
+  localStorage.removeItem(PHASE_OVERRIDES_KEY);
+  snapshotDefaultTimeline();
+  WORLD.timeline = JSON.parse(JSON.stringify(WORLD_DEFAULT_TIMELINE));
+}
+
 function getEventAnchors() {
   let a = null;
   try { a = JSON.parse(localStorage.getItem(EVENT_ANCHORS_KEY) || "null"); } catch (e) {}
@@ -8195,17 +8261,30 @@ if (proacEnabled && proacSaveBtn) {
         if(sel.value==="deepseek"){body.querySelector("#c_url").value="https://api.deepseek.com/v1";body.querySelector("#c_model").value="deepseek-chat";}
       };
 body.querySelector("#resetStartNodeBtn").onclick = () => {
-  if (!confirm("⚠️ 重新选择开局会清空当前所有剧情进度（回合、聊天记录、推特等全部重置，好感度不会重置），确认继续？")) return;
-  localStorage.removeItem("sv_start_node");
-  localStorage.removeItem("sv_start_node_chosen_v1");
-  localStorage.removeItem("sv_state");
-  // 顺便清空帖子，避免旧数据污染
-  localStorage.removeItem("sv_posts");
-  localStorage.removeItem("sv_chats");
-  toast("已重置，即将刷新");
+  if (!confirm("⚠️ 重新选择开局会清空当前所有剧情进度（好感度、回合、聊天记录、推特、日记、小剧场等），但会保留你的人设存档、API 配置、外观设置、世界书。确认继续？")) return;
+
+  // ★ 只清剧情相关数据，不动人设/外观/API/存档/世界书
+  const keysToRemove = [
+    "sv_start_node", "sv_start_node_chosen_v1", "sv_state",
+    "sv_posts", "sv_chats", "sv_contacts",
+    "sv_diary", "sv_diary_me", "sv_theaters", "sv_peter_binding",
+    "sv_sidequests", "sv_mj_notebook", "sv_behavior_log",
+    "sv_patrol", "sv_patrol_pending", "sv_patrol_mode",
+    "sv_memory_state", "sv_blank4y_turns",
+    "sv_peter_identity_revealed", "sv_peter_last_user_act",
+    "sv_peter_idle_turns", "sv_peter_last_proactive",
+    "sv_event_anchors",  // ★ 阶段锚点进度清空（但自定义阶段模板不受影响，见第3部分）
+    "sv_phase_overrides",
+    "sv_daily_news",
+    "sv_school_scores", "sv_school_team", "sv_school_class_used",
+    "sv_school_class_pending", "sv_school_dance",
+    "sv_blacklist"
+  ];
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  toast("已重置剧情，人设/API/外观/世界书已保留，即将刷新");
   setTimeout(() => location.reload(), 600);
-};
-      body.querySelector("#fetchModel").onclick = async (e) => {
+};      body.querySelector("#fetchModel").onclick = async (e) => {
         e.target.textContent="...";
         try {
           const m = await fetchModels(body.querySelector("#c_url").value, body.querySelector("#c_key").value);
@@ -8401,14 +8480,18 @@ if (profileSaveBtn) {
           if (latestSlots[i] && !confirm(`档位 ${i + 1} 已有内容，是否覆盖？`)) return;
 
           const p = store.getProfile();
-          const autoLabel = `${p.name || "未命名"} · ${new Date().toLocaleString()}`;
+const curState = store.getState();
+const curPhase = WORLD.timeline[curState.anchor] || WORLD.timeline[0];
+const autoLabel = `${p.name || "未命名"} · ${curPhase.name} · ${new Date().toLocaleString()}`;
 
-          latestSlots[i] = {
-            label: autoLabel,
-            timestamp: Date.now(),
-            profile: JSON.parse(JSON.stringify(store.getProfile())),
-            data: collectAllData()
-          };
+latestSlots[i] = {
+  label: autoLabel,
+  timestamp: Date.now(),
+  phaseName: curPhase.name,                 // ★ 单独存一份方便读档时显示
+  phaseKey: curPhase.key,
+  profile: JSON.parse(JSON.stringify(store.getProfile())),
+  data: collectAllData()                     // ★ 已经包含所有 sv_ 前缀数据（聊天/日记/剧场/推特等）
+};
           setProfileSlots(latestSlots);
 
           toast(`✅ 已保存到人设档位 ${i + 1}`);
@@ -16075,13 +16158,25 @@ function parseOptions(raw) {
   // 先把各种反引号/``` 去掉
   text = text.replace(/```[a-z]*/gi, "").replace(/```/g, "");
 
-  // ★ 关键：AI 有时把 4 个选项挤成一行（"A. xxx B. xxx C. xxx"），
-  //   这里手动在 " B." " C." " D." 前面插换行
-  //   避免误伤正文（只处理选项区，且只处理大写 A-D 后面紧跟 . 、 : ： ) 的情况）
-  text = text.replace(/([^\n])\s+([B-D])\s*[\.\、\:：\)]\s*/g, (m, p1, p2) => {
-    // 只在前面不是字母/数字时拆分，避免把 "Version 2.0" 之类拆开
-    return p1 + "\n" + p2 + ". ";
-  });
+  // ★ 关键：只在"选项标记之后"的区域做拆行，不污染正文
+  const markerMatch = text.match(/[【\[]\s*(?:选项|你的选择|行动选择|请选择|选择)\s*[】\]]/i);
+  if (markerMatch) {
+    const markerEnd = markerMatch.index + markerMatch[0].length;
+    const before = text.slice(0, markerEnd);
+    let after = text.slice(markerEnd);
+
+    // 只在选项区域里做 " B." " C." " D." 拆行
+    after = after.replace(/([^\n])\s+([B-D])\s*[\.\、\:：\)]\s*/g, (m, p1, p2) => {
+      return p1 + "\n" + p2 + ". ";
+    });
+
+    text = before + after;
+  } else {
+    // 没找到选项标记时，才在全文里尝试拆行（保留原有兜底行为）
+    text = text.replace(/([^\n])\s+([B-D])\s*[\.\、\:：\)]\s*/g, (m, p1, p2) => {
+      return p1 + "\n" + p2 + ". ";
+    });
+  }
 
   // 按行提取
   const lines = text.split("\n");
@@ -16092,18 +16187,15 @@ function parseOptions(raw) {
     const line = rawLine.trim();
     if (!line) continue;
 
-    // 匹配行首 A. / A、 / A: / A： / A)  （允许前置 ** 加粗和空格）
     const m = line.match(/^(?:\*{0,2}\s*)?([A-D])\s*[\.\、\:：\)]\s*(?:\*{0,2}\s*)?(.+)$/);
 
     if (m) {
       if (current) collected.push(current);
       current = (m[1] + ". " + m[2]).trim();
     } else {
-      // 没有 A/B/C/D 前缀的行 → 如果上一行是选项，就拼到上一行（多行选项）
       if (current) {
         current += " " + line;
       } else {
-        // 前面没有选项行，说明不是选项内容，跳过
         continue;
       }
     }
@@ -19313,116 +19405,307 @@ window.showEventAnchorPanel = function() {
   div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
 
   const render = () => {
-    const anchorsNow = getEventAnchors();
-    const doneNow = store.getState().doneBeats || {};
-    let html = `<div style="max-width:560px;margin:0 auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <h2 style="margin:0;font-size:17px;">📌 事件锚点</h2>
-        <button id="anchorClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
-      </div>
-      <p style="font-size:11px;color:var(--muted);margin:0 0 14px;line-height:1.6;">
-        ✅已发生 ▶当前阶段 ⬜待发生。点标题可改名，✕删除，＋加锚点。勾选=已发生（AI 不再重演）。
-      </p >`;
+  const anchorsNow = getEventAnchors();
+  const doneNow = store.getState().doneBeats || {};
+  let html = `<div style="max-width:560px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h2 style="margin:0;font-size:17px;">📌 事件锚点 · 阶段管理</h2>
+      <button id="anchorClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
+      ✅已发生 ▶当前阶段 ⬜待发生。点锚点标题可改名，✕删除，＋加锚点。阶段标题旁可改名/在此阶段后插入新阶段。
+    </p >
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button id="anchorNewPhaseStart" class="btn ghost" style="flex:1;font-size:12px;color:var(--accent-2);border-color:var(--accent-2);">🧩 插在最前面</button>
+      <button id="phaseResetAll" class="btn ghost" style="flex:1;font-size:12px;color:#e62429;border-color:#e62429;">🔄 恢复默认阶段划分</button>
+    </div>`;
 
-    WORLD.timeline.forEach((phase, pIdx) => {
-      const beats = anchorsNow[phase.key] || [];
-      const isCur = phase.key === curKey;
-      html += `<div style="background:var(--panel);border:1px solid ${isCur?'var(--accent-2)':'var(--line)'};border-radius:12px;padding:12px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:13px;font-weight:700;color:${isCur?'var(--accent-2)':'var(--text)'};">${isCur?'▶ ':''}${esc(phase.name)}</div>
-          <button class="anchor-add" data-pk="${phase.key}" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:8px;padding:2px 10px;font-size:12px;cursor:pointer;">＋ 加</button>
-        </div>`;
-      beats.forEach((b, i) => {
-  const isDone = !!doneNow[b.id];
-  const isFirst = (i === 0);
-  const isLast = (i === beats.length - 1);
-  html += `<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px dashed var(--line);">
-    <input type="checkbox" class="anchor-chk" data-id="${b.id}" ${isDone?'checked':''} style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent-2);">
-    <span class="anchor-title" data-pk="${phase.key}" data-id="${b.id}" style="flex:1;font-size:12.5px;cursor:pointer;${isDone?'color:var(--muted);text-decoration:line-through;':'color:var(--text);'}">${esc(b.title)}</span>
-    <button class="anchor-up" data-pk="${phase.key}" data-id="${b.id}" ${isFirst?'disabled':''} style="background:none;border:none;color:${isFirst?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isFirst?'default':'pointer'};flex-shrink:0;padding:0 3px;">↑</button>
-    <button class="anchor-down" data-pk="${phase.key}" data-id="${b.id}" ${isLast?'disabled':''} style="background:none;border:none;color:${isLast?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isLast?'default':'pointer'};flex-shrink:0;padding:0 3px;">↓</button>
-    <button class="anchor-del" data-pk="${phase.key}" data-id="${b.id}" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;flex-shrink:0;padding:0 3px;">✕</button>
-  </div>`;
-});
-      if (!beats.length) html += `<div style="font-size:11px;color:var(--muted);padding:4px 0;">（空，点＋添加）</div>`;
-      html += `</div>`;
+  WORLD.timeline.forEach((phase, pIdx) => {
+    const beats = anchorsNow[phase.key] || [];
+    const isCur = phase.key === curKey;
+    html += `<div style="background:var(--panel);border:1px solid ${isCur?'var(--accent-2)':'var(--line)'};border-radius:12px;padding:12px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:6px;">
+        <div class="phase-name" data-pk="${phase.key}" style="font-size:13px;font-weight:700;color:${isCur?'var(--accent-2)':'var(--text)'};cursor:pointer;flex:1;min-width:0;">${isCur?'▶ ':''}${esc(phase.name)}${phase.isCustom ? ' <span style="font-size:10px;color:var(--muted);">(自定义)</span>' : ''}</div>
+        <button class="anchor-add" data-pk="${phase.key}" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">＋锚点</button>
+        <button class="phase-insert-after" data-pk="${phase.key}" style="background:var(--panel-2);border:1px solid var(--line);color:#8a2be2;border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">🧩此后插</button>
+        ${phase.isCustom ? `<button class="phase-del-custom" data-pk="${phase.key}" style="background:var(--panel-2);border:1px solid var(--line);color:#e62429;border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">删阶段</button>` : ""}
+      </div>`;
+    beats.forEach((b, i) => {
+      const isDone = !!doneNow[b.id];
+      const isFirst = (i === 0);
+      const isLast = (i === beats.length - 1);
+      html += `<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px dashed var(--line);">
+        <input type="checkbox" class="anchor-chk" data-id="${b.id}" ${isDone?'checked':''} style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent-2);">
+        <span class="anchor-title" data-pk="${phase.key}" data-id="${b.id}" style="flex:1;font-size:12.5px;cursor:pointer;${isDone?'color:var(--muted);text-decoration:line-through;':'color:var(--text);'}">${esc(b.title)}</span>
+        <button class="anchor-up" data-pk="${phase.key}" data-id="${b.id}" ${isFirst?'disabled':''} style="background:none;border:none;color:${isFirst?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isFirst?'default':'pointer'};flex-shrink:0;padding:0 3px;">↑</button>
+        <button class="anchor-down" data-pk="${phase.key}" data-id="${b.id}" ${isLast?'disabled':''} style="background:none;border:none;color:${isLast?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isLast?'default':'pointer'};flex-shrink:0;padding:0 3px;">↓</button>
+        <button class="anchor-del" data-pk="${phase.key}" data-id="${b.id}" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;flex-shrink:0;padding:0 3px;">✕</button>
+      </div>`;
     });
+    if (!beats.length) html += `<div style="font-size:11px;color:var(--muted);padding:4px 0;">（空，点＋锚点添加）</div>`;
+    html += `</div>`;
+  });
 
-    html += `<button id="anchorReset" class="btn ghost" style="width:100%;margin-top:4px;color:#e62429;border-color:#e62429;font-size:12px;">🔄 恢复默认锚点（不影响已勾选的完成状态）</button></div>`;
-    div.innerHTML = html;
-    bind();
-  };
+  html += `<button id="anchorReset" class="btn ghost" style="width:100%;margin-top:4px;color:#e62429;border-color:#e62429;font-size:12px;">🔄 仅恢复默认锚点列表（不影响阶段结构）</button></div>`;
+  div.innerHTML = html;
+  bind();
+};
 
   const bind = () => {
-    div.querySelector("#anchorClose").onclick = () => div.remove();
+  div.querySelector("#anchorClose").onclick = () => div.remove();
 
-    div.querySelectorAll(".anchor-chk").forEach(el => {
-      el.onchange = () => {
-        const st = store.getState();
-        st.doneBeats = st.doneBeats || {};
-        if (el.checked) st.doneBeats[el.dataset.id] = true;
-        else delete st.doneBeats[el.dataset.id];
-        store.setState(st);
-        render();
-      };
-    });
-
-    div.querySelectorAll(".anchor-title").forEach(el => {
-      el.onclick = () => {
-        const nv = prompt("修改锚点名称：", el.textContent);
-        if (!nv || !nv.trim()) return;
-        const a = getEventAnchors();
-        const arr = a[el.dataset.pk] || [];
-        const t = arr.find(x => x.id === el.dataset.id);
-        if (t) { t.title = nv.trim(); setEventAnchors(a); render(); }
-      };
-    });
-
-    div.querySelectorAll(".anchor-del").forEach(el => {
-      el.onclick = () => {
-        if (!confirm("删除这个锚点？")) return;
-        const a = getEventAnchors();
-        a[el.dataset.pk] = (a[el.dataset.pk] || []).filter(x => x.id !== el.dataset.id);
-        setEventAnchors(a);
-        render();
-      };
-    });
-
-    div.querySelectorAll(".anchor-add").forEach(el => {
-      el.onclick = () => {
-        const nv = prompt("新锚点名称：");
-        if (!nv || !nv.trim()) return;
-        const a = getEventAnchors();
-        a[el.dataset.pk] = a[el.dataset.pk] || [];
-        a[el.dataset.pk].push({ id: el.dataset.pk + "_c" + Date.now(), title: nv.trim() });
-        setEventAnchors(a);
-        render();
-      };
-    });
-
-div.querySelectorAll(".anchor-up").forEach(el => {
-  el.onclick = () => {
-    if (el.disabled) return;
-    moveBeat(el.dataset.pk, el.dataset.id, -1);
-    render();
-  };
-});
-
-div.querySelectorAll(".anchor-down").forEach(el => {
-  el.onclick = () => {
-    if (el.disabled) return;
-    moveBeat(el.dataset.pk, el.dataset.id, +1);
-    render();
-  };
-});
-
-    div.querySelector("#anchorReset").onclick = () => {
-      if (!confirm("恢复默认锚点列表？你自定义增删的锚点会丢失，但完成勾选状态保留。")) return;
-      setEventAnchors(getDefaultEventAnchors());
+  div.querySelectorAll(".anchor-chk").forEach(el => {
+    el.onchange = () => {
+      const st = store.getState();
+      st.doneBeats = st.doneBeats || {};
+      if (el.checked) st.doneBeats[el.dataset.id] = true;
+      else delete st.doneBeats[el.dataset.id];
+      store.setState(st);
       render();
-      toast("已恢复默认锚点");
     };
+  });
+
+  div.querySelectorAll(".anchor-title").forEach(el => {
+    el.onclick = () => {
+      const nv = prompt("修改锚点名称：", el.textContent);
+      if (!nv || !nv.trim()) return;
+      const a = getEventAnchors();
+      const arr = a[el.dataset.pk] || [];
+      const t = arr.find(x => x.id === el.dataset.id);
+      if (t) { t.title = nv.trim(); setEventAnchors(a); render(); }
+    };
+  });
+
+  div.querySelectorAll(".anchor-del").forEach(el => {
+    el.onclick = () => {
+      if (!confirm("删除这个锚点？")) return;
+      const a = getEventAnchors();
+      a[el.dataset.pk] = (a[el.dataset.pk] || []).filter(x => x.id !== el.dataset.id);
+      setEventAnchors(a);
+      render();
+    };
+  });
+
+  div.querySelectorAll(".anchor-add").forEach(el => {
+    el.onclick = () => {
+      const nv = prompt("新锚点名称：");
+      if (!nv || !nv.trim()) return;
+      const a = getEventAnchors();
+      a[el.dataset.pk] = a[el.dataset.pk] || [];
+      a[el.dataset.pk].push({ id: el.dataset.pk + "_c" + Date.now(), title: nv.trim() });
+      setEventAnchors(a);
+      render();
+    };
+  });
+
+  div.querySelectorAll(".anchor-up").forEach(el => {
+    el.onclick = () => { if (el.disabled) return; moveBeat(el.dataset.pk, el.dataset.id, -1); render(); };
+  });
+  div.querySelectorAll(".anchor-down").forEach(el => {
+    el.onclick = () => { if (el.disabled) return; moveBeat(el.dataset.pk, el.dataset.id, +1); render(); };
+  });
+
+  div.querySelector("#anchorReset").onclick = () => {
+    if (!confirm("恢复默认锚点列表？你自定义增删的锚点会丢失，但完成勾选状态保留。（不影响阶段结构）")) return;
+    // 只重置内置阶段的锚点，不动自定义阶段的锚点
+    const defaultAnchors = getDefaultEventAnchors();
+    const curAnchors = getEventAnchors();
+    Object.keys(defaultAnchors).forEach(k => { curAnchors[k] = defaultAnchors[k]; });
+    setEventAnchors(curAnchors);
+    render();
+    toast("已恢复默认锚点");
   };
+
+  // ★ 阶段改名
+  div.querySelectorAll(".phase-name").forEach(el => {
+    el.onclick = () => {
+      const pk = el.dataset.pk;
+      const curPhase = WORLD.timeline.find(p => p.key === pk);
+      if (!curPhase) return;
+      const nv = prompt("修改阶段名称：", curPhase.name);
+      if (!nv || !nv.trim() || nv.trim() === curPhase.name) return;
+
+      if (curPhase.isCustom) {
+        // 自定义阶段：直接改 inserts 里存的 phase.name
+        const ov = getPhaseOverrides();
+        ov.inserts.forEach(ins => { if (ins.phase.key === pk) ins.phase.name = nv.trim(); });
+        setPhaseOverrides(ov);
+      } else {
+        // 默认阶段：记录改名映射
+        const ov = getPhaseOverrides();
+        ov.renames[pk] = nv.trim();
+        setPhaseOverrides(ov);
+      }
+      refreshEffectiveTimeline();
+      render();
+      toast("阶段名称已修改");
+    };
+  });
+
+  // ★ 在此阶段后插入新阶段
+  div.querySelectorAll(".phase-insert-after").forEach(el => {
+    el.onclick = () => showPhaseInsertEditor(el.dataset.pk, render);
+  });
+
+  // ★ 最前面插入
+  const startBtn = div.querySelector("#anchorNewPhaseStart");
+  if (startBtn) startBtn.onclick = () => showPhaseInsertEditor(null, render);
+
+  // ★ 删除自定义阶段
+  div.querySelectorAll(".phase-del-custom").forEach(el => {
+    el.onclick = () => {
+      if (!confirm("删除这个自定义阶段？它的锚点也会被删除。")) return;
+      const pk = el.dataset.pk;
+      const ov = getPhaseOverrides();
+      ov.inserts = ov.inserts.filter(ins => ins.phase.key !== pk);
+      setPhaseOverrides(ov);
+      const a = getEventAnchors();
+      delete a[pk];
+      setEventAnchors(a);
+      refreshEffectiveTimeline();
+      render();
+      toast("已删除自定义阶段");
+    };
+  });
+
+  // ★ 恢复默认阶段划分（清所有覆盖）
+  const resetAllBtn = div.querySelector("#phaseResetAll");
+  if (resetAllBtn) {
+    resetAllBtn.onclick = () => {
+      if (!confirm("确定恢复为默认的阶段划分吗？所有改名和插入的自定义阶段都会被移除（但不影响已勾选的锚点完成状态和当前游戏进度）。")) return;
+      resetPhaseOverrides();
+      render();
+      toast("已恢复默认阶段划分");
+    };
+  }
+};
+
+// ============================================================
+// 🧩 阶段插入编辑弹窗（afterKey = null 表示插最前面，否则插在该 key 阶段之后）
+// ============================================================
+function showPhaseInsertEditor(afterKey, onDoneRefresh) {
+  document.querySelectorAll(".__custom_phase_editor").forEach(el => el.remove());
+
+  const overlay = document.createElement("div");
+  overlay.className = "__custom_phase_editor";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;";
+
+  const panel = document.createElement("div");
+  panel.style.cssText = "max-width:460px;width:100%;max-height:90vh;overflow-y:auto;background:var(--panel,#14141c);border:1px solid var(--line,#2a2a38);border-radius:18px;padding:20px;color:var(--text,#f2f3f7);";
+
+  const s = store.getState();
+  const defaultYear = s.gameYear || 2024;
+  const afterPhase = afterKey ? WORLD.timeline.find(p => p.key === afterKey) : null;
+
+  panel.innerHTML = `
+    <h2 style="margin:0 0 4px;font-size:17px;">🧩 插入新阶段</h2>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 14px;line-height:1.6;">
+      ${afterPhase ? `将插入在「${esc(afterPhase.name)}」之后。` : "将插入在时间线最前面。"}
+      本局游戏内立即生效；重新选择开局后会恢复为默认阶段划分。
+    </p >
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;color:var(--muted);">阶段名称 *</label>
+      <input id="cp_name" placeholder="例如：暗影宇宙支线" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;margin-top:4px;">
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;">
+        <label style="font-size:12px;color:var(--muted);">起始年</label>
+        <input id="cp_year" type="number" value="${defaultYear}" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;margin-top:4px;">
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:12px;color:var(--muted);">月份区间</label>
+        <div style="display:flex;gap:4px;margin-top:4px;">
+          <input id="cp_m1" type="number" min="1" max="12" value="1" style="width:100%;box-sizing:border-box;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+          <input id="cp_m2" type="number" min="1" max="12" value="12" style="width:100%;box-sizing:border-box;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;color:var(--muted);">阶段概述 *</label>
+      <textarea id="cp_summary" rows="3" placeholder="这个阶段讲的是什么故事……" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;color:var(--muted);">允许出现的角色（逗号分隔）</label>
+      <input id="cp_allowed" placeholder="彼得·帕克, MJ, 自定义角色" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;margin-top:4px;">
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;color:var(--muted);">禁止出现的角色（逗号分隔）</label>
+      <input id="cp_forbidden" placeholder="灭霸, 秃鹫" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;margin-top:4px;">
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;color:var(--muted);">必然发生的大事件（可留空）</label>
+      <textarea id="cp_forced" rows="2" placeholder="例如：主角会遇到……" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;color:var(--muted);">节奏说明（给 AI 的节奏指引，可留空）</label>
+      <textarea id="cp_pacing" rows="2" placeholder="例如：每个大事件间要插入日常铺垫……" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;color:var(--muted);">锚点节拍（每行一个，按顺序）</label>
+      <textarea id="cp_beats" rows="6" placeholder="开场·相遇&#10;冲突升级&#10;转折点&#10;高潮对决&#10;结局收尾" style="width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;margin-top:4px;resize:vertical;font-family:inherit;"></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button id="cp_cancel" class="btn ghost" style="flex:1;">取消</button>
+      <button id="cp_save" class="btn" style="flex:1;">💾 插入阶段</button>
+    </div>
+  `;
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  panel.querySelector("#cp_cancel").onclick = close;
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+  panel.querySelector("#cp_save").onclick = () => {
+    const name = panel.querySelector("#cp_name").value.trim();
+    const summary = panel.querySelector("#cp_summary").value.trim();
+    const beatsRaw = panel.querySelector("#cp_beats").value.trim();
+    if (!name) return toast("请填写阶段名称");
+    if (!summary) return toast("请填写阶段概述");
+    if (!beatsRaw) return toast("请至少填写一个锚点节拍");
+
+    const beats = beatsRaw.split("\n").map(x => x.trim()).filter(Boolean);
+    const year = parseInt(panel.querySelector("#cp_year").value) || defaultYear;
+    const m1 = parseInt(panel.querySelector("#cp_m1").value) || 1;
+    const m2 = parseInt(panel.querySelector("#cp_m2").value) || 12;
+    const allowed = panel.querySelector("#cp_allowed").value.split(",").map(x => x.trim()).filter(Boolean);
+    const forbidden = panel.querySelector("#cp_forbidden").value.split(",").map(x => x.trim()).filter(Boolean);
+    const forced = panel.querySelector("#cp_forced").value.trim();
+    const pacing = panel.querySelector("#cp_pacing").value.trim();
+
+    const key = "custom_" + Date.now();
+    const phaseObj = {
+      key, name, year, monthRange: [m1, m2], summary,
+      allowed, forbidden, forcedEvent: forced || null, pacing,
+      mutableOutcomes: [], smallEvents: [], mjRelation: ""
+    };
+
+    const ov = getPhaseOverrides();
+    ov.inserts.push({ afterKey: afterKey, phase: phaseObj });
+    setPhaseOverrides(ov);
+
+    // 写锚点
+    const anchors = getEventAnchors();
+    anchors[key] = beats.map((title, i) => ({ id: key + "_" + (i + 1), title }));
+    setEventAnchors(anchors);
+
+    refreshEffectiveTimeline();
+
+    toast(`✅ 已插入阶段「${name}」`);
+    close();
+    if (typeof onDoneRefresh === "function") onDoneRefresh();
+  };
+}
 
   render();
   document.querySelector(".device").appendChild(div);
@@ -19918,6 +20201,9 @@ function formatDialogue(text) {
 
   return s;
 }
+// 快照默认时间线 + 应用已保存的阶段覆盖（改名/插入自定义阶段）
+snapshotDefaultTimeline();
+refreshEffectiveTimeline();
 // ============================================================
 // 🧠 启动时：检测老存档 + 决定是否弹遗忘魔咒窗
 //   - 只在"老玩家 + 已到 2024 + 没问过"时弹
