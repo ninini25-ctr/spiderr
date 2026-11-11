@@ -3530,7 +3530,8 @@ getProactiveCfg(){
   });
 },
 setProactiveCfg(c){ this.set("sv_proactive_cfg", c); },
-
+getCloudCfg(){ return this.get("sv_cloud_cfg", { url:"", code:"" }); },
+setCloudCfg(c){ this.set("sv_cloud_cfg", c); },
   // ===== 🕵️ MJ 笔记本 =====
   getMjNotebook() {
     return this.get("sv_mj_notebook", {
@@ -8308,6 +8309,38 @@ body.querySelectorAll(".c-ref-trigger").forEach(btn => {
           <button class="btn ghost" id="clearDataBtn" style="color:#e62429;border-color:#e62429;">🗑️ 清空全部数据</button>
 <button class="btn ghost" id="requestPersistBtn" style="margin-top:8px;">💾 申请持久化存储（防止浏览器清理）</button>
           <div id="persistStatus" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;"></div>
+<div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
+  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">☁️ 云同步（PC/手机互通）</div>
+  <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
+    在两台设备上填<b>相同的同步码</b>即可互通存档。<br>
+    同步码就是你的密码，请设长一点、别人猜不到（至少6位）。<br>
+    ⚠️ 只同步剧情存档，不含图片和音乐。
+  </p >
+  <div class="field">
+    <label>Worker 网址</label>
+    <input id="cloud_url" placeholder="https://sv-sync.xxx.workers.dev" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;">
+  </div>
+  <div class="field">
+    <label>你的同步码（相当于密码）</label>
+    <input id="cloud_code" placeholder="例如：myspider-2024-abc123" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;">
+  </div>
+
+  <button class="btn" id="cloud_save_cfg" style="margin-bottom:8px;">💾 保存云同步设置</button>
+
+  <!-- ★ 云端状态显示区 -->
+  <div id="cloud_meta_box" style="background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:11.5px;color:var(--muted);line-height:1.7;">
+    云端状态：未检查
+  </div>
+
+  <div class="row" style="gap:8px;margin-bottom:8px;">
+    <button class="btn ghost" id="cloud_check" style="flex:1;">🔍 检查云端</button>
+  </div>
+  <div class="row" style="gap:8px;">
+    <button class="btn ghost" id="cloud_upload" style="flex:1;">☁️⬆️ 上传到云</button>
+    <button class="btn ghost" id="cloud_download" style="flex:1;">☁️⬇️ 从云读取</button>
+  </div>
+  <div id="cloud_status" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;"></div>
+</div>
         </div>
 
 <div class="card">
@@ -8737,7 +8770,198 @@ if (profileLoadBtn) {
     }
   };
 }
+// ===== ☁️ 云同步（含云端状态检测）=====
+(function bindCloudSync() {
+  const urlInput = body.querySelector("#cloud_url");
+  const codeInput = body.querySelector("#cloud_code");
+  const statusEl = body.querySelector("#cloud_status");
+  const metaBox = body.querySelector("#cloud_meta_box");
+  const saveCfgBtn = body.querySelector("#cloud_save_cfg");
+  const checkBtn = body.querySelector("#cloud_check");
+  const uploadBtn = body.querySelector("#cloud_upload");
+  const downloadBtn = body.querySelector("#cloud_download");
+  if (!urlInput || !saveCfgBtn) return;
 
+  // 回填配置
+  const cfg = store.getCloudCfg();
+  urlInput.value = cfg.url || "";
+  codeInput.value = cfg.code || "";
+
+  // 格式化时间差（多久以前）
+  const timeAgo = (ts) => {
+    const diff = Date.now() - ts;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "刚刚";
+    if (min < 60) return min + " 分钟前";
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + " 小时前";
+    const day = Math.floor(hr / 24);
+    return day + " 天前";
+  };
+
+  // 渲染元信息到状态框
+  const renderMeta = (meta) => {
+    if (!meta) {
+      metaBox.innerHTML = "云端状态：<b style='color:var(--muted);'>该同步码下还没有存档</b>";
+      return;
+    }
+    const kb = (meta.size / 1024).toFixed(1);
+    const timeStr = new Date(meta.savedAt).toLocaleString();
+    metaBox.innerHTML =
+      "云端状态：<b style='color:#4caf50;'>有存档</b><br>" +
+      "📅 存档时间：" + timeStr + "（" + timeAgo(meta.savedAt) + "）<br>" +
+      "📦 大小：" + kb + " KB<br>" +
+      "💻 来自：" + esc(meta.device || "未知设备");
+  };
+
+  // 收集本地存档
+  const collectLocal = () => {
+    const dump = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("sv_") && k !== "sv_cloud_cfg") {
+        dump[k] = localStorage.getItem(k);
+      }
+    }
+    try {
+      dump["sv_memory_state"] = JSON.stringify(store.getMemoryState());
+      dump["sv_blank4y_turns"] = String(getBlank4yTurns());
+    } catch (e) {}
+    // 带个设备标识，方便识别是哪台设备传的
+    dump["__device"] = (navigator.userAgent.includes("Mobile") ? "📱手机" : "💻电脑") +
+      " · " + (navigator.platform || "");
+    return dump;
+  };
+
+  // 保存配置
+  saveCfgBtn.onclick = () => {
+    const url = urlInput.value.trim().replace(/\/+$/, "");
+    const code = codeInput.value.trim();
+    if (!url) return toast("请填 Worker 网址");
+    if (code.length < 6) return toast("同步码至少 6 位");
+    store.setCloudCfg({ url, code });
+    toast("云同步设置已保存");
+    metaBox.innerHTML = "云端状态：未检查（点「检查云端」查看）";
+  };
+
+  // 🔍 检查云端（只查元信息，不覆盖本地）
+  const doCheck = async (silent) => {
+    const c = store.getCloudCfg();
+    if (!c.url || !c.code) {
+      if (!silent) toast("请先保存云同步设置");
+      return null;
+    }
+    if (!silent) { checkBtn.disabled = true; metaBox.innerHTML = "⏳ 查询中..."; }
+    try {
+      const res = await fetch(c.url, {
+        method: "GET",
+        headers: { "X-Sync-Code": c.code, "X-Action": "check" }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      if (!data.exists) {
+        renderMeta(null);
+        return null;
+      }
+      renderMeta(data.meta);
+      return data.meta;
+    } catch (e) {
+      if (!silent) metaBox.innerHTML = "❌ 查询失败：" + esc(e.message);
+      return null;
+    } finally {
+      if (!silent) checkBtn.disabled = false;
+    }
+  };
+  checkBtn.onclick = () => doCheck(false);
+
+  // 上传
+  uploadBtn.onclick = async () => {
+    const c = store.getCloudCfg();
+    if (!c.url || !c.code) return toast("请先保存云同步设置");
+    uploadBtn.disabled = true;
+    statusEl.textContent = "⏳ 上传中...";
+    try {
+      const res = await fetch(c.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Sync-Code": c.code },
+        body: JSON.stringify(collectLocal())
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      const kb = (data.size / 1024).toFixed(1);
+      statusEl.textContent = "✅ 已上传（" + kb + " KB） · " + new Date().toLocaleString();
+      toast("上传成功");
+      // 上传后刷新云端状态显示
+      renderMeta({ savedAt: data.savedAt, size: data.size, device: data.device });
+    } catch (e) {
+      statusEl.textContent = "❌ 上传失败：" + e.message;
+      toast("上传失败：" + e.message);
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  };
+
+  // 下载（先查云端时间，确认再覆盖）
+  downloadBtn.onclick = async () => {
+    const c = store.getCloudCfg();
+    if (!c.url || !c.code) return toast("请先保存云同步设置");
+
+    // 下载前先查一次元信息
+    statusEl.textContent = "⏳ 正在检查云端...";
+    const meta = await doCheck(true);
+    if (!meta) {
+      statusEl.textContent = "❌ 云端没有存档（这个同步码还没上传过）";
+      toast("云端没有存档");
+      return;
+    }
+
+    const timeStr = new Date(meta.savedAt).toLocaleString();
+    const kb = (meta.size / 1024).toFixed(1);
+    const confirmMsg =
+      "⚠️ 从云端读取会覆盖本设备当前的全部剧情存档！\n\n" +
+      "云端存档信息：\n" +
+      "· 存档时间：" + timeStr + "\n" +
+      "· 大小：" + kb + " KB\n" +
+      "· 来自：" + (meta.device || "未知设备") + "\n\n" +
+      "确定要用云端存档覆盖本地吗？";
+    if (!confirm(confirmMsg)) {
+      statusEl.textContent = "已取消读取";
+      return;
+    }
+
+    downloadBtn.disabled = true;
+    statusEl.textContent = "⏳ 读取中...";
+    try {
+      const res = await fetch(c.url, {
+        method: "GET",
+        headers: { "X-Sync-Code": c.code }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.empty) throw new Error("云端没有存档");
+        throw new Error(data.error || ("HTTP " + res.status));
+      }
+      const record = data.data || {};
+      Object.keys(record).forEach(k => {
+        if (k.startsWith("sv_") && k !== "sv_cloud_cfg") {
+          localStorage.setItem(k, record[k]);
+        }
+      });
+      statusEl.textContent = "✅ 读取成功，即将刷新";
+      toast("读取成功，即将刷新");
+      setTimeout(() => location.reload(), 900);
+    } catch (e) {
+      statusEl.textContent = "❌ 读取失败：" + e.message;
+      toast("读取失败：" + e.message);
+      downloadBtn.disabled = false;
+    }
+  };
+
+  // ★ 打开设置页时，如果已配置好，自动静默检查一次云端状态
+  if (cfg.url && cfg.code) {
+    doCheck(true);
+  }
+})();
      // ===== 数据管理 =====
       body.querySelector("#exportDataBtn").onclick = () => {
   const dump = {};
