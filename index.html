@@ -13965,6 +13965,22 @@ ${phase.key === "phase6_5" ? `
       ? `<div style="font-size:13px;color:var(--text);font-weight:600;">▶ 当前推进：${esc(_curBeat.title)}</div>
          ${_lastDone ? `<div style="font-size:11px;color:var(--accent-2);margin-top:4px;">👉 下一回合将开始新锚点</div>` : ""}`
       : (_phaseBeats.length ? `<div style="font-size:13px;color:#4caf50;font-weight:600;">🎉 本阶段锚点已全部完成，即将推进到下一阶段</div>` : `<div style="font-size:12px;color:var(--muted);">本阶段暂无锚点</div>`)}
+<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #8a2be2;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:11px;color:var(--muted);">📌 事件锚点进度 ${_phaseBeats.length ? `（${_doneCount}/${_phaseBeats.length}）` : ""}</div>
+      <button id="twAnchorBtn2" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;">管理</button>
+    </div>
+    ${_lastDone ? `<div style="font-size:12px;color:#4caf50;margin-bottom:4px;">✅ 上回合完成：${esc(_lastDone.join("、"))}</div>` : ""}
+    ${_curBeat
+      ? `<div style="font-size:13px;color:var(--text);font-weight:600;">▶ 当前推进：${esc(_curBeat.title)}</div>
+         ${_lastDone ? `<div style="font-size:11px;color:var(--accent-2);margin-top:4px;">👉 下一回合将开始新锚点</div>` : ""}`
+      : (_phaseBeats.length ? `<div style="font-size:13px;color:#4caf50;font-weight:600;">🎉 本阶段锚点已全部完成，即将推进到下一阶段</div>` : `<div style="font-size:12px;color:var(--muted);">本阶段暂无锚点</div>`)}
+
+    <!-- ★ 推进按钮挪到这里，远离自定义输入框，并加二次确认 -->
+    <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);">
+      <button id="twSkipBeatBtn" style="flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:7px;font-size:11px;cursor:pointer;">⏩ 跳过当前锚点</button>
+      <button id="twSkipPhaseBtn" style="flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:7px;font-size:11px;cursor:pointer;">⏭️ 跳到下个大事件</button>
+    </div>
 </div>
 ${(() => {
   try {
@@ -13994,10 +14010,6 @@ ${(() => {
       ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
       <div class="card">
   <input id="customAct" placeholder="自定义行动... 用（括号）可跳出剧情下达干预指令" style="width:100%;padding:10px;margin-bottom:8px">
-  <div style="display:flex;gap:8px;margin-bottom:8px;">
-    <button class="btn ghost" style="flex:1;font-size:12px;padding:8px;" onclick="window.advanceToNextBeat()">⏩ 推进至下一个锚点</button>
-    <button class="btn ghost" style="flex:1;font-size:12px;padding:8px;" onclick="window.selectOption('（推进至下一个大事件）')">⏭️ 推进至下一个大事件</button>
-  </div>
   <button class="btn" style="width:100%;" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
 </div>
     </div>`;
@@ -14048,7 +14060,19 @@ ${(() => {
         };
       });
     };
+const _skipBeat = body.querySelector("#twSkipBeatBtn");
+if (_skipBeat) _skipBeat.onclick = () => {
+  if (confirm("确定跳过当前锚点吗？\n\n会把这一拍标记为已完成，下一回合直接进入下一个锚点。")) {
+    window.advanceToNextBeat();
+  }
+};
 
+const _skipPhase = body.querySelector("#twSkipPhaseBtn");
+if (_skipPhase) _skipPhase.onclick = () => {
+  if (confirm("确定跳到下一个大事件吗？\n\n会快进时间、把当前阶段标记为已发生，直接进入下一阶段。此操作跨度较大。")) {
+    window.selectOption("（推进至下一个大事件）");
+  }
+};
 // 🎬 电影原剧情锚点跳转
     const anchorJumpBtn = body.querySelector("#twAnchorJumpBtn");
     if (anchorJumpBtn) {
