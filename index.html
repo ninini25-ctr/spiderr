@@ -6839,13 +6839,20 @@ window.advancePhaseManually = () => {
   const phase = WORLD.timeline[s.anchor];
   if (!phase) return;
 
-  // 校验：本阶段锚点必须全部完成
-  const beats = (getEventAnchors()[phase.key]) || [];
-  const allDone = beats.length === 0 || beats.every(b => (s.doneBeats || {})[b.id]);
-  if (!allDone) {
-    toast("本阶段还有锚点没完成，不能跳阶段");
+  // 校验：本阶段锚点是否全部完成
+const beats = (getEventAnchors()[phase.key]) || [];
+const allDone = beats.length === 0 || beats.every(b => (s.doneBeats || {})[b.id]);
+if (!allDone) {
+  // 不直接拒绝，而是二次确认允许强推（兼容历史 bug 导致 doneBeats 不完整的老存档）
+  const doneCount = beats.filter(b => (s.doneBeats || {})[b.id]).length;
+  if (!confirm(`本阶段还有锚点未标记完成（${doneCount}/${beats.length}）。\n\n如果你确认剧情其实已经演完、只是卡住了，可以强制推进。\n\n要强制推进到下一阶段吗？`)) {
     return;
   }
+  // 强推前把剩余锚点也标记完成，保持数据一致
+  markPhaseBeatsAllDone(s.anchor);
+  const _latest = store.getState();
+  s.doneBeats = _latest.doneBeats || {};
+}
 
   if (s.anchor >= WORLD.timeline.length - 1) {
     // 已经是最后阶段 → 标记主线完结
