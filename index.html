@@ -6829,6 +6829,82 @@ const np = WORLD.timeline[s.anchor];
   openApp('worldline');
 };
 
+// ============================================================
+// ⏭️ 手动推进到下一阶段（当本阶段锚点已全部完成，但系统迟迟没推时用）
+// ============================================================
+window.advancePhaseManually = () => {
+  const s = store.getState();
+  if (s.mainStoryEnded) { toast("主线已完结"); return; }
+
+  const phase = WORLD.timeline[s.anchor];
+  if (!phase) return;
+
+  // 校验：本阶段锚点必须全部完成
+  const beats = (getEventAnchors()[phase.key]) || [];
+  const allDone = beats.length === 0 || beats.every(b => (s.doneBeats || {})[b.id]);
+  if (!allDone) {
+    toast("本阶段还有锚点没完成，不能跳阶段");
+    return;
+  }
+
+  if (s.anchor >= WORLD.timeline.length - 1) {
+    // 已经是最后阶段 → 标记主线完结
+    s.mainStoryEnded = true;
+    s.currentStory = "";
+    s.currentOptions = "";
+    store.setState(s);
+    toast("🎬 主线已完结");
+    openApp("worldline");
+    return;
+  }
+
+  // 记录当前阶段大事件为"已发生"
+  if (phase.forcedEvent) {
+    s.pastEvents = s.pastEvents || [];
+    if (!s.pastEvents.includes(phase.forcedEvent)) {
+      s.pastEvents.push(phase.forcedEvent);
+    }
+  }
+
+  // 空白期退出时重置计数
+  if (phase.key === "phase6_5") {
+    resetBlank4yTurns();
+  }
+
+  // 把当前阶段所有锚点标记为已发生（保险）
+  markPhaseBeatsAllDone(s.anchor);
+  {
+    const _latest = store.getState();
+    s.doneBeats = _latest.doneBeats || {};
+  }
+
+  // 推进到下一阶段
+  s.anchor += 1;
+  const np = WORLD.timeline[s.anchor];
+  s.gameYear = np.year;
+  s.gameMonth = np.monthRange[0];
+  s.gameDay = 1;
+
+  // 身份暴露标记（和自动推进保持一致）
+  const npKey = np.key;
+  if (["phase3","phase4","phase5","phase6","phase6_mv","phase6_5","phase6_6"].includes(npKey)) {
+    localStorage.setItem("sv_peter_identity_revealed", "1");
+  }
+
+  // 清空当前剧情，让下一回合生成新阶段内容
+  s.history = s.history || [];
+  if (s.currentStory) {
+    s.history.push({ story: s.currentStory, choice: "（阶段完成，推进到下一阶段）" });
+  }
+  s.currentStory = "";
+  s.currentOptions = "";
+  s.turn += 1;
+
+  store.setState(s);
+  toast(`⏭️ 已推进到：${np.name}`);
+  openApp("worldline");
+};
+
 window.addComment = async (platform, postIndex, text, parentCommentIndex = null) => {
   if (!text||!text.trim()) return toast("请输入评论");
   const all = store.getPosts();
@@ -13556,8 +13632,37 @@ if (s.mainStoryEnded) {
       openApp('worldline');
     };
 
-    if (!s.currentStory) {
-      body.innerHTML = `<div class="loader"><div class="spin"></div>生成剧情中...</div>`;
+   if (!s.currentStory) {
+  body.innerHTML = `<div class="loader"><div class="spin"></div>生成剧情中...</div>`;
+
+  // ★ 自动兜底：如果当前阶段锚点已全部完成，直接推进到下一阶段，不再生成本阶段剧情
+  (function autoAdvanceIfAllDone() {
+    const curPhase = WORLD.timeline[s.anchor];
+    if (!curPhase) return;
+    const beats = (getEventAnchors()[curPhase.key]) || [];
+    if (!beats.length) return;
+    const allDone = beats.every(b => (s.doneBeats || {})[b.id]);
+    if (!allDone) return;
+    if (s.anchor >= WORLD.timeline.length - 1) return; // 最后阶段交给正常流程
+
+    // 已全部完成 → 推进
+    if (curPhase.forcedEvent) {
+      s.pastEvents = s.pastEvents || [];
+      if (!s.pastEvents.includes(curPhase.forcedEvent)) s.pastEvents.push(curPhase.forcedEvent);
+    }
+    if (curPhase.key === "phase6_5") resetBlank4yTurns();
+    s.anchor += 1;
+    const np = WORLD.timeline[s.anchor];
+    s.gameYear = np.year;
+    s.gameMonth = np.monthRange[0];
+    s.gameDay = 1;
+    const npKey = np.key;
+    if (["phase3","phase4","phase5","phase6","phase6_mv","phase6_5","phase6_6"].includes(npKey)) {
+      localStorage.setItem("sv_peter_identity_revealed", "1");
+    }
+    store.setState(s);
+    toast(`⏭️ 阶段推进 → ${np.name}`);
+  })();
       try {
         const history = s.history || [];
         const lastTurn = history.length > 0 ? history[history.length - 1] : null;
@@ -14188,19 +14293,12 @@ ${phase.key === "phase6_5" ? `
     ${_curBeat
       ? `<div style="font-size:13px;color:var(--text);font-weight:600;">▶ 当前推进：${esc(_curBeat.title)}</div>
          ${_lastDone ? `<div style="font-size:11px;color:var(--accent-2);margin-top:4px;">👉 下一回合将开始新锚点</div>` : ""}`
-      : (_phaseBeats.length ? `<div style="font-size:13px;color:#4caf50;font-weight:600;">🎉 本阶段锚点已全部完成，即将推进到下一阶段</div>` : `<div style="font-size:12px;color:var(--muted);">本阶段暂无锚点</div>`)}
-<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #8a2be2;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <div style="font-size:11px;color:var(--muted);">📌 事件锚点进度 ${_phaseBeats.length ? `（${_doneCount}/${_phaseBeats.length}）` : ""}</div>
-      <button id="twAnchorBtn2" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;">管理</button>
-    </div>
-    ${_lastDone ? `<div style="font-size:12px;color:#4caf50;margin-bottom:4px;">✅ 上回合完成：${esc(_lastDone.join("、"))}</div>` : ""}
-    ${_curBeat
-      ? `<div style="font-size:13px;color:var(--text);font-weight:600;">▶ 当前推进：${esc(_curBeat.title)}</div>
-         ${_lastDone ? `<div style="font-size:11px;color:var(--accent-2);margin-top:4px;">👉 下一回合将开始新锚点</div>` : ""}`
-      : (_phaseBeats.length ? `<div style="font-size:13px;color:#4caf50;font-weight:600;">🎉 本阶段锚点已全部完成，即将推进到下一阶段</div>` : `<div style="font-size:12px;color:var(--muted);">本阶段暂无锚点</div>`)}
+      : (_phaseBeats.length
+          ? `<div style="font-size:13px;color:#4caf50;font-weight:600;">🎉 本阶段锚点已全部完成</div>
+             <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:8px;">系统会在合适时机自动推进；如果卡住了，可点下方手动推进。</div>
+             <button id="twForcePhaseBtn" style="width:100%;background:linear-gradient(135deg,#4caf50,#2d6bff);border:none;color:#fff;border-radius:10px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;">⏭️ 推进到下一阶段</button>`
+          : `<div style="font-size:12px;color:var(--muted);">本阶段暂无锚点</div>`)}
 
-    <!-- ★ 推进按钮挪到这里，远离自定义输入框，并加二次确认 -->
     <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);">
       <button id="twSkipBeatBtn" style="flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:7px;font-size:11px;cursor:pointer;">⏩ 跳过当前锚点</button>
       <button id="twSkipPhaseBtn" style="flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:7px;font-size:11px;cursor:pointer;">⏭️ 跳到下个大事件</button>
@@ -14284,6 +14382,13 @@ ${(() => {
         };
       });
     };
+const _forcePhase = body.querySelector("#twForcePhaseBtn");
+if (_forcePhase) _forcePhase.onclick = () => {
+  if (confirm("本阶段锚点已全部完成。\n\n确定现在推进到下一阶段吗？")) {
+    window.advancePhaseManually();
+  }
+};
+
 const _skipBeat = body.querySelector("#twSkipBeatBtn");
 if (_skipBeat) _skipBeat.onclick = () => {
   if (confirm("确定跳过当前锚点吗？\n\n会把这一拍标记为已完成，下一回合直接进入下一个锚点。")) {
