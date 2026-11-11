@@ -5206,6 +5206,89 @@ function getAffinityOf(name) {
   return 0;
 }
 // ============================================================
+// 🧠 角色别名表：用于判断某段剧情里该角色是否"在场"
+// ============================================================
+function getCharacterAliases(name) {
+  const map = {
+    "彼得·帕克": ["彼得·帕克", "彼得", "帕克", "蜘蛛侠", "Spider-Man", "Spiderman", "Peter"],
+    "托尼·斯塔克": ["托尼·斯塔克", "托尼", "斯塔克", "钢铁侠", "Iron Man", "Tony Stark"],
+    "内德·利兹": ["内德·利兹", "内德", "Ned"],
+    "米歇尔·琼斯": ["米歇尔·琼斯", "米歇尔", "琼斯", "MJ"],
+    "梅婶": ["梅婶", "梅·帕克", "梅帕克", "梅姨", "Aunt May"],
+    "美国队长": ["美国队长", "美队", "史蒂夫·罗杰斯", "史蒂夫", "罗杰斯", "Captain America"],
+    "娜塔莎·罗曼诺夫": ["娜塔莎·罗曼诺夫", "娜塔莎", "罗曼诺夫", "黑寡妇", "Black Widow"],
+    "雷神": ["雷神", "托尔", "Thor"],
+    "绿巨人": ["绿巨人", "布鲁斯·班纳", "班纳", "浩克", "Hulk"],
+    "鹰眼": ["鹰眼", "克林特·巴顿", "克林特", "巴顿", "Hawkeye"],
+    "绯红女巫": ["绯红女巫", "旺达·马克西莫夫", "旺达", "Scarlet Witch"],
+    "冬兵": ["冬兵", "巴基·巴恩斯", "巴基", "冬日战士", "Winter Soldier"],
+    "猎鹰": ["猎鹰", "山姆·威尔逊", "山姆·威尔逊", "威尔逊", "Falcon"],
+    "蚁人": ["蚁人", "斯科特·朗", "斯科特", "Ant-Man"],
+    "黑豹": ["黑豹", "特查拉", "瓦坎达", "Black Panther"],
+    "战争机器": ["战争机器", "罗德", "罗德上校", "War Machine"],
+    "奇异博士": ["奇异博士", "斯蒂芬·斯特兰奇", "斯特兰奇", "至尊法师", "Doctor Strange"],
+    "夜魔侠": ["夜魔侠", "马特·默多克", "默多克", "Daredevil"],
+    "叶莲娜·贝洛娃": ["叶莲娜·贝洛娃", "叶莲娜", "贝洛娃", "Yelena"],
+    "洛基": ["洛基", "Loki"],
+    "Flash Thompson": ["Flash Thompson", "Flash", "弗拉什"],
+    "Liz Allan": ["Liz Allan", "Liz", "莉兹"],
+    "Happy Hogan": ["Happy Hogan", "Happy", "哈皮", "霍根"]
+  };
+  return map[name] || [name];
+}
+
+// ============================================================
+// 🧠 角色记忆隔离规则
+//   - 只把"当前聊天对象亲身在场过的剧情"作为共享记忆喂给 AI
+//   - 其余（玩家和别人的私聊、别的角色内心活动）一律不知道
+// ============================================================
+function buildMemoryIsolationRule(currentUser) {
+  const s = store.getState();
+  const aliases = getCharacterAliases(currentUser);
+  const inScene = (text) => {
+    if (!text) return false;
+    return aliases.some(a => text.includes(a));
+  };
+
+  // 从主线历史 + 当前剧情里，筛出该角色在场的片段（= 共同经历）
+  const history = s.history || [];
+  const shared = [];
+  history.forEach(h => {
+    const story = h && h.story ? h.story : "";
+    if (inScene(story)) shared.push(story.slice(0, 300));
+  });
+  if (s.currentStory && inScene(s.currentStory)) {
+    shared.push(s.currentStory.slice(0, 300));
+  }
+  // 只取最近 5 段，控制 token
+  const sharedText = shared.slice(-5).join("\n———\n");
+
+  let rule = `
+
+【🧠 角色记忆隔离 · 铁律 · 违反即失败】
+1. 你只是「${currentUser}」，你**只拥有你自己亲身经历过的记忆**。
+2. 你**不知道**玩家和其他角色之间的私人聊天内容。
+3. 你**不知道**其他角色的内心想法、私人经历、专属说话风格。
+4. **严禁**用其他角色（尤其是彼得·帕克）的口吻、语气、口头禅、记忆、经历来说话。你有你自己的性格和说话方式。
+5. 你只能基于「你和玩家的直接聊天记录」+「你亲身出现过的剧情」来回应。`;
+
+  if (sharedText) {
+    rule += `
+
+【你亲身经历过的剧情（你在场，可作为共同记忆自然提及）】
+${sharedText}
+
+⚠️ 以上剧情里即使出现了别的角色，你也只知道"你在场时亲眼看到/亲耳听到的部分"，不知道他们背着你发生的事、不知道他们的内心活动。`;
+  } else {
+    rule += `
+
+【你和玩家目前没有共同经历的主线剧情】
+你对玩家的了解仅限于你们之间的直接聊天记录。**不要编造**你们"一起经历过"的大事件或共同回忆。`;
+  }
+
+  return rule;
+}
+// ============================================================
 // 🦸 复联成员：判断在当前游戏时间是否已故
 // ============================================================
 function isAvengerDeadNow(name) {
@@ -11359,6 +11442,9 @@ const peterPersonaRule = (self.currentUser === "彼得·帕克") ? buildPeterBra
 const avengerRule = WORLD.avengersRoster[self.currentUser]
   ? buildAvengerChatRule(self.currentUser)
   : "";
+// 🧠 角色记忆隔离（防止托尼串彼得等角色互串）
+const memoryIsolationRule = buildMemoryIsolationRule(self.currentUser);
+
       const sysPrompt = `${langBrief}你在扮演「${self.currentUser}」，正在和「${playerName}」（${playerGender}，用「${playerPronoun}」指代）用手机发短信。
 
 【当前日期】${nowStr}
@@ -11368,6 +11454,7 @@ ${affBehavior}
 ${peterInitiativeHint}
 ${characterVibe}
 ${avengerRule}
+${memoryIsolationRule}
 ${peterChatterRule}
 ${peterStageRule}
 ${nonPeterCeilingRule}
