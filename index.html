@@ -3410,7 +3410,8 @@ const store = {
   pov: "second",
   pastEvents: [],
 doneBeats: {},      // ★ 阶段内事件锚点完成记录
-beatTurns: {}       // ★ 每个锚点已推进的回合数
+beatTurns: {},       // ★ 每个锚点已推进的回合数
+phaseEnteredTurn: 1    // ★ 新增：进入当前阶段时的回合数
 };
   if (chosen) {
   init.anchor = chosen.anchor ?? 0;
@@ -3422,6 +3423,7 @@ beatTurns: {}       // ★ 每个锚点已推进的回合数
   const s = this.get("sv_state", init);
 if (!s.doneBeats || typeof s.doneBeats !== "object") s.doneBeats = {};
 if (!s.beatTurns || typeof s.beatTurns !== "object") s.beatTurns = {};
+if (typeof s.phaseEnteredTurn !== "number") s.phaseEnteredTurn = s.turn || 1;  // ★ 新增
 
   // ★ 关键：每次 getState 都强制用 contacts 里的彼得 affinity 覆盖，
   // 保证"哪里改了都一致"
@@ -6110,7 +6112,8 @@ try {
 // ★ 重建一个带正确 anchor 的 state，再写入锚点进度
 (function initAnchorsForNewGame() {
   const fresh = store.getState(); // 会用 sv_start_node 重建
-  fresh.doneBeats = {};
+   fresh.doneBeats = {};
+  fresh.phaseEnteredTurn = fresh.turn || 1;   // ★ 新增：记录进入阶段的回合
   store.setState(fresh);
   markEarlierPhasesDone(chosen.anchor || 0);
 
@@ -13644,32 +13647,45 @@ if (s.mainStoryEnded) {
 
   // ★ 自动兜底：如果当前阶段锚点已全部完成，直接推进到下一阶段，不再生成本阶段剧情
   (function autoAdvanceIfAllDone() {
-    const curPhase = WORLD.timeline[s.anchor];
-    if (!curPhase) return;
-    const beats = (getEventAnchors()[curPhase.key]) || [];
-    if (!beats.length) return;
-    const allDone = beats.every(b => (s.doneBeats || {})[b.id]);
-    if (!allDone) return;
-    if (s.anchor >= WORLD.timeline.length - 1) return; // 最后阶段交给正常流程
+  const curPhase = WORLD.timeline[s.anchor];
+  if (!curPhase) return;
+  const beats = (getEventAnchors()[curPhase.key]) || [];
+  if (!beats.length) return;
+  const allDone = beats.every(b => (s.doneBeats || {})[b.id]);
+  if (!allDone) return;
+  if (s.anchor >= WORLD.timeline.length - 1) return;
 
-    // 已全部完成 → 推进
-    if (curPhase.forcedEvent) {
-      s.pastEvents = s.pastEvents || [];
-      if (!s.pastEvents.includes(curPhase.forcedEvent)) s.pastEvents.push(curPhase.forcedEvent);
-    }
-    if (curPhase.key === "phase6_5") resetBlank4yTurns();
-    s.anchor += 1;
-    const np = WORLD.timeline[s.anchor];
-    s.gameYear = np.year;
-    s.gameMonth = np.monthRange[0];
-    s.gameDay = 1;
-    const npKey = np.key;
-    if (["phase3","phase4","phase5","phase6","phase6_mv","phase6_5","phase6_6"].includes(npKey)) {
-      localStorage.setItem("sv_peter_identity_revealed", "1");
-    }
-    store.setState(s);
-    toast(`⏭️ 阶段推进 → ${np.name}`);
-  })();
+  // ★ 关键门槛：必须在当前阶段真正玩过（生成过剧情）至少 2 回合，才允许自动推进。
+  //   防止"从中段进入、锚点被预标记为已发生"时，刚进游戏就被自动踹到下一阶段。
+  const enteredTurn = (typeof s.phaseEnteredTurn === "number") ? s.phaseEnteredTurn : s.turn;
+  const playedInThisPhase = s.turn - enteredTurn;
+  if (playedInThisPhase < 2) {
+    // 还没在本阶段玩够，不自动推进（玩家可以手动点"推进到下一阶段"按钮）
+    return;
+  }
+
+  // 已全部完成且玩够回合 → 推进
+  if (curPhase.forcedEvent) {
+    s.pastEvents = s.pastEvents || [];
+    if (!s.pastEvents.includes(curPhase.forcedEvent)) s.pastEvents.push(curPhase.forcedEvent);
+  }
+  if (curPhase.key === "phase6_5") resetBlank4yTurns();
+  s.anchor += 1;
+  const np = WORLD.timeline[s.anchor];
+  s.gameYear = np.year;
+  s.gameMonth = np.monthRange[0];
+  s.gameDay = 1;
+  s.phaseEnteredTurn = s.turn;   // ★ 记录进入新阶段的回合
+  const npKey = np.key;
+  if (["phase3","phase4","phase5","phase6","phase6_mv","phase6_5","phase6_6"].includes(npKey)) {
+    localStorage.setItem("sv_peter_identity_revealed", "1");
+  }
+  store.setState(s);
+  toast(`⏭️ 阶段推进 → ${np.name}`);
+})();
+// ★ 同步"进入当前阶段的回合数"：如果 anchor 变了但没记录，补上
+if (typeof s.phaseEnteredTurn !== "number") s.phaseEnteredTurn = s.turn;
+
       try {
         const history = s.history || [];
         const lastTurn = history.length > 0 ? history[history.length - 1] : null;
