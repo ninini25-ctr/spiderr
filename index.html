@@ -3663,7 +3663,45 @@ function detectIsOldPlayer() {
 function detectRomanceMode() {
   return detectIsOldPlayer() ? "rekindle" : "newheart";
 }
+// ============================================================
+// 🧹 清空"彼得关系数据"：重新以全新玩家身份开始崭新之日时调用
+//   只清与彼得关系相关的剧情派生数据，不动人设/API/外观/世界书/存档槽
+// ============================================================
+function clearPeterRelationData() {
+  // 1. 清空所有聊天记录（含彼得）
+  store.setChats({});
 
+  // 2. 彼得好感度归零、心声重置
+  const contacts = store.getContacts();
+  contacts.forEach(c => {
+    if (c.name === "彼得·帕克") {
+      c.affinity = 0;
+      c.heart = "暂无";
+    }
+  });
+  store.setContacts(contacts);
+
+  // 3. 同步世界线 state 里的彼得好感度
+  try {
+    const st = store.getState();
+    st.affinity = 0;
+    st.confessed = false;        // 告白状态重置
+    store.setState(st);
+  } catch (e) {}
+
+  // 4. 清掉关系派生数据
+  localStorage.removeItem("sv_behavior_log");     // 行为日志
+  localStorage.removeItem("sv_mj_notebook");       // MJ 笔记本
+  localStorage.removeItem("sv_diary");             // 彼得日记
+  localStorage.removeItem("sv_diary_me");          // 我的日记
+  localStorage.removeItem("sv_peek_scenes");       // 窗（窥视片段）
+
+  // 5. 彼得主动发信 / 身份相关计数
+  localStorage.removeItem("sv_peter_last_user_act");
+  localStorage.removeItem("sv_peter_idle_turns");
+  localStorage.removeItem("sv_peter_last_proactive");
+  localStorage.removeItem("sv_peter_identity_revealed");
+}
 // ============================================================
 // 🧠 检测：老存档是否已推进到"遗忘咒"节点（用于弹窗）
 //   判定条件（满足任一）：
@@ -5903,34 +5941,52 @@ try {
   const isBlank4y = (keyOfChosen === "start_phase6_5");
   const isBrandNew = (keyOfChosen === "start_phase6_6" || keyOfChosen === "start_phase6_6_rekindle");
   const isLegacy   = !isBlank4y && !isBrandNew;
+  const isRekindleNode = (keyOfChosen === "start_phase6_6_rekindle");
+
+  // ★ 进入遗忘之后的剧情（空白期/崭新之日）时，若检测到上一轮残留的彼得关系数据，
+  //   让玩家选择：延续旧情 or 全新开始（清空聊天与好感度）
+  let romanceModeDecided = null;  // "newheart" | "rekindle"
+  if ((isBlank4y || isBrandNew) && !isRekindleNode) {
+    const hadOld = detectIsOldPlayer();
+    if (hadOld) {
+      const keepOld = confirm(
+        "检测到你上一轮留下的聊天记录和好感度。\n\n" +
+        "· 点「确定」= 延续上次的关系（彼得记得你，你不记得他 · 旧情路线）\n" +
+        "· 点「取消」= 全新开始（清空旧聊天和好感度，两人素不相识 · 新人路线）"
+      );
+      if (keepOld) {
+        romanceModeDecided = "rekindle";
+      } else {
+        clearPeterRelationData();   // ★ 这里真正清空残留数据
+        romanceModeDecided = "newheart";
+      }
+    } else {
+      // 本来就没有旧数据 → 纯新玩家
+      romanceModeDecided = "newheart";
+    }
+  }
 
   if (isBlank4y) {
-// 🕸️ 进入空白期时，重置回合计数
-resetBlank4yTurns();
-
-    // 四年空白期：魔咒生效，但还没解锁彼得聊天
+    resetBlank4yTurns();
     store.setMemoryState({
       spellActive: true,
       phase: "blank4y",
       peterChatUnlocked: false,
-      romanceMode: null,
+      romanceMode: romanceModeDecided,   // 空白期先定好，推进到崭新之日会复用
       migrationAsked: true
     });
   } else if (isBrandNew) {
-// 🕸️ 老存档直接跳到崭新之日，不需要空白期计数
-resetBlank4yTurns();
-
-    // 崭新之日：魔咒生效，romanceMode 由检测判定
-    // ★ 关键：这一行必须在 removeItem("sv_state") 之前执行
+    resetBlank4yTurns();
     store.setMemoryState({
       spellActive: true,
       phase: "brandnew",
       peterChatUnlocked: false,
-      romanceMode: detectRomanceMode(),
+      romanceMode: isRekindleNode
+        ? "rekindle"
+        : (romanceModeDecided || detectRomanceMode()),
       migrationAsked: true
     });
   } else if (isLegacy) {
-    // 旧世界：魔咒不生效
     store.setMemoryState({
       spellActive: false,
       phase: "legacy",
