@@ -5841,8 +5841,14 @@ ${extraFields.join("\n")}
 【文风】电影镜头感，严禁 AI 句式。多动作、细节、感官描写。剧情里如果出现具体日期，必须写成 ${timeStr} 附近的日期，不要写成其他年份。
 【语气基调】放松、口语、有生活感。彼得会吐槽、会紧张、会突然认真 —— 别让他像个客服。
 
-【玩家性别】
-玩家是**女性**，请用"她"指代，不要用"他"。
+【玩家性别 · 铁律】
+${
+  p.gender === "male"
+    ? '玩家是**男性**，请用"他"指代，严禁用"她"或"TA"。'
+    : p.gender === "nonbinary"
+    ? '玩家是**非二元性别**，请用"TA"指代，严禁默认用"她"或"他"。'
+    : '玩家是**女性**，请用"她"指代，严禁用"他"。'
+}
 ${intimacyRule}
 ${worldbookPrompt}
 
@@ -11186,8 +11192,9 @@ const worldbookPrompt = buildWorldbookPromptForScope("messages");
       const playerPronoun = playerGender === "男" ? "他" : "她";
       const contactAff = getAffinityOf(self.currentUser);
 const attitude = affinityLevelHint(contactAff);
-const affBehavior = buildAffinityBehaviorBlock(store.getProfile().gender === "male" ? "他" : "她", contactAff);
-      const genderPronoun = (store.getProfile().gender === "male") ? "他" : "她";
+const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
+      const genderPronoun = store.getProfile().gender === "male" ? "他"
+  : store.getProfile().gender === "nonbinary" ? "TA" : "她";
 
       const recent = arr.slice(-store.getChatConfig().maxContext * 2)
         .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
