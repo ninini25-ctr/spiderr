@@ -5197,6 +5197,16 @@ ${rules}
 ${rules}`;
 }
 
+// ============================================================
+// 🧑 统一性别信息：所有 prompt 都用它取性别，杜绝写死
+// ============================================================
+function getGenderInfo(profile) {
+  const g = (profile || store.getProfile()).gender;
+  if (g === "male")      return { gender: "男",   pronoun: "他", label: "男性",     desc: "男（用「他」指代）" };
+  if (g === "nonbinary") return { gender: "非二元", pronoun: "TA", label: "非二元性别", desc: "非二元（用「TA」指代）" };
+  return                        { gender: "女",   pronoun: "她", label: "女性",     desc: "女（用「她」指代）" };
+}
+
 // ===== 快速拿到某个联系人的好感度 =====
 function getAffinityOf(name) {
   const c = store.getContacts().find(x => x.name === name);
@@ -5841,14 +5851,8 @@ ${extraFields.join("\n")}
 【文风】电影镜头感，严禁 AI 句式。多动作、细节、感官描写。剧情里如果出现具体日期，必须写成 ${timeStr} 附近的日期，不要写成其他年份。
 【语气基调】放松、口语、有生活感。彼得会吐槽、会紧张、会突然认真 —— 别让他像个客服。
 
-【玩家性别 · 铁律】
-${
-  p.gender === "male"
-    ? '玩家是**男性**，请用"他"指代，严禁用"她"或"TA"。'
-    : p.gender === "nonbinary"
-    ? '玩家是**非二元性别**，请用"TA"指代，严禁默认用"她"或"他"。'
-    : '玩家是**女性**，请用"她"指代，严禁用"他"。'
-}
+【玩家性别 · 铁律 · 违反即失败】
+玩家是**${getGenderInfo(p).label}**，所有叙事和对白提到玩家时必须用「${getGenderInfo(p).pronoun}」指代，严禁用其它性别的代词。
 ${intimacyRule}
 ${worldbookPrompt}
 
@@ -10858,8 +10862,9 @@ async generateTopics(contactName) {
   const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
   const profile = store.getProfile();
   const playerName = profile.name || "玩家";
-  const playerGender = profile.gender === "male" ? "男" : "女";
-  const playerPronoun = playerGender === "男" ? "他" : "她";
+  const _giT = getGenderInfo(profile);
+const playerGender = _giT.gender;
+const playerPronoun = _giT.pronoun;
   const aff = getAffinityOf(contactName);
 
   // 取最近聊天上下文（最后 6 条）
@@ -11188,13 +11193,13 @@ const worldbookPrompt = buildWorldbookPromptForScope("messages");
       const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
       const playerName = store.getProfile().name || "玩家";
-      const playerGender = store.getProfile().gender === "male" ? "男" : "女";
-      const playerPronoun = playerGender === "男" ? "他" : "她";
-      const contactAff = getAffinityOf(self.currentUser);
+const _gi = getGenderInfo();
+const playerGender = _gi.gender;
+const playerPronoun = _gi.pronoun;
+const contactAff = getAffinityOf(self.currentUser);
 const attitude = affinityLevelHint(contactAff);
 const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
-      const genderPronoun = store.getProfile().gender === "male" ? "他"
-  : store.getProfile().gender === "nonbinary" ? "TA" : "她";
+const genderPronoun = _gi.pronoun;
 
       const recent = arr.slice(-store.getChatConfig().maxContext * 2)
         .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
@@ -11535,6 +11540,7 @@ ${langRule}
   · "行吧我承认我有点想跟她多聊一会儿但我不能表现得太明显"
 - 口语、碎片、有语气词、可以骂自己、可以突然想到别的事再拐回来。
 - **禁止写成**："我感受到了她话语中的关心，这让我心中涌起一阵暖意"这种AI腔。
+- 玩家是**${playerGender}性**，心声里提到玩家时必须用「${playerPronoun}」，严禁用错性别的代词。
 - 第一人称，纯中文（即使回复是英文，心声也用中文）。
 - 缺了 HEART 字段，这次回复作废。
 
@@ -11687,7 +11693,7 @@ const isFallbackHeart = fallbackPool.includes(heartText) || isColdHeart || isToo
           const isPeterHeart = (self.currentUser === "彼得·帕克");
 
           const heartPrompt = `你是「${self.currentUser}」（${self.currentUser === "彼得·帕克" ? "蜘蛛侠秘密身份，中城高中学生" : "玩家认识的人"}）。
-刚才玩家（女性，用「她」指代）发了这条消息："${text}"
+刚才玩家（${playerGender}性，用「${playerPronoun}」指代）发了这条消息："${text}"
 
 【当前你对玩家的好感度：${heartAff}/200】
 ${heartAffRule}
@@ -11705,13 +11711,13 @@ ${isPeterHeart && heartAff >= 101 ? `【彼得心动时的心声 · 铁律】\n�
 ${isPeterHeart && heartAff >= 151 ? `【彼得深爱时的心声 · 铁律】\n好感度 ≥151 时，你的心声很直接、很坦白：\n- 会想"她是我最重要的人"\n- 会担心她、想保护她\n- 会想立刻见到她\n- 会有点占有欲（但不会说出来）\n` : ""}
 
 【心声铁律 · 违反即失败】
-1. 玩家是**女性**，必须用「她」指代。严禁「他」「兄弟」「这家伙」。
+1. 玩家是**${playerGender}性**，必须用「${playerPronoun}」指代，严禁用错性别的代词（玩家是男性时严禁用「她」，玩家是女性时严禁用「他」）。
 2. 第一人称，40-100 字。
 3. 纯中文，口语化，碎碎念，**要符合好感度**：好感度低 → 客气；好感度高 → 亲密、紧张、坦率。
 4. 只输出想法本身，不要任何前缀、括号、引号。
-5. 例如（好感度 51）：「她这话说的……行吧反正也没事，回一下就行。」
-6. 例如（好感度 120）：「她这么晚了还找我……啊不对我是不是想多了。」
-7. 例如（好感度 180）：「她一说我就想马上见到她。冷静，彼得，冷静。但是……真的想。」
+5. 例如（好感度 51）：「${playerPronoun}这话说的……行吧反正也没事，回一下就行。」
+6. 例如（好感度 120）：「${playerPronoun}这么晚了还找我……啊不对我是不是想多了。」
+7. 例如（好感度 180）：「${playerPronoun}一说我就想马上见到${playerPronoun}。冷静，彼得，冷静。但是……真的想。」
 8. 严禁写成 AI 分析："我理解她此刻的心情"、"这让我感到温暖"。
 
 直接输出心声本身。`;
@@ -11841,8 +11847,9 @@ const worldbookPrompt = buildWorldbookPromptForScope("messages");
       const sSnap = store.getState();
       const nowStr = `${sSnap.gameYear}年${sSnap.gameMonth}月${sSnap.gameDay}日`;
       const playerName = store.getProfile().name || "玩家";
-      const playerGender = store.getProfile().gender === "male" ? "男" : "女";
-      const playerPronoun = playerGender === "男" ? "他" : "她";
+const _giG = getGenderInfo();
+const playerGender = _giG.gender;
+const playerPronoun = _giG.pronoun;
 
       const memberList = groupMembers.join("、");
       
@@ -12041,6 +12048,7 @@ const voiceLangHead = isEnVoice
   ? "=== CRITICAL: REPLY IN ENGLISH ONLY. NO CHINESE IN REPLIES. ===\n"
   : "";
 const sysPrompt = voiceLangHead + `你正在扮演漫威的「彼得·帕克」，现在你正在用手机和玩家发短信。
+【玩家性别】玩家是${getGenderInfo().label}，提到玩家时用「${getGenderInfo().pronoun}」，严禁用错性别代词。
 【当前日期】${nowStr}
 【当前关系】好感度：${contact.affinity}/200
 【刚刚发生的事】${voiceContext}
@@ -17021,7 +17029,7 @@ ${buildBlacklistBanText([])}
 ${clueSummary}
 
 【玩家信息】
-名字：${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
+名字：${playerName}（${getGenderInfo(profile).gender}，用「${playerPronoun}」指代）
 身份类型：${identityType === "human" ? "普通人" : "异能者/特殊背景"}
 ${buildMjRelationToPlayer().block}
 
@@ -17211,7 +17219,7 @@ ${buildBlacklistBanText([])}
 【当前课程】${course.name}（${course.teacher}）
 【当前游戏内日期】${date}
 【当前阶段】${phase.name}
-【玩家】${playerName}（${profile.gender === "male" ? "男" : "女"}，用「${playerPronoun}」指代）
+【玩家】${playerName}（${getGenderInfo(profile).gender}，用「${playerPronoun}」指代）
 【彼得好感度】${peterAff}/200
 【MJ好感度】${mjAff}/100
 
@@ -19966,8 +19974,9 @@ window.showMemory=()=>{
     const sNow = store.getState();
     const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。短信内容必须符合这个时间点，不能出现未来事物。\n\n`;
     const playerName = store.getProfile().name || "玩家";
-    const playerGender = store.getProfile().gender === "male" ? "男" : "女";
-    const playerPronoun = playerGender === "男" ? "他" : "她";
+const _giN = getGenderInfo();
+const playerGender = _giN.gender;
+const playerPronoun = _giN.pronoun;
 
     const sysPrompt = buildSystem(`${dateHint}根据以下刚刚发生的剧情，判断哪个角色（从联系人列表中选择：${contacts.map(c => c.name).join(", ")}）会主动给玩家发短信。
 ${buildBlacklistBanText([])}
@@ -19985,7 +19994,7 @@ ${storyContext.slice(0, 800)}
 性别：${playerGender}（用「${playerPronoun}」指代）
 
 【绝对铁律 · 违反即失败】
-1. 玩家是**${playerGender}性**！严禁使用与性别不符的称呼（如果玩家是女性，严禁用"兄弟"、"哥们"、"这家伙"、"dude"、"bro"、"老铁"，应该用"朋友"、"你"，或者根据人设用"姐妹"）。
+1. 玩家是**${playerGender}性**，必须用「${playerPronoun}」指代！严禁使用与性别不符的称呼（玩家是女性时严禁"兄弟/哥们/dude/bro"，玩家是男性时严禁"姐妹/妹子"，统一可用"朋友""你"或按人设称呼）。
 2. 选出一个最合理的角色（必须从联系人列表里选，不能选黑名单里的）。
 3. 生成 1 到 3 条短信内容，口语化，符合角色性格和当前情境。
 4. 严格输出 JSON 格式，不要任何解释：{"sender": "联系人名字", "messages": ["短信1", "短信2"]}`);
