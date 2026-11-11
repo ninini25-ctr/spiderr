@@ -6017,6 +6017,13 @@ confirmBtn.onclick = () => {
 
   localStorage.setItem("sv_start_node", JSON.stringify(chosen));
   localStorage.setItem("sv_start_node_chosen_v1", "1");
+// 🕸️ 从"身份已曝光"的节点开局，自动标记彼得身份对玩家已暴露
+const revealedKeys = [
+   "start_phase6_multiverse" // 身份暴露 → 多元宇宙
+ ];
+if (revealedKeys.includes(chosen.key)) {
+  localStorage.setItem("sv_peter_identity_revealed", "1");
+}
 // ============================================================
 // 🧠 2-I：根据选择的开局节点，决定 memoryState
 //   - start_phase6_5 → 四年空白期
@@ -9724,6 +9731,18 @@ ${isSpellActiveNow() && c.name !== "彼得·帕克" ? `
         <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="aff_level_hint">${affinityLevelHint(c.affinity)}</div>
       </div>
       <div class="field"><label>心声 (AI 生成)</label><textarea id="c_heart" rows="3" readonly style="opacity:0.7">${esc(c.heart || "暂无")}</textarea></div>
+${this.currentUser === "彼得·帕克" ? `
+      <div class="field" style="margin-top:4px;padding:10px 12px;background:var(--panel-2);border-radius:10px;">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <label style="font-size:13px;color:var(--text);">🕷️ 彼得已对我公开蜘蛛侠身份</label>
+          <label class="switch">
+            <input type="checkbox" id="peterRevealToggle" ${localStorage.getItem("sv_peter_identity_revealed")==="1" ? "checked" : ""}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;">开启后，聊天里彼得不再装作不是蜘蛛侠，可以和你自然聊巡逻、受伤、蛛丝等。</div>
+      </div>
+` : ""}
      <button class="btn" id="save">保存简介</button>
     </div>
 
@@ -9759,6 +9778,14 @@ ${isSpellActiveNow() && c.name !== "彼得·帕克" ? `
       affInput.value = Math.min(cap, (parseInt(affInput.value) || 0) + 5);
       syncAffHint();
     };
+
+const revealToggle = body.querySelector("#peterRevealToggle");
+if (revealToggle) {
+  revealToggle.onchange = () => {
+    localStorage.setItem("sv_peter_identity_revealed", revealToggle.checked ? "1" : "0");
+    toast(revealToggle.checked ? "彼得现在知道你已经知道了" : "已恢复：彼得仍对你保密");
+  };
+}
 
     body.querySelector("#save").onclick = () => {
       const rawAff = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
@@ -13377,9 +13404,20 @@ let confessionInject = "";
 ❌ 禁止在战斗/危机场景里告白（当前锚点已确认是安全的，放心写）
 ❌ 禁止把告白拖到以后的回合
 ❌ 禁止只暧昧不告白`;
-})();         
+})();
+      // 🕸️ 身份暴露检测：只在"还没暴露"时才给 AI 这个指令
+const identityRevealPrompt = (localStorage.getItem("sv_peter_identity_revealed") === "1")
+  ? ""
+  : `
+
+【🕸️ 身份暴露检测 · 重要】
+如果本回合剧情中，彼得·帕克当着玩家（${playerNameForPov}）的面，以任何方式**确实暴露**了自己就是蜘蛛侠（主动坦白 / 被玩家亲眼看到换装 / 被当场揭穿 / 在玩家面前摘下面罩等），你必须在剧情正文之后、【选项】之前，单独输出一行：
+【身份暴露】
+注意：只有玩家**确实知道了**才输出；如果只是暗示、擦边、玩家还没确认，就不要输出。`;   
+
 const sysPrompt = buildSystem(`你现在是蜘蛛侠世界的DM。
 ${confessionInject}
+${identityRevealPrompt}
 ${worldlineLangRule}
 ${povRule}
 ${transitionHint}
@@ -13419,6 +13457,13 @@ ${getBlank4yTurns() >= BLANK4Y_MAX_TURNS - 1 ? `
 ${isSpellActiveNow() ? buildRomanceArcPrompt() : ""}
 ${buildPeterBrandNewDayPersona()}
 ${isSpellActiveNow() && !store.getMemoryState().peterChatUnlocked ? `
+
+// 🕸️ 身份暴露：AI 上报彼得当面掉马时，设置标志，让聊天同步
+if (/【身份暴露】/.test(res) && localStorage.getItem("sv_peter_identity_revealed") !== "1") {
+  localStorage.setItem("sv_peter_identity_revealed", "1");
+  toast("🕸️ 彼得的秘密身份已对你暴露");
+}
+res = res.replace(/【身份暴露】/g, "");
 
 【🔓 解锁触发器 · 极重要 · 违反即失败】
 当前玩家和彼得**还没有重新建立关系**。你必须在合适的时机触发解锁。
