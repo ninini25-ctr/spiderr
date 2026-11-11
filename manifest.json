@@ -1,11 +1,31 @@
 {
   "name": "蜘蛛侠世界模拟器",
-  "short_name": "蜘蛛侠",
-  "start_url": ".",
+  "short_name": "蜘蛛终端",
+  "description": "一个蜘蛛侠世界的互动模拟器",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0a0a0f",
-  "theme_color": "#e62429",
+  "theme_color": "#0a0a0f",
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
