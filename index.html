@@ -19849,6 +19849,18 @@ music: {
 // ============================================================
 apps.Dating = {
   title: "约饭",
+onBack() {
+  const session = store.get("sv_date_session", null);
+  // 约会进行中 / 结算页 → 返回键先回到约饭列表，而不是退桌面
+  if (session) {
+    store.set("sv_date_session", null);
+    this.selSpot = null;
+    this.selPeople = [];
+    this.render(document.getElementById("appBody"));
+    return true;   // 拦截，不退桌面
+  }
+  return false;    // 已在列表页 → 正常退桌面
+},
   selCity: null,
   selSpot: null,
   selPeople: [],
@@ -20315,21 +20327,40 @@ apps.Dating = {
   },
 
   showHistory(h) {
-    const div = document.createElement("div");
-    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
-    div.innerHTML = `
-      <div style="max-width:520px;margin:10px auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <h2 style="margin:0;font-size:17px;">${esc(h.city)} · ${esc(h.spot)}</h2>
-          <button class="btn ghost" id="dtHistClose" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">${esc(h.date)} · 和 ${esc(h.people.join("、"))} · ${esc(h.moodLabel || "")}</div>
-        <div class="dt-story">${formatDialogue(h.finalStory || "")}</div>
-      </div>`;
-    document.querySelector(".device").appendChild(div);
-    div.querySelector("#dtHistClose").onclick = () => div.remove();
-    div.onclick = (e) => { if (e.target === div) div.remove(); };
-  },
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+
+  let bodyHtml = "";
+  if (Array.isArray(h.fullHistory) && h.fullHistory.length) {
+    // 完整过程：逐段剧情 + 玩家选择
+    bodyHtml = h.fullHistory.map((seg, i) => `
+      <div style="margin-bottom:16px;">
+        ${i === h.fullHistory.length - 1
+          ? `<div style="font-size:11px;color:#4caf50;margin-bottom:6px;letter-spacing:.5px;">🏁 结局</div>`
+          : `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;">— 第 ${i + 1} 回合 —</div>`}
+        <div class="dt-story" style="margin-bottom:8px;">${formatDialogue(seg.story || "")}</div>
+        ${seg.choice ? `<div style="font-size:12px;color:var(--accent-2);padding:8px 12px;background:var(--panel-2);border-radius:10px;border:1px solid var(--line);">➤ ${esc(seg.choice)}</div>` : ""}
+      </div>`).join("");
+  } else {
+    // 老存档兜底：只有结局
+    bodyHtml = `<div class="dt-story">${formatDialogue(h.finalStory || "")}</div>`;
+  }
+
+  div.innerHTML = `
+    <div style="max-width:520px;margin:10px auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="margin:0;font-size:17px;">${esc(h.city)} · ${esc(h.spot)}</h2>
+        <button class="btn ghost" id="dtHistClose" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">${esc(h.date)} · 和 ${esc(h.people.join("、"))} · ${esc(h.moodLabel || "")}</div>
+      ${bodyHtml}
+      <button class="btn ghost" id="dtHistClose2" style="width:100%;margin-top:8px;">关闭</button>
+    </div>`;
+  document.querySelector(".device").appendChild(div);
+  div.querySelector("#dtHistClose").onclick = () => div.remove();
+  div.querySelector("#dtHistClose2").onclick = () => div.remove();
+  div.onclick = (e) => { if (e.target === div) div.remove(); };
+},
 
   _split(res) {
     const idx = res.indexOf("【选项】");
@@ -20487,18 +20518,23 @@ window.resolveDateOption = async (choice) => {
       session.mood = mood;
       session.closed = true;
 
-      // 存历史
-      const hist = store.get("sv_date_history", []);
-      hist.unshift({
-        id: session.id,
-        city: session.city.emoji + " " + session.city.name,
-        spot: session.spot.emoji + " " + session.spot.name,
-        people: session.people.map(n => store.getContacts().find(x => x.name === n)?.note || n),
-        date: `${store.getState().gameYear}年${store.getState().gameMonth}月${store.getState().gameDay}日`,
-        finalStory: story,
-        moodLabel: { 愉快: "☺️ 愉快", 平淡: "🙂 平淡", 不愉快: "😔 不愉快" }[mood],
-        ts: Date.now()
-      });
+      // 存历史（含完整过程）
+const hist = store.get("sv_date_history", []);
+const fullHistory = [
+  ...(session.history || []),      // 每轮：{ story, choice }
+  { story, choice: null }          // 最后一段结局剧情
+];
+hist.unshift({
+  id: session.id,
+  city: session.city.emoji + " " + session.city.name,
+  spot: session.spot.emoji + " " + session.spot.name,
+  people: session.people.map(n => store.getContacts().find(x => x.name === n)?.note || n),
+  date: `${store.getState().gameYear}年${store.getState().gameMonth}月${store.getState().gameDay}日`,
+  finalStory: story,
+  fullHistory: fullHistory,
+  moodLabel: { 愉快: "☺️ 愉快", 平淡: "🙂 平淡", 不愉快: "😔 不愉快" }[mood],
+  ts: Date.now()
+});
       if (hist.length > 50) hist.length = 50;
       store.set("sv_date_history", hist);
 
