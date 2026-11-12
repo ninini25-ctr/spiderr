@@ -19840,27 +19840,18 @@ music: {
   }
 };
 
-// ============================================================
-// 🍜 约饭 / 约会 App
-//   - 单选/多选联系人一起吃饭或约会
-//   - 好感度不同 → 剧情交互不同
-//   - 约会愉快加好感度，不愉快减好感度
-//   - 可选城市 + 地点，文风与「世界线」一致
-// ============================================================
 apps.Dating = {
   title: "约饭",
 onBack() {
-  const session = store.get("sv_date_session", null);
-  // 约会进行中 / 结算页 → 返回键先回到约饭列表，而不是退桌面
-  if (session) {
-    store.set("sv_date_session", null);
-    this.selSpot = null;
-    this.selPeople = [];
-    this.render(document.getElementById("appBody"));
-    return true;   // 拦截，不退桌面
-  }
-  return false;    // 已在列表页 → 正常退桌面
-},
+    const session = store.get("sv_date_session", null);
+    // 约会进行中/结算页 → 返回键回到约饭列表（★ 不清空会话，保留进度）
+    if (session && this._view !== "setup") {
+      this._view = "setup";
+      this.render(document.getElementById("appBody"));
+      return true;   // 拦截，不退桌面
+    }
+    return false;    // 已在列表页 → 正常退回桌面
+  },
   selCity: null,
   selSpot: null,
   selPeople: [],
@@ -20072,6 +20063,8 @@ onBack() {
     for (const k of _keys) await resolveImageUrlCached("idb:" + k);
 
     const session = store.get("sv_date_session", null);
+    // 返回列表时 _view=setup，即使有进行中会话也先显示列表
+    if (this._view === "setup") { this.renderSetup(body); return; }
     if (session && !session.closed) { this.renderDate(body, session); return; }
     if (session && session.closed) { this.renderResult(body, session); return; }
     this.renderSetup(body);
@@ -20089,8 +20082,21 @@ onBack() {
     const history = store.get("sv_date_history", []);
     if (!this.selCity) this.selCity = this.CITIES[0];
 
+    const ongoing = store.get("sv_date_session", null);
+    const ongoingBanner = (ongoing && !ongoing.closed) ? `
+      <div id="dtResumeBanner" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;margin-bottom:16px;cursor:pointer;background:linear-gradient(135deg,#2d6bff22,#e0245a14);border:1px solid var(--accent-2);">
+        <div style="font-size:22px;">🍜</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;color:var(--accent-2);font-weight:700;letter-spacing:.5px;">▶ 进行中的约会</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px;">${ongoing.city.emoji} ${esc(ongoing.city.name)} · ${ongoing.spot.emoji} ${esc(ongoing.spot.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">和 ${esc(ongoing.people.map(n => store.getContacts().find(x=>x.name===n)?.note || n).join("、"))} · 第 ${ongoing.turn} 回合</div>
+        </div>
+        <div style="font-size:18px;color:var(--accent-2);">›</div>
+      </div>` : "";
+
     body.innerHTML = `
       <div class="dt-wrap">
+        ${ongoingBanner}
         <div class="dt-hero">
           <div class="dt-hero-label">DINNER & DATE</div>
           <div class="dt-hero-title">约饭</div>
@@ -20199,6 +20205,13 @@ onBack() {
         if (h) self.showHistory(h);
       };
     });
+const resumeBanner = body.querySelector("#dtResumeBanner");
+    if (resumeBanner) {
+      resumeBanner.onclick = () => {
+        this._view = "date";
+        this.render(body);
+      };
+    }
   },
 
   async startDate(body) {
@@ -20225,6 +20238,7 @@ onBack() {
       };
       this.selPeople.forEach(n => session.summary[n] = 0);
       store.set("sv_date_session", session);
+      this._view = "date";
       this.renderDate(body, session);
     } catch (e) {
       body.innerHTML = `<div style="padding:16px"><div class="card">失败：${esc(e.message)}</div></div>`;
@@ -20316,15 +20330,17 @@ onBack() {
       store.set("sv_date_session", null);
       this.selSpot = null;
       this.selPeople = [];
+      this._view = "setup";
       this.render(body);
     };
     body.querySelector("#dtBack").onclick = () => {
       store.set("sv_date_session", null);
       this.selSpot = null;
       this.selPeople = [];
+      this._view = "setup";
       this.render(body);
     };
-  },
+},
 
   showHistory(h) {
   const div = document.createElement("div");
