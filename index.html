@@ -2212,6 +2212,7 @@ body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); 
       <button class="app-icon" data-app="MJNotebook"><span>🕵️</span><label>MJ 笔记本</label></button>
      <button class="app-icon" data-app="School"><span>🏫</span><label>中城高中</label></button>
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
+      <button class="app-icon" data-app="Dating"><span>🍜</span><label>约饭</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>社交圈</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
       <button class="app-icon" data-app="Appearance"><span>🎨</span><label>外观</label></button>
@@ -7590,6 +7591,7 @@ const WB_SCOPES = [
  { key: "MJNotebook", label: "🕵️ MJ笔记本", desc: "MJ 观察" },
   { key: "contacts",  label: "👥 社交圈",   desc: "号角日报等" },
   { key: "School",    label: "🏫 中城高中", desc: "课堂/训练/舞会" },
+  { key: "Dating",    label: "🍜 约饭",     desc: "约会/聚餐剧情" }, 
   { key: "Spider_Terminal", label: "🕷️ 蜘蛛终端", desc: "巡逻事件" }
 ];
 
@@ -13079,15 +13081,70 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
 async generateMixedComments(postText, postName) {
   const sNow = store.getState();
   const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有评论必须符合这个时间点。\n\n`;
-  const contactsList = store.getContacts()
-    .filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || ""))
-    .map(c => c.name);
+  // ★ 复联成员关系圈（按电影交集）：两人无共同圈 = 从未交集
+const AV_CIRCLES = [
+  ["托尼·斯塔克","美国队长","雷神","绿巨人","娜塔莎·罗曼诺夫","鹰眼","洛基"],                          // 复联初代
+  ["托尼·斯塔克","美国队长","娜塔莎·罗曼诺夫","冬兵","猎鹰","绯红女巫","鹰眼","蚁人","黑豹","战争机器","彼得·帕克"], // 内战
+  ["彼得·帕克","托尼·斯塔克","奇异博士"],                                                           // 泰坦星
+  ["奇异博士","托尼·斯塔克","绿巨人","美国队长","娜塔莎·罗曼诺夫","绯红女巫","冬兵","猎鹰","黑豹","雷神","战争机器","蚁人","鹰眼"], // 终局地球
+  ["叶莲娜·贝洛娃","娜塔莎·罗曼诺夫"],
+  ["夜魔侠","彼得·帕克"],
+  ["彼得·帕克","内德·利兹","米歇尔·琼斯","梅婶"]   // 蜘蛛侠的普通朋友圈
+];
+const _isAvenger = (n) => !!WORLD.avengersRoster[n];
+const _areAcquainted = (a, b) => {
+  if (a === b) return true;
+  return AV_CIRCLES.some(cir => cir.includes(a) && cir.includes(b));
+};
+
+let contactsList = store.getContacts()
+  .filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || ""))
+  .map(c => c.name);
+
+// 发帖人是复联成员或彼得时，按关系圈过滤"必评联系人"：没交集的不出现
+if (_isAvenger(postName) || postName === "彼得·帕克") {
+  contactsList = contactsList.filter(c => {
+    if (_isAvenger(c)) return _areAcquainted(postName, c);          // 复联成员：需有交集
+    if (c === "彼得·帕克") return _areAcquainted(postName, "彼得·帕克");
+    // 普通联系人（内德/MJ/梅婶/自定义）：只有彼得发帖时才认识他们
+    return postName === "彼得·帕克";
+  });
+}
 
   // ===== 第一步：联系人评论（强约束，逐个点名）=====
   let contactComments = [];
   if (contactsList.length > 0) {
+   // ★ 为联系人里的复联成员，注入人设 + 时间线记忆，防止 OOC
+    const avengerPersonaBlock = contactsList.map(n => {
+      const persona = WORLD.avengersSocialPersona[n];
+      const roster = WORLD.avengersRoster[n];
+      if (!persona && !roster) return "";
+      let block = `【${n}】`;
+      if (persona) block += `\n社媒人设：${persona}`;
+      if (roster) {
+        block += `\n性格：${roster.desc}`;
+        // 当前时间线记忆
+        const y = sNow.gameYear || 0;
+        const years = Object.keys(roster.memory || {}).map(Number).filter(yr => yr <= y).sort((a, b) => b - a);
+        const curMem = years.length ? roster.memory[years[0]] : "";
+        if (curMem) block += `\n此刻处境(${y}年)：${curMem}`;
+        if (isAvengerDeadNow(n)) block += `\n注意：此人在当前时间线已故，评论要用"超越时间的回望/释然"语气，不要绑定当下日期。`;
+      }
+      return block;
+    }).filter(Boolean).join("\n\n");
+
     const contactPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
 ${buildBlacklistBanText([postName])}
+${avengerPersonaBlock ? `
+【复联成员人设 · 评论必须严格符合 · 违反即失败】
+以下联系人是复联成员，他们的评论必须完全贴合各自的性格和社媒口吻，严禁 OOC：
+${avengerPersonaBlock}
+
+【复联成员铁律】
+1. 托尼要阴阳怪气/炫技/嘴毒；美队正直老派；雷神大写狂魔自恋；娜塔莎简短冷酷；洛基居高临下管人叫凡人；奇异博士高冷文绉绉……严格按上面每个人的人设写。
+2. 评论内容只能提及他们在当前时间线（${sNow.gameYear}年）之前知道的事，禁止剧透未来。
+3. 严禁把复联成员写成普通网友的口吻。
+` : ""}
 
 【任务】
 这条推文下面，以下联系人**每一个人都必须留下一条评论**，一个都不能少：
@@ -13250,6 +13307,7 @@ return merged;
   all.twitter.unshift(newPost);
   store.setPosts(all);
   this.render($("#appBody"));
+try { window.triggerPostReactionSMS(newPost.text, "twitter"); } catch(e){}
 
   // ★ 改用公共函数生成评论：联系人必出 + 陌生人 5 条
   try {
@@ -14644,6 +14702,7 @@ try {
         });
         store.setPosts(all);
         this.render(body);
+try { window.triggerPostReactionSMS(text, "instagram"); } catch(e){}
       } catch(e) {
         body.innerHTML = `<div style="padding:14px"><div class="card">失败: ${esc(e.message)}</div></div>`;
       }
@@ -19780,6 +19839,1041 @@ music: {
     }
   }
 };
+
+// ============================================================
+// 🍜 约饭 / 约会 App
+//   - 单选/多选联系人一起吃饭或约会
+//   - 好感度不同 → 剧情交互不同
+//   - 约会愉快加好感度，不愉快减好感度
+//   - 可选城市 + 地点，文风与「世界线」一致
+// ============================================================
+apps.Dating = {
+  title: "约饭",
+  selCity: null,
+  selSpot: null,
+  selPeople: [],
+
+  CITIES: [
+  {
+    key: "queens", name: "皇后区", emoji: "🏘️", color: "#e05a5a",
+    desc: "熟悉的街区，老披萨店和地铁穿行的味道。",
+    spots: [
+      { name: "社区披萨店", emoji: "🍕" },
+      { name: "戴利餐车夜宵", emoji: "🚚" },
+      { name: "公寓楼顶天台", emoji: "🌆" },
+      { name: "24小时便利店", emoji: "🏪" },
+      { name: "街角甜甜圈店", emoji: "🍩" },
+      { name: "中城高中操场", emoji: "🏫" },
+      { name: "地铁末班车", emoji: "🚇" }
+    ]
+  },
+  {
+    key: "manhattan", name: "曼哈顿中城", emoji: "🏙️", color: "#4a7bd6",
+    desc: "霓虹、高楼与行色匆匆的人群。",
+    spots: [
+      { name: "安静的小意面馆", emoji: "🍝" },
+      { name: "现代美术馆", emoji: "🖼️" },
+      { name: "摩天楼观景台", emoji: "🌃" },
+      { name: "午夜甜品店", emoji: "🍰" },
+      { name: "中央公园长椅", emoji: "🌳" },
+      { name: "时代广场人潮", emoji: "✨" },
+      { name: "爵士酒吧包厢", emoji: "🎷" }
+    ]
+  },
+  {
+    key: "brooklyn", name: "布鲁克林", emoji: "🌉", color: "#c88a3a",
+    desc: "红砖、复古唱片与海风。",
+    spots: [
+      { name: "复古唱片咖啡馆", emoji: "🎧" },
+      { name: "大桥下的河边步道", emoji: "🌊" },
+      { name: "手冲咖啡小店", emoji: "☕" },
+      { name: "旧书店角落", emoji: "📚" },
+      { name: "周末跳蚤市场", emoji: "🛍️" },
+      { name: "红砖屋顶派对", emoji: "🎉" },
+      { name: "海边仓库画廊", emoji: "🎨" }
+    ]
+  },
+  {
+    key: "coney", name: "科尼岛", emoji: "🎡", color: "#2bb3b3",
+    desc: "海滩、游乐园和融化的冰淇淋。",
+    spots: [
+      { name: "摩天轮", emoji: "🎡" },
+      { name: "海滩热狗摊", emoji: "🌭" },
+      { name: "傍晚的沙滩", emoji: "🏖️" },
+      { name: "老游戏厅", emoji: "🕹️" },
+      { name: "木栈道漫步", emoji: "🪵" },
+      { name: "冰淇淋车", emoji: "🍦" },
+      { name: "海钓码头", emoji: "🎣" }
+    ]
+  },
+  {
+    key: "venice", name: "威尼斯", emoji: "🛶", color: "#b5743e",
+    desc: "水道、石桥与黄昏的钟声（游学记忆）。",
+    spots: [
+      { name: "运河边小餐馆", emoji: "🍷" },
+      { name: "贡多拉", emoji: "🛶" },
+      { name: "石桥上看落日", emoji: "🌅" },
+      { name: "圣马可广场", emoji: "🕊️" },
+      { name: "巷子里的手工冰淇淋", emoji: "🍨" },
+      { name: "面具作坊", emoji: "🎭" }
+    ]
+  },
+  {
+    key: "london", name: "伦敦", emoji: "🎡", color: "#6b6f8f",
+    desc: "阴雨、红巴士与塔桥的灯。",
+    spots: [
+      { name: "街角炸鱼薯条", emoji: "🍟" },
+      { name: "泰晤士河畔", emoji: "🌧️" },
+      { name: "老派茶室", emoji: "🫖" },
+      { name: "红色双层巴士顶层", emoji: "🚌" },
+      { name: "塔桥夜景", emoji: "🌉" },
+      { name: "雨中的书报亭", emoji: "📰" }
+    ]
+  },
+  {
+    key: "tokyo", name: "东京", emoji: "🗼", color: "#e06b9a",
+    desc: "霓虹小巷、拉面香气与电车叮当。",
+    spots: [
+      { name: "深夜拉面摊", emoji: "🍜" },
+      { name: "居酒屋角落", emoji: "🏮" },
+      { name: "涩谷十字路口", emoji: "🚦" },
+      { name: "樱花树下长椅", emoji: "🌸" },
+      { name: "屋顶自动贩卖机前", emoji: "🥤" },
+      { name: "电玩街扭蛋店", emoji: "🎮" },
+      { name: "隅田川烟火", emoji: "🎆" }
+    ]
+  },
+  {
+    key: "paris", name: "巴黎", emoji: "🗼", color: "#9a6fb0",
+    desc: "塞纳河、可颂与铁塔的灯火。",
+    spots: [
+      { name: "塞纳河畔咖啡座", emoji: "☕" },
+      { name: "铁塔下的草坪", emoji: "🗼" },
+      { name: "转角可颂面包房", emoji: "🥐" },
+      { name: "蒙马特画家街", emoji: "🎨" },
+      { name: "午夜河边散步", emoji: "🌙" },
+      { name: "小剧院门口", emoji: "🎭" }
+    ]
+  },
+  {
+    key: "wakanda", name: "瓦坎达", emoji: "🐆", color: "#3faa6b",
+    desc: "高科技与古老部落交织的秘境之城。",
+    spots: [
+      { name: "黄金城观景台", emoji: "🌇" },
+      { name: "传统集市", emoji: "🛖" },
+      { name: "瀑布边圣地", emoji: "💧" },
+      { name: "悬浮列车车厢", emoji: "🚝" },
+      { name: "夜市火堆旁", emoji: "🔥" },
+      { name: "草原边的星空", emoji: "🌌" }
+    ]
+  }
+],
+
+  _injectCss() {
+  if (document.getElementById("dating-style")) return;
+  const st = document.createElement("style");
+  st.id = "dating-style";
+  st.textContent = `
+    .dt-wrap{padding:16px;}
+    .dt-hero{background:linear-gradient(135deg,#2d6bff18,#e0245a14,#f5a62312);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden;}
+    .dt-hero::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#e05a5a,#e06b9a,#9a6fb0,#4a7bd6,#2bb3b3);}
+    .dt-hero-label{font-size:10px;letter-spacing:4px;color:var(--accent-2);font-weight:700;}
+    .dt-hero-title{font-size:21px;font-weight:800;color:var(--text);letter-spacing:2px;margin-top:4px;}
+    .dt-hero-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6;}
+    .dt-sec{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.5px;margin:18px 0 10px;display:flex;align-items:center;gap:6px;}
+    .dt-sec::before{content:"";width:3px;height:13px;border-radius:2px;background:linear-gradient(to bottom,var(--accent-2),var(--accent));}
+    .dt-city-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;}
+.dt-city{padding:12px 8px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer;transition:all .18s;text-align:center;position:relative;overflow:hidden;}
+    .dt-city::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--cc,var(--line));opacity:.5;transition:opacity .18s;}
+    .dt-city.on{border-color:var(--cc,var(--text));background:color-mix(in srgb, var(--cc,var(--text)) 10%, var(--panel));transform:translateY(-2px);box-shadow:0 6px 16px color-mix(in srgb, var(--cc,#000) 20%, transparent);}
+    .dt-city.on::before{opacity:1;height:4px;}
+    .dt-city-emoji{font-size:23px;}
+    .dt-city-name{font-size:12.5px;font-weight:700;color:var(--text);margin-top:4px;}
+    .dt-city-desc{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:break-word;}
+    .dt-spot-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+    .dt-spot{padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:8px;}
+    .dt-spot.on{border-color:var(--cc,var(--text));background:color-mix(in srgb, var(--cc,var(--text)) 12%, var(--panel));box-shadow:0 4px 12px color-mix(in srgb, var(--cc,#000) 16%, transparent);}
+    .dt-spot-emoji{font-size:19px;}
+    .dt-spot-name{font-size:13px;color:var(--text);font-weight:600;}
+    .dt-people{display:flex;flex-direction:column;gap:8px;}
+    .dt-person{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer;transition:all .18s;}
+    .dt-person.on{border-color:var(--accent-2);background:linear-gradient(135deg,#2d6bff14,#e0245a0e);box-shadow:0 4px 12px rgba(45,107,255,.14);}
+    .dt-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;flex-shrink:0;}
+    .dt-avatar img{width:100%;height:100%;object-fit:cover;}
+    .dt-person-info{flex:1;min-width:0;}
+    .dt-person-name{font-size:14px;font-weight:700;color:var(--text);}
+    .dt-person-aff{font-size:11px;color:var(--muted);margin-top:2px;}
+    .dt-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;transition:all .18s;}
+    .dt-person.on .dt-check{background:var(--accent-2);border-color:var(--accent-2);}
+    .dt-start{width:100%;margin-top:18px;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--accent-2),var(--accent));color:#fff;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:2px;transition:all .2s;box-shadow:0 6px 20px rgba(45,107,255,.25);}
+    .dt-start:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;background:var(--panel-2);color:var(--muted);}
+    .dt-topbar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,var(--panel),var(--panel-2));border:1px solid var(--line);margin-bottom:12px;}
+    .dt-topbar-loc{flex:1;min-width:0;}
+    .dt-topbar-city{font-size:13px;font-weight:700;color:var(--text);}
+    .dt-topbar-spot{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .dt-mini-avs{display:flex;}
+    .dt-mini-av{width:28px;height:28px;border-radius:50%;border:2px solid var(--panel);background:linear-gradient(135deg,var(--accent-2),var(--accent));margin-left:-8px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;}
+    .dt-mini-av:first-child{margin-left:0;}
+    .dt-mini-av img{width:100%;height:100%;object-fit:cover;}
+    .dt-story{font-size:14px;line-height:1.85;color:var(--text);white-space:pre-wrap;margin-bottom:18px;font-family:"SimSun","宋体",serif;}
+    .dt-opt{width:100%;text-align:left;padding:13px 15px;margin-bottom:8px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);color:var(--text);font-size:13px;line-height:1.5;cursor:pointer;white-space:normal;word-break:break-word;transition:all .15s;}
+    .dt-opt:hover{border-color:var(--accent-2);background:linear-gradient(135deg,#2d6bff0e,transparent);transform:translateX(2px);}
+    .dt-end-opt{border-style:dashed;color:var(--muted);}
+    .dt-custom{display:flex;gap:8px;margin-top:4px;}
+    .dt-custom input{flex:1;padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;outline:none;box-sizing:border-box;transition:border .18s;}
+    .dt-custom input:focus{border-color:var(--accent-2);}
+    .dt-custom button{padding:0 18px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent-2),var(--accent));color:#fff;font-weight:600;font-size:13px;cursor:pointer;}
+    .dt-finish-btn{width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1px dashed var(--line);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s;}
+    .dt-finish-btn:hover{border-color:var(--accent);color:var(--accent);}
+    .dt-result{background:linear-gradient(160deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:18px;padding:24px 20px;text-align:center;position:relative;overflow:hidden;}
+    .dt-result::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#e05a5a,#e06b9a,#9a6fb0,#4a7bd6,#2bb3b3);}
+    .dt-result-mood{font-size:42px;margin-bottom:8px;}
+    .dt-result-title{font-size:18px;font-weight:800;color:var(--text);letter-spacing:1px;}
+    .dt-result-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+    .dt-result-list{margin:18px 0;display:flex;flex-direction:column;gap:8px;}
+    .dt-result-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line);}
+    .dt-result-name{font-size:13px;color:var(--text);font-weight:600;}
+    .dt-result-delta{font-size:14px;font-weight:800;}
+    .dt-hist-item{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent-2);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+    .dt-hist-item:hover{border-color:var(--accent-2);transform:translateX(2px);}
+    .dt-hist-title{font-size:13px;font-weight:700;color:var(--text);}
+    .dt-hist-meta{font-size:11px;color:var(--muted);margin-top:4px;}
+  `;
+  document.head.appendChild(st);
+},
+
+  _realAv(v) {
+    if (!v) return "";
+    if (v.startsWith("idb:")) return _imgCache[v.slice(4)] || "";
+    return v;
+  },
+
+  async render(body) {
+    this._injectCss();
+    $("#appSettingsBtn").style.display = "none";
+
+    // 预加载头像
+    const _keys = [];
+    store.getContacts().forEach(c => {
+      if (c.avatar && c.avatar.startsWith("idb:")) _keys.push(c.avatar.slice(4));
+    });
+    for (const k of _keys) await resolveImageUrlCached("idb:" + k);
+
+    const session = store.get("sv_date_session", null);
+    if (session && !session.closed) { this.renderDate(body, session); return; }
+    if (session && session.closed) { this.renderResult(body, session); return; }
+    this.renderSetup(body);
+  },
+
+  renderSetup(body) {
+    const self = this;
+    const contacts = store.getContacts().filter(c =>
+      !c.isGroup &&
+      !/^群聊\s*·/.test(c.name || "") &&
+      !isContactBlockedBySpell(c.name) &&
+      !store.isBlacklisted(c.name)
+    );
+
+    const history = store.get("sv_date_history", []);
+    if (!this.selCity) this.selCity = this.CITIES[0];
+
+    body.innerHTML = `
+      <div class="dt-wrap">
+        <div class="dt-hero">
+          <div class="dt-hero-label">DINNER & DATE</div>
+          <div class="dt-hero-title">约饭</div>
+          <div class="dt-hero-sub">挑一座城、一个地方，约上想见的人。<br>相处是否愉快，会落在你们之间。</div>
+        </div>
+
+        <div class="dt-sec">📍 选择城市</div>
+        <div class="dt-city-row" id="dtCityRow"></div>
+
+        <div class="dt-sec">🪑 选择地点</div>
+        <div class="dt-spot-grid" id="dtSpotGrid"></div>
+
+        <div class="dt-sec">👥 约谁（可多选）</div>
+        <div class="dt-people" id="dtPeople"></div>
+
+        <button class="dt-start" id="dtStartBtn" disabled>请选择城市、地点和至少一人</button>
+
+        ${history.length ? `
+          <div class="dt-sec">📁 过往的约会（${history.length}）</div>
+          <div id="dtHist">${history.slice(0, 15).map((h, i) => `
+            <div class="dt-hist-item" data-idx="${i}">
+              <div class="dt-hist-title">${esc(h.city)} · ${esc(h.spot)}</div>
+              <div class="dt-hist-meta">${esc(h.date)} · 和 ${esc(h.people.join("、"))} · ${esc(h.moodLabel || "")}</div>
+            </div>`).join("")}</div>
+        ` : ""}
+      </div>`;
+
+    const cityRow = body.querySelector("#dtCityRow");
+    const spotGrid = body.querySelector("#dtSpotGrid");
+    const peopleEl = body.querySelector("#dtPeople");
+    const startBtn = body.querySelector("#dtStartBtn");
+
+    const refreshStart = () => {
+      const ok = this.selCity && this.selSpot && this.selPeople.length > 0;
+      startBtn.disabled = !ok;
+      startBtn.textContent = ok
+        ? `🍜 出发 · 和 ${this.selPeople.join("、")} 约 ${this.selCity.name}`
+        : "请选择城市、地点和至少一人";
+    };
+
+    const renderSpots = () => {
+      spotGrid.innerHTML = this.selCity.spots.map(sp => `
+  <div class="dt-spot ${this.selSpot && this.selSpot.name === sp.name ? 'on' : ''}" data-spot="${esc(sp.name)}" style="--cc:${this.selCity.color};">
+          <span class="dt-spot-emoji">${sp.emoji}</span>
+          <span class="dt-spot-name">${esc(sp.name)}</span>
+        </div>`).join("");
+      spotGrid.querySelectorAll(".dt-spot").forEach(el => {
+        el.onclick = () => {
+          this.selSpot = this.selCity.spots.find(x => x.name === el.dataset.spot);
+          renderSpots(); refreshStart();
+        };
+      });
+    };
+
+    cityRow.innerHTML = this.CITIES.map(c => `
+  <div class="dt-city ${this.selCity.key === c.key ? 'on' : ''}" data-city="${c.key}" style="--cc:${c.color};">
+        <div class="dt-city-emoji">${c.emoji}</div>
+        <div class="dt-city-name">${esc(c.name)}</div>
+        <div class="dt-city-desc">${esc(c.desc)}</div>
+      </div>`).join("");
+    cityRow.querySelectorAll(".dt-city").forEach(el => {
+      el.onclick = () => {
+        this.selCity = this.CITIES.find(x => x.key === el.dataset.city);
+        this.selSpot = null;
+        cityRow.querySelectorAll(".dt-city").forEach(x => x.classList.toggle("on", x.dataset.city === this.selCity.key));
+        renderSpots(); refreshStart();
+      };
+    });
+    renderSpots();
+
+    if (!contacts.length) {
+      peopleEl.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">还没有可约的联系人</div>`;
+    } else {
+      peopleEl.innerHTML = contacts.map(c => {
+        const av = this._realAv(c.avatar);
+        const aff = getAffinityOf(c.name);
+        const on = this.selPeople.includes(c.name);
+        return `
+          <div class="dt-person ${on ? 'on' : ''}" data-name="${esc(c.name)}">
+            <div class="dt-avatar">${av ? `<img src="${av}">` : esc((c.name || "?")[0].toUpperCase())}</div>
+            <div class="dt-person-info">
+              <div class="dt-person-name">${esc(c.note || c.name)}</div>
+              <div class="dt-person-aff">好感度 ${aff} · ${esc(affinityLevelHint(aff).split("（")[0])}</div>
+            </div>
+            <div class="dt-check">${on ? '✓' : ''}</div>
+          </div>`;
+      }).join("");
+      peopleEl.querySelectorAll(".dt-person").forEach(el => {
+        el.onclick = () => {
+          const name = el.dataset.name;
+          const idx = this.selPeople.indexOf(name);
+          if (idx === -1) this.selPeople.push(name); else this.selPeople.splice(idx, 1);
+          el.classList.toggle("on");
+          el.querySelector(".dt-check").textContent = this.selPeople.includes(name) ? "✓" : "";
+          refreshStart();
+        };
+      });
+    }
+
+    refreshStart();
+    startBtn.onclick = () => this.startDate(body);
+
+    body.querySelectorAll(".dt-hist-item").forEach(el => {
+      el.onclick = () => {
+        const h = store.get("sv_date_history", [])[parseInt(el.dataset.idx)];
+        if (h) self.showHistory(h);
+      };
+    });
+  },
+
+  async startDate(body) {
+    const self = this;
+    body.innerHTML = `<div class="loader"><div class="spin"></div>正在前往 ${esc(this.selSpot.name)}...</div>`;
+    try {
+      const sys = this._buildPrompt("opening", {
+        city: this.selCity, spot: this.selSpot, people: this.selPeople
+      });
+      const res = await callAI([{ role: "user", content: "生成约会开场" }], sys);
+      const { story, options } = this._split(res);
+
+      const session = {
+        id: "dt_" + Date.now(),
+        city: { key: this.selCity.key, name: this.selCity.name, emoji: this.selCity.emoji },
+        spot: { name: this.selSpot.name, emoji: this.selSpot.emoji },
+        people: [...this.selPeople],
+        story, options,
+        history: [],
+        closed: false,
+        turn: 1,
+        summary: {},
+        createdAt: Date.now()
+      };
+      this.selPeople.forEach(n => session.summary[n] = 0);
+      store.set("sv_date_session", session);
+      this.renderDate(body, session);
+    } catch (e) {
+      body.innerHTML = `<div style="padding:16px"><div class="card">失败：${esc(e.message)}</div></div>`;
+    }
+  },
+
+  renderDate(body, session) {
+    const self = this;
+    const miniAvs = session.people.slice(0, 4).map(n => {
+      const c = store.getContacts().find(x => x.name === n);
+      const av = c ? this._realAv(c.avatar) : "";
+      return `<div class="dt-mini-av">${av ? `<img src="${av}">` : esc((n || "?")[0])}</div>`;
+    }).join("");
+
+    body.innerHTML = `
+      <div class="dt-wrap">
+        <div class="dt-topbar">
+          <div class="dt-mini-avs">${miniAvs}</div>
+          <div class="dt-topbar-loc">
+            <div class="dt-topbar-city">${session.city.emoji} ${esc(session.city.name)}</div>
+            <div class="dt-topbar-spot">${session.spot.emoji} ${esc(session.spot.name)} · 第 ${session.turn} 回合</div>
+          </div>
+        </div>
+        <div class="dt-story">${formatDialogue(session.story)}</div>
+        <div id="dtOpts"></div>
+        <div class="dt-custom">
+          <input id="dtCustom" placeholder="自定义行动... 用（括号）可下达干预指令">
+          <button id="dtSend">发送</button>
+        </div>
+        <button class="dt-finish-btn" id="dtFinish">🏁 提议结束这次约会</button>
+      </div>`;
+
+    const optsEl = body.querySelector("#dtOpts");
+    const opts = (session.options || "").split("\n").filter(l => /^[A-D][\.\、]/.test(l.trim()));
+    optsEl.innerHTML = opts.map(o => {
+      const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+      return `<button class="dt-opt" onclick="window.resolveDateOption('${safe}')">${formatDialogue(o)}</button>`;
+    }).join("") || `
+      <button class="dt-opt" onclick="window.resolveDateOption('（自然地聊起最近的事）')">自然地聊起最近的事</button>
+      <button class="dt-opt" onclick="window.resolveDateOption('（专心吃东西，不多话）')">专心吃东西，不多话</button>`;
+
+    const input = body.querySelector("#dtCustom");
+    const send = () => {
+      const v = input.value.trim();
+      if (!v) return toast("请输入行动");
+      window.resolveDateOption(v);
+    };
+    body.querySelector("#dtSend").onclick = send;
+    input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); send(); } });
+
+    body.querySelector("#dtFinish").onclick = () => {
+      window.resolveDateOption("（我觉得差不多了，自然地提议结束这次约会）");
+    };
+  },
+
+  renderResult(body, session) {
+    const self = this;
+    const moodMap = {
+      "愉快": { emoji: "☺️", title: "愉快的一次约会", sub: "你们都笑了，时间过得很快。" },
+      "平淡": { emoji: "🙂", title: "平淡但不坏", sub: "没什么波澜，也算安稳。" },
+      "不愉快": { emoji: "😔", title: "不太愉快", sub: "有些话没说好，气氛凉了下来。" }
+    };
+    const m = moodMap[session.mood] || moodMap["平淡"];
+
+    const rows = session.people.map(n => {
+      const d = session.summary[n] || 0;
+      const color = d > 0 ? "#4caf50" : d < 0 ? "#e62429" : "var(--muted)";
+      const sign = d > 0 ? "+" : "";
+      return `<div class="dt-result-row">
+        <span class="dt-result-name">${esc(store.getContacts().find(x => x.name === n)?.note || n)}</span>
+        <span class="dt-result-delta" style="color:${color};">好感度 ${sign}${d}</span>
+      </div>`;
+    }).join("");
+
+    body.innerHTML = `
+      <div class="dt-wrap">
+        <div class="dt-result">
+          <div class="dt-result-mood">${m.emoji}</div>
+          <div class="dt-result-title">${m.title}</div>
+          <div class="dt-result-sub">${session.city.emoji} ${esc(session.city.name)} · ${session.spot.emoji} ${esc(session.spot.name)}</div>
+          <div class="dt-result-list">${rows}</div>
+        </div>
+        <div class="dt-story" style="margin-top:16px;">${formatDialogue(session.story)}</div>
+        <button class="dt-start" id="dtAgain">🍜 再约一次</button>
+        <button class="dt-finish-btn" id="dtBack" style="margin-top:8px;">返回列表</button>
+      </div>`;
+
+    body.querySelector("#dtAgain").onclick = () => {
+      store.set("sv_date_session", null);
+      this.selSpot = null;
+      this.selPeople = [];
+      this.render(body);
+    };
+    body.querySelector("#dtBack").onclick = () => {
+      store.set("sv_date_session", null);
+      this.selSpot = null;
+      this.selPeople = [];
+      this.render(body);
+    };
+  },
+
+  showHistory(h) {
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+    div.innerHTML = `
+      <div style="max-width:520px;margin:10px auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h2 style="margin:0;font-size:17px;">${esc(h.city)} · ${esc(h.spot)}</h2>
+          <button class="btn ghost" id="dtHistClose" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">${esc(h.date)} · 和 ${esc(h.people.join("、"))} · ${esc(h.moodLabel || "")}</div>
+        <div class="dt-story">${formatDialogue(h.finalStory || "")}</div>
+      </div>`;
+    document.querySelector(".device").appendChild(div);
+    div.querySelector("#dtHistClose").onclick = () => div.remove();
+    div.onclick = (e) => { if (e.target === div) div.remove(); };
+  },
+
+  _split(res) {
+    const idx = res.indexOf("【选项】");
+    const story = (idx > -1 ? res.slice(0, idx) : res)
+      .replace("【剧情】", "")
+      .replace(/【好感度变动[:：][^】]*】/g, "")
+      .replace(/【约会结束】/g, "")
+      .replace(/【约会氛围[:：][^】]*】/g, "")
+      .trim();
+    const options = idx > -1 ? res.slice(idx + 4).replace(/【[^】]*】/g, "").trim() : "";
+    return { story, options };
+  },
+
+  _buildPrompt(mode, ctx) {
+    const s = store.getState();
+    const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+    const profile = store.getProfile();
+    const gi = getGenderInfo(profile);
+    const pov = s.pov || "second";
+    const playerName = profile.name || "玩家";
+
+    const povRule = pov === "first"
+      ? `【叙事人称】全程用「我」称呼玩家本人。`
+      : pov === "third"
+      ? `【叙事人称】全程用「${playerName}」或「${gi.pronoun}」称呼玩家。`
+      : `【叙事人称】全程用「你」称呼玩家。`;
+
+    // 每个同行人的好感度行为块
+    const peopleBlocks = (ctx.people || []).map(n => {
+      const aff = getAffinityOf(n);
+      const c = store.getContacts().find(x => x.name === n) || {};
+      return `—— ${n}（简介：${c.desc || "—"}）\n${buildAffinityBehaviorBlock(n, aff)}`;
+    }).join("\n\n");
+
+    const styleRule = `
+【文风铁律 · 与世界线一致 · 违反即失败】
+1. 电影镜头感，多动作、细节、感官描写，贴近纽约的真实生活质感。
+2. 严禁 AI 腔：禁止"他感到…"、"心中涌起…"、"不是…而是…"、"眼神中透露…"等书面腔。
+3. 对白必须用：*"English"*（中文翻译）格式（星号 + 半角引号 + 中文括号）。
+4. 叙事文字一律中文。
+5. ${povRule}
+6. 玩家是视角中心，不替玩家做决定、不替玩家说话。`;
+
+    const common = `你正在生成一段「约饭/约会」剧情（日常向，独立于主线，但会影响好感度）。
+${buildBlacklistBanText([])}
+${buildSpellBanText()}
+
+【当前游戏内日期】${date}
+【地点】${ctx.city.emoji} ${ctx.city.name} · ${ctx.spot.emoji} ${ctx.spot.name}
+【同行的人】${(ctx.people || []).join("、")}
+
+【各人与玩家的关系 · 必须严格据此决定态度/亲密度/语气】
+${peopleBlocks}
+
+【核心要求 · 铁律】
+1. **好感度决定一切交互**：好感度低的人态度客气疏离、话少、容易冷场；好感度高的人主动、放松、会开玩笑/关心/靠近。严禁所有人一个态度。
+2. 多人同行时，要写出人物之间的互动张力（插话、互怼、起哄、尴尬），而不是轮流和玩家单独说话。
+3. ${ctx.people.includes("彼得·帕克") ? "彼得保持他话痨+自嘲+焦虑+突然认真的风格。" : ""}
+4. 严禁出现当前阶段禁止的角色/事件，保持日常质感，不要主线大事件、不要战斗。
+${styleRule}`;
+
+    if (mode === "opening") {
+      return buildSystem(common + `
+
+【本次任务 · 开场】
+1. 写一段 600~900 字的约会开场：到达地点、落座/点单、第一波互动。
+2. 把每个人与玩家的好感度差异立刻体现出来。
+3. 结尾用【选项】列出 A. B. C. D. 四个玩家可选的行动，各占一行。`, "Dating");
+    }
+
+    // continue
+    return buildSystem(common + `
+
+【上一轮剧情】
+${ctx.lastStory}
+
+【玩家选择】
+${ctx.choice}
+
+【已进行回合】第 ${ctx.turn} 回合
+
+【本次任务 · 续写】
+1. 承接玩家的选择，写 600~900 字。
+2. 严格按各人好感度演出反应：玩家的选择让对方舒服→升温；冒犯/冷场/自私→降温。
+3. 结尾用【选项】列出 A. B. C. D.，其中至少一个是"收尾/告别"方向。
+4. 本回合末尾，为每个"情绪有明显变化"的同行人输出一行：
+   【好感度变动: 名字=±X】（X 为 -5~5；没变化的人可不写）
+   依据：玩家的选择是否让 ta 愉快。愉快为正，冒犯/敷衍/闹得不愉快为负。
+5. 如果这次约会自然走到尾声（玩家告别/尽兴/闹翻/提议结束），在末尾输出：
+   【约会结束】
+   并输出整体氛围一行：【约会氛围: 愉快】或【约会氛围: 平淡】或【约会氛围: 不愉快】
+6. 一般约会 3~5 回合收尾，不要拖沓。`, "Dating");
+  }
+};
+
+// ============================================================
+// 🍜 约饭 · 续写一回合
+// ============================================================
+window.resolveDateOption = async (choice) => {
+  if (!choice || !choice.trim()) return toast("请输入内容");
+  const session = store.get("sv_date_session", null);
+  if (!session || session.closed) return;
+
+  const body = document.getElementById("appBody");
+  body.innerHTML = `<div class="loader"><div class="spin"></div>相处中...</div>`;
+
+  try {
+    session.history = session.history || [];
+    session.history.push({ story: session.story, choice });
+
+    const sys = apps.Dating._buildPrompt("continue", {
+      city: session.city, spot: session.spot, people: session.people,
+      lastStory: session.story, choice, turn: session.turn
+    });
+    const res = await callAI([{ role: "user", content: "续写约会" }], sys);
+
+    // 解析好感度变动
+    const affM = [...res.matchAll(/【好感度变动[:：]\s*([^=】]+)=\s*([+-]?\d+)】/g)];
+    affM.forEach(m => {
+      const rawName = m[1].trim();
+      let delta = Math.max(-5, Math.min(5, parseInt(m[2]) || 0));
+      if (!delta) return;
+      // 匹配到同行人
+      const name = session.people.find(p =>
+        p === rawName || p.includes(rawName) || rawName.includes(p)
+      );
+      if (!name) return;
+      const list = store.getContacts();
+      const c = list.find(x => x.name === name);
+      if (!c) return;
+      const cap = name === "彼得·帕克" ? 200 : 100;
+      const before = c.affinity || 0;
+      c.affinity = Math.max(0, Math.min(cap, before + delta));
+      store.setContacts(list);
+      if (name === "彼得·帕克") { const st = store.getState(); st.affinity = c.affinity; store.setState(st); }
+      session.summary[name] = (session.summary[name] || 0) + (c.affinity - before);
+    });
+
+    const ended = /【约会结束】/.test(res);
+    let mood = null;
+    const moodM = res.match(/【约会氛围[:：]\s*(愉快|平淡|不愉快)】/);
+    if (moodM) mood = moodM[1];
+
+    const { story, options } = apps.Dating._split(res);
+    session.story = story;
+    session.options = options;
+    session.turn += 1;
+
+    if (ended) {
+      // 兜底推断氛围
+      if (!mood) {
+        const total = Object.values(session.summary).reduce((a, b) => a + b, 0);
+        mood = total > 2 ? "愉快" : total < -2 ? "不愉快" : "平淡";
+      }
+      session.mood = mood;
+      session.closed = true;
+
+      // 存历史
+      const hist = store.get("sv_date_history", []);
+      hist.unshift({
+        id: session.id,
+        city: session.city.emoji + " " + session.city.name,
+        spot: session.spot.emoji + " " + session.spot.name,
+        people: session.people.map(n => store.getContacts().find(x => x.name === n)?.note || n),
+        date: `${store.getState().gameYear}年${store.getState().gameMonth}月${store.getState().gameDay}日`,
+        finalStory: story,
+        moodLabel: { 愉快: "☺️ 愉快", 平淡: "🙂 平淡", 不愉快: "😔 不愉快" }[mood],
+        ts: Date.now()
+      });
+      if (hist.length > 50) hist.length = 50;
+      store.set("sv_date_history", hist);
+
+      store.set("sv_date_session", session);
+apps.Dating.renderResult(body, session);
+toast("约会结束 · " + mood);
+// 🍜 约会结束 → 同行人自动发短信
+setTimeout(() => {
+  try { window.sendDateFollowupSMS(session); } catch (e) { console.warn(e); }
+}, 1200);
+    } else {
+      store.set("sv_date_session", session);
+      apps.Dating.renderDate(body, session);
+    }
+  } catch (e) {
+    body.innerHTML = `<div style="padding:16px"><div class="card">失败：${esc(e.message)}</div></div>`;
+  }
+};
+// ============================================================
+// 🍜 约饭 · 约会结束后，同行人自动发来短信
+// ============================================================
+window.sendDateFollowupSMS = async function(session) {
+  if (!session || !session.people || !session.people.length) return;
+
+  const profile = store.getProfile();
+  const playerName = profile.name || "你";
+  const gi = getGenderInfo(profile);
+  const locStr = `${session.city.name} · ${session.spot.name}`;
+  const moodLabel = { 愉快: "愉快", 平淡: "平淡", 不愉快: "不愉快" }[session.mood] || "平淡";
+
+  for (const name of session.people) {
+    // 🔒 遗忘魔咒：彼得未解锁时不发
+    if (isContactBlockedBySpell(name)) continue;
+
+    const aff = getAffinityOf(name);
+    const delta = session.summary[name] || 0;      // 本次约会该人好感变化
+    const c = store.getContacts().find(x => x.name === name) || {};
+
+    // 这个人这次约会的"心情方向"
+    let personMood;
+    if (delta > 1) personMood = "开心、意犹未尽，想再约";
+    else if (delta < -1) personMood = "有点失落/不满/冷淡，这次相处让 ta 不太舒服";
+    else personMood = "平静，没太大波澜";
+
+    try {
+      const sys = `你是漫威世界里的「${name}」，刚刚和「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代）结束了一次约会/聚餐，现在回到各自的地方，你拿起手机给 ta 发短信。
+
+【这次约会】地点：${locStr} · 整体氛围：${moodLabel}
+【你此刻的心情】${personMood}
+${buildAffinityBehaviorBlock(name, aff)}
+${name === "彼得·帕克" ? buildPeterBrandNewDayPersona() : ""}
+
+【短信风格 · 铁律 · 违反即失败】
+1. 这是手机短信，严禁动作描写、括号、星号、神态描写。
+2. 生成 1~3 条，每条 8~35 字，用 || 分隔（前后各一空格）。
+3. 内容必须贴合这次约会氛围和你对 ta 的好感度：
+   - 好感高 + 愉快：热情、想再约、带点小雀跃
+   - 好感低 或 不愉快：客气疏离、冷淡、甚至略带情绪
+   - 平淡：随口一句，不咸不淡
+4. 开头不要固定，不要"嘿""在吗"。
+5. 全部纯中文，可夹少量英文口语词。
+${name === "彼得·帕克" ? "6. 彼得保持话痨+自嘲+突然认真的风格。" : ""}
+
+只输出短信本身，多条用 || 分隔，不要任何前缀、编号、解释。`;
+
+      const res = await callAI([{ role: "user", content: "发约会后的短信" }], sys);
+      let msgs = String(res || "").split(/\|\|/).map(x => x.trim()).filter(Boolean);
+      if (!msgs.length) continue;
+
+      const chats = store.getChats();
+      const arr = chats[name] || [];
+      msgs.forEach(m => arr.push({ role: "them", content: m }));
+      chats[name] = arr;
+      store.setChats(chats);
+
+      if (typeof showMsgBanner === "function") {
+        showMsgBanner(name, msgs[0] || "");
+      }
+
+      // 若正在和此人聊天，刷新
+      if (apps.messages.currentUser === name && apps.messages.view === "chat") {
+        apps.messages.render(document.getElementById("appBody"));
+      }
+
+      // 多人时稍微错开，避免横幅挤在一起
+      await new Promise(r => setTimeout(r, 600));
+    } catch (e) {
+      console.warn("[约会后短信] 失败:", name, e);
+    }
+  }
+};
+
+// ============================================================
+// 🔗 信息 ↔ 社交平台 联动系统
+// ============================================================
+function getLinkageCfg() {
+  const def = { charPostEnabled: true, charPostChance: 30, postSmsEnabled: true, postSmsThreshold: 51 };
+  try {
+    const v = JSON.parse(localStorage.getItem("sv_linkage_cfg") || "null");
+    if (v && typeof v === "object") return { ...def, ...v };
+  } catch (e) {}
+  return def;
+}
+function setLinkageCfg(c) { localStorage.setItem("sv_linkage_cfg", JSON.stringify(c)); }
+
+// ===== 联动 1：聊天触发角色发动态（无好感度门槛）=====
+window.triggerCharacterPost = async function(contactName) {
+  try {
+    if (!contactName) return;
+    if (isContactBlockedBySpell(contactName)) return;
+    if (store.isBlacklisted(contactName)) return;
+
+    const chats = store.getChats();
+    const arr = (chats[contactName] || []).filter(m => m.content && !m.content.startsWith("[语音]"));
+    if (!arr.length) return;
+
+    const fmt = (m) => (m.role === "me" ? "玩家：" : contactName + "：") + m.content.replace(/HEART\s*[:：][\s\S]*/i, "").trim();
+
+    // ===== 1. 当前话题 = 最近 3 条消息 =====
+    const curMsgs = arr.slice(-3);
+    const currentTopic = curMsgs.map(fmt).join("\n");
+    if (!currentTopic.trim()) return;
+
+    // ===== 2. 从当前话题提取关键词（过滤停用词）=====
+    const STOP = new Set("今天 什么 怎么 可以 我们 这个 那个 一个 没有 知道 这样 那样 就是 还是 不是 已经 因为 所以 但是 然后 现在 时候 觉得 可能 应该 这么 那么 自己 东西 事情 真的 其实 有点 一下 一些 这些 那些 他们 她们 你们 而且 或者 如果 虽然 还有 一直 终于 开始 结束 谢谢 哈哈 嗯嗯 好的 行吧 不过 比较 感觉 一样 真是 怎样 为什么".split(/\s+/));
+    const kwSet = new Set();
+    const cleanForKw = curMsgs.map(m => m.content.replace(/HEART\s*[:：][\s\S]*/i, "")).join(" ");
+    (cleanForKw.match(/[\u4e00-\u9fa5]{2,}/g) || []).forEach(seg => {
+      if (seg.length <= 4) { if (!STOP.has(seg)) kwSet.add(seg); }
+      else {
+        for (let i = 0; i <= seg.length - 2; i++) {
+          const g2 = seg.slice(i, i + 2);
+          if (!STOP.has(g2)) kwSet.add(g2);
+        }
+      }
+    });
+    (cleanForKw.match(/[a-zA-Z]{3,}/g) || []).forEach(w => kwSet.add(w.toLowerCase()));
+    const keywords = [...kwSet];
+
+    // ===== 3. 从历史里检索"同关键词"记忆（排除当前话题那几条）=====
+    const historyPool = arr.slice(0, -3);
+    const relatedMemory = historyPool.filter(m => {
+      const txt = m.content.replace(/HEART\s*[:：][\s\S]*/i, "").toLowerCase();
+      return keywords.some(k => k.length >= 2 && txt.includes(k.toLowerCase()));
+    }).slice(-6).map(fmt).join("\n");
+
+    const s = store.getState();
+    const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+    const contact = store.getContacts().find(c => c.name === contactName) || {};
+
+    const sys = `你是「${contactName}」（${contact.desc || ""}）。你刚刚在和玩家聊天，现在你顺手发一条社交动态。
+${buildBlacklistBanText([])}
+${buildSpellBanText()}
+
+【当前日期】${date}
+
+【★ 你们当前正在聊的话题（帖子只能围绕这一个话题）★】
+${currentTopic}
+
+${relatedMemory ? `【和这个话题相关的过往记忆（可自然融入，体现你们之前也聊过这个话题）】\n${relatedMemory}\n` : ""}
+
+【发帖铁律 · 违反即失败】
+1. 帖子**只能**围绕上面"当前正在聊的话题"这一个主题。
+2. **绝对禁止**把其他无关的旧话题写进帖子（即使过往记忆里提到过别的事，也不能带进来）。
+3. 不要直接复述聊天原话，要像真人发社媒那样含蓄、有网感、带点情绪。
+4. ${contactName === "彼得·帕克" ? "你以「彼得·帕克」身份发帖，只能是普通高中生日常，绝对不能暴露自己是蜘蛛侠。" : "按你本人的身份和口吻发帖。"}
+
+【输出格式 · 严格 JSON · 不要代码块】
+{
+  "platform": "twitter 或 instagram",
+  "text": "帖子正文（只围绕当前话题，真人口吻，可带 emoji / 话题标签）",
+  "imgPrompt": "若 platform 是 instagram，这里给英文生图提示词；twitter 留空字符串"
+}
+只输出 JSON，不要任何解释。`;
+
+    const raw = await callAI([{ role: "user", content: "发条动态" }], sys);
+    const cleaned = String(raw || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+    const st = cleaned.indexOf("{"), en = cleaned.lastIndexOf("}");
+    if (st === -1 || en === -1) return;
+    const data = JSON.parse(cleaned.substring(st, en + 1));
+    if (!data.text) return;
+
+    const text = sanitizeBySpell(sanitizeByBlacklist(data.text));
+    const platform = (data.platform || "").toLowerCase().includes("insta") ? "instagram" : "twitter";
+
+    // ===== 评论生成（带兜底，避免评论区空白）=====
+    async function genComments() {
+      let mixed = [];
+      try { mixed = await apps.twitter.generateMixedComments(text, contactName); }
+      catch (e) { console.warn("[角色帖评论]", e); }
+      if (!Array.isArray(mixed) || !mixed.length) {
+        const pool = [
+          { user: "queens_boy(美)", text: "哈哈哈真实" },
+          { user: "nyc_vibes(美)", text: "same here 😂" },
+          { user: "tokyo_ya(日)", text: "わかる（懂了）" },
+          { user: "midtown_kid(美)", text: "我也这么觉得 💯" },
+          { user: "brooklyn_fog(美)", text: "🤔有点意思" }
+        ];
+        mixed = pool.sort(() => Math.random() - 0.5).slice(0, 3).map(x => ({ ...x, replies: [] }));
+      }
+      return mixed;
+    }
+
+    const all = store.getPosts();
+
+    if (platform === "instagram") {
+      let imgUrl = "ERROR";
+      try {
+        const ref = contact.refImage || null;
+        imgUrl = await generateImage(data.imgPrompt || text, ref);
+      } catch (e) {}
+      const pid = "ig_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+      all.instagram = all.instagram || [];
+      all.instagram.unshift({
+        id: pid, name: contactName, handle: "@" + contactName,
+        img: imgUrl, imgPrompt: data.imgPrompt || "",
+        text, likes: Math.floor(Math.random() * 300) + 20, comments: []
+      });
+      store.setPosts(all);
+      toast(`📸 ${contactName} 发了一条 Instagram`);
+
+      const mixed = await genComments();
+      const a2 = store.getPosts();
+      const idx = (a2.instagram || []).findIndex(x => x.id === pid);
+      if (idx !== -1) { a2.instagram[idx].comments = mixed; store.setPosts(a2); }
+      if (currentApp === "instagram") apps.instagram.render(document.getElementById("appBody"));
+    } else {
+      const pid = "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+      all.twitter = all.twitter || [];
+      all.twitter.unshift({
+        id: pid, name: contactName, handle: "@" + contactName,
+        text, likes: Math.floor(Math.random() * 300) + 10,
+        retweetCount: Math.floor(Math.random() * 200) + 5,
+        feed: "following", comments: []
+      });
+      store.setPosts(all);
+      toast(`🐦 ${contactName} 发了一条推特`);
+
+      const mixed = await genComments();
+      const a2 = store.getPosts();
+      const idx = (a2.twitter || []).findIndex(x => x.id === pid);
+      if (idx !== -1) { a2.twitter[idx].comments = mixed; store.setPosts(a2); }
+      if (currentApp === "twitter") apps.twitter.render(document.getElementById("appBody"));
+    }
+  } catch (e) { console.warn("[角色发帖] 失败:", e); }
+};
+
+// ===== 联动 2：用户发帖触发高好感度联系人私信 =====
+window.triggerPostReactionSMS = async function(postText, platform) {
+  try {
+    const lk = getLinkageCfg();
+    if (!lk.postSmsEnabled) return;
+    if (!postText || !postText.trim()) return;
+    const threshold = lk.postSmsThreshold || 51;
+    const platLabel = platform === "instagram" ? "Instagram" : "推特";
+
+    const candidates = store.getContacts().filter(c =>
+      !c.isGroup &&
+      !/^群聊\s*·/.test(c.name || "") &&
+      !isContactBlockedBySpell(c.name) &&
+      !store.isBlacklisted(c.name) &&
+      getAffinityOf(c.name) >= threshold
+    );
+    if (!candidates.length) return;
+
+    const profile = store.getProfile();
+    const playerName = profile.name || "玩家";
+    const gi = getGenderInfo(profile);
+
+    for (const c of candidates) {
+      const name = c.name;
+      const aff = getAffinityOf(name);
+      try {
+        const sys = `你是「${name}」。玩家「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代）刚刚在${platLabel}上发了一条动态，你看到了，于是私信给 ta。
+${buildBlacklistBanText([])}
+${name === "彼得·帕克" ? buildPeterBrandNewDayPersona() : ""}
+
+【玩家发的动态内容】
+${postText}
+
+${buildAffinityBehaviorBlock(name, aff)}
+
+【短信风格 · 铁律 · 违反即失败】
+1. 这是手机短信，严禁动作/括号/星号/神态描写。
+2. 生成 1~2 条，每条 8~30 字，多条用 || 分隔（前后各一空格）。
+3. 内容必须针对 ta 刚发的这条动态来回应（调侃/关心/共鸣/吐槽），严格符合你和 ta 的好感度。
+4. 开头不要固定，不要"嘿""在吗"。纯中文，可夹少量英文口语词。
+
+只输出短信本身，多条用 || 分隔，不要任何前缀。`;
+
+        const res = await callAI([{ role: "user", content: "看到动态发短信" }], sys);
+        const msgs = String(res || "").split(/\|\|/).map(x => x.trim()).filter(Boolean);
+        if (!msgs.length) continue;
+
+        const chats = store.getChats();
+        const arr = chats[name] || [];
+        msgs.forEach(m => arr.push({ role: "them", content: m }));
+        chats[name] = arr;
+        store.setChats(chats);
+
+        if (typeof showMsgBanner === "function") showMsgBanner(name, msgs[0] || "");
+        if (apps.messages.currentUser === name && apps.messages.view === "chat") {
+          apps.messages.render(document.getElementById("appBody"));
+        }
+        await new Promise(r => setTimeout(r, 700));
+      } catch (e) { console.warn("[发帖短信]", name, e); }
+    }
+  } catch (e) { console.warn("[triggerPostReactionSMS]", e); }
+};
+
+// ===== Hook：聊天回复后，角色按概率发动态 =====
+(function hookCharacterPost() {
+  const origSend = apps.messages.sendMessage;
+  apps.messages.sendMessage = async function(body, text, isRetry) {
+    const userName = this.currentUser;
+    await origSend.call(this, body, text, isRetry);
+    try {
+      if (isRetry) return;
+      const c = store.getContacts().find(x => x.name === userName);
+      if (c && c.isGroup) return;          // 群聊不触发
+      const lk = getLinkageCfg();
+      if (lk.charPostEnabled && Math.random() * 100 < lk.charPostChance) {
+        setTimeout(() => { try { window.triggerCharacterPost(userName); } catch (e) {} }, 1500);
+      }
+    } catch (e) {}
+  };
+})();
+
+// ===== Hook：设置页追加「联动设置」卡片 =====
+(function hookLinkageSettings() {
+  const origRender = apps.settings.render;
+  apps.settings.render = function(body) {
+    origRender.call(this, body);
+    try {
+      const lk = getLinkageCfg();
+const container = body.firstElementChild || body;
+const card = document.createElement("div");
+card.style.cssText = "background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:18px;";
+card.innerHTML = `
+        <h3>🔗 社交联动</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+          聊天时角色可能顺手发条相关动态；你发帖时，好感度够高的联系人会私信你。
+        </p >
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <label style="font-size:13px;color:var(--text);">聊天触发角色发帖</label>
+          <label class="switch"><input type="checkbox" id="lk_charPost" ${lk.charPostEnabled ? "checked" : ""}><span class="slider"></span></label>
+        </div>
+        <div class="field">
+          <label>角色发帖概率（%，0-100）</label>
+          <input id="lk_chance" type="number" min="0" max="100" value="${lk.charPostChance}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;box-sizing:border-box;">
+        </div>
+        <div class="row" style="justify-content:space-between;align-items:center;margin:14px 0 10px;">
+          <label style="font-size:13px;color:var(--text);">发帖触发联系人私信</label>
+          <label class="switch"><input type="checkbox" id="lk_postSms" ${lk.postSmsEnabled ? "checked" : ""}><span class="slider"></span></label>
+        </div>
+        <div class="field">
+          <label>私信触发的好感度门槛（≥ 该值的联系人才会私信）</label>
+          <input id="lk_threshold" type="number" min="0" max="200" value="${lk.postSmsThreshold}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;box-sizing:border-box;">
+        </div>
+        <button class="btn" id="lk_save">保存联动设置</button>
+      `;
+      container.insertBefore(card, container.firstChild);
+
+card.querySelector("#lk_save").onclick = () => {
+        setLinkageCfg({
+          charPostEnabled: card.querySelector("#lk_charPost").checked,
+          charPostChance: Math.max(0, Math.min(100, parseInt(card.querySelector("#lk_chance").value) || 0)),
+          postSmsEnabled: card.querySelector("#lk_postSms").checked,
+          postSmsThreshold: Math.max(0, Math.min(200, parseInt(card.querySelector("#lk_threshold").value) || 51))
+        });
+        toast("已保存联动设置");
+      };
+    } catch (e) { console.warn("[联动设置] 注入失败:", e); }
+  };
+})();
 
 console.log("Apps 已注册:", Object.keys(apps));
 
