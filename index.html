@@ -11896,10 +11896,10 @@ ${worldbookPrompt}
   // ★ 修复 2：REPLIES 匹配更宽容
  text = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1");
 const rMatch = text.match(
-  /(?:^|\n)\s*\**\s*(?:REPLIES?|REPLY|回复)\s*\**\s*[:：]\s*\**\s*([\s\S]*?)(?=\n\s*\**\s*HEART\s*\**\s*[:：]|$)/i
+  /(?:REPLIES?|REPLY|回复)\s*[:：]\s*([\s\S]*?)(?=\s*HEART\s*[:：]|$)/i
 );
 const hMatch = text.match(
-  /(?:^|\n)\s*\**\s*HEART\s*\**\s*[:：]\s*([\s\S]+)/i
+  /HEART\s*[:：]\s*([\s\S]+)/i
 );
 
         if (rMatch) {
