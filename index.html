@@ -20598,6 +20598,8 @@ ${buildSpellBanText()}
 【各人与玩家的关系 · 必须严格据此决定态度/亲密度/语气】
 ${peopleBlocks}
 
+【关于恋爱/暧昧 · 约饭专属】
+约饭是独立的私人约会场景。如果某位同行人好感度已进入暧昧（≥101）或恋人（≥151）档，你应当在本次约会里自然演出对应的亲密互动（牵手、靠近、告白、亲吻等），不要因为"这不是彼得"而刻意回避。但这只发生在约饭/聊天里，不写进世界线主线。
 【核心要求 · 铁律】
 1. **好感度决定一切交互**：好感度低的人态度客气疏离、话少、容易冷场；好感度高的人主动、放松、会开玩笑/关心/靠近。严禁所有人一个态度。
 2. 多人同行时，要写出人物之间的互动张力（插话、互怼、起哄、尴尬），而不是轮流和玩家单独说话。
@@ -20674,7 +20676,7 @@ window.resolveDateOption = async (choice) => {
       const list = store.getContacts();
       const c = list.find(x => x.name === name);
       if (!c) return;
-      const cap = name === "彼得·帕克" ? 200 : 100;
+     const cap = getAffinityCapOf(name);
       const before = c.affinity || 0;
       c.affinity = Math.max(0, Math.min(cap, before + delta));
       store.setContacts(list);
