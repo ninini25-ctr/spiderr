@@ -11884,93 +11884,91 @@ ${worldbookPrompt}
       // ============================================
       // ★ 统一解析器（REPLIES:/HEART: 文本格式优先，JSON 兜底静默）
       // ============================================
-     function parseReplyRaw(raw, isEnMode) {
+    function parseReplyRaw(raw, isEnMode) {
   let text = String(raw || "").replace(/```[a-z]*/gi, "").replace(/```/g, "").trim();
 
-  // ★ 修复 1：先去 markdown 加粗/斜体符号，再匹配
+  // 1. 先去 markdown 加粗/斜体符号
   text = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1");
 
-  let replies = [];
   let heart = "";
 
-  // ★ 修复 2：REPLIES 匹配更宽容
- text = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1");
-const rMatch = text.match(
-  /(?:REPLIES?|REPLY|回复)\s*[:：]\s*([\s\S]*?)(?=\s*HEART\s*[:：]|$)/i
-);
-const hMatch = text.match(
-  /HEART\s*[:：]\s*([\s\S]+)/i
-);
+  // 2. 不管 HEART 贴在哪里（行首、句中、紧贴正文），都按它第一次出现的位置切开
+  //    用 search 找 "HEART" 关键字，前面可以有可选的 ** 和空白
+  const heartMarkerRe = /\**\s*HEART\s*\**\s*[:：]/i;
+  const hm = text.match(heartMarkerRe);
+  if (hm && typeof hm.index === "number") {
+    heart = text.slice(hm.index + hm[0].length).trim();
+    text = text.slice(0, hm.index).trim();   // HEART 之后的全部剔除出 replies 区
+  }
 
-        if (rMatch) {
-  replies = rMatch[1].replace(/\r/g, "").split(/\|\||\n/).map(s => s.trim()).filter(Boolean);
-}
-if (hMatch) {
-  heart = hMatch[1].trim();
-}
+  // 3. 从剩下的正文里剥掉 REPLIES / REPLY / 回复 前缀（容忍空格、冒号、大小写）
+  text = text.replace(/^\**\s*(?:REPLIES?|REPLY|回复)\s*\**\s*[:：]?\s*/i, "");
 
-        if (replies.length === 0 || !heart) {
-          try {
-            const startIdx = text.indexOf("{"), endIdx = text.lastIndexOf("}");
-            if (startIdx !== -1 && endIdx > startIdx) {
-              const obj = JSON.parse(text.substring(startIdx, endIdx + 1));
-              if (!replies.length && Array.isArray(obj.replies)) replies = obj.replies;
-              if (!heart && typeof obj.heart === "string") heart = obj.heart;
-            }
-          } catch (_) {}
-        }
+  // 4. JSON 兜底：如果这时还没切出 heart，或正文看着像 JSON，尝试解析
+  let replies = [];
+  if (!text || /^\{[\s\S]*\}$/.test(text) || !heart) {
+    try {
+      const startIdx = raw.indexOf("{"), endIdx = raw.lastIndexOf("}");
+      if (startIdx !== -1 && endIdx > startIdx) {
+        const obj = JSON.parse(raw.substring(startIdx, endIdx + 1));
+        if (Array.isArray(obj.replies)) replies = obj.replies.map(x => String(x));
+        if (!heart && typeof obj.heart === "string") heart = obj.heart;
+      }
+    } catch (_) {}
+  }
 
-        if (replies.length === 0) {
-          replies = [text.replace(/REPLIES\s*[:：]/i, "").trim()];
-        }
+  // 5. 没走 JSON 的话，按 || 或换行拆 replies
+  if (replies.length === 0) {
+    replies = text.split(/\|\||\n/).map(s => s.trim()).filter(Boolean);
+  }
 
-        const cleanBubble = (s) => {
-  if (!s) return "";
-  let c = String(s);
-  c = c.replace(/\*[^*]*\*/g, "");
-  c = c.replace(/[\(（\[【][^\)）\]】]*[\)）\]】]/g, "");
-  c = c.replace(/\s+/g, " ").trim();
-  c = c.replace(/\s*\|\|\s*/g, " ").trim(); 
+  const cleanBubble = (s) => {
+    if (!s) return "";
+    let c = String(s);
+    // 每一条再兜底剥一次前缀（防止 AI 每条都带 REPLIES:）
+    c = c.replace(/^\**\s*(?:REPLIES?|REPLY|回复)\s*\**\s*[:：]?\s*/i, "");
+    c = c.replace(/\*[^*]*\*/g, "");
+    c = c.replace(/[\(（\[【][^\)）\]】]*[\)）\]】]/g, "");
+    c = c.replace(/\s+/g, " ").trim();
+    c = c.replace(/\s*\|\|\s*/g, " ").trim();
 
-          if (!isEnMode) {
-            const enCount = (c.match(/[a-zA-Z]/g) || []).length;
-            const cnCount = (c.match(/[\u4e00-\u9fa5]/g) || []).length;
-            if (enCount > cnCount * 2 && enCount > 5) {
-              const stripped = c.replace(/[a-zA-Z]+/g, "").trim();
-              if (stripped.length >= 2) c = stripped;
-            }
-          }
-          return c;
-        };
+    if (!isEnMode) {
+      const enCount = (c.match(/[a-zA-Z]/g) || []).length;
+      const cnCount = (c.match(/[\u4e00-\u9fa5]/g) || []).length;
+      if (enCount > cnCount * 2 && enCount > 5) {
+        const stripped = c.replace(/[a-zA-Z]+/g, "").trim();
+        if (stripped.length >= 2) c = stripped;
+      }
+    }
+    return c;
+  };
 
-if (replies.length > 0) {
+  // 6. 再按 || 二次拆分 + 清洗
   replies = replies
     .flatMap(r => String(r).split(/\|\|/))
-    .map(s => s.trim())
-    .filter(Boolean);
+    .map(cleanBubble)
+    .filter(t => t && t !== "..." && t !== "…");
+
+  if (replies.length === 0) replies = isEnMode ? ["Uh..."] : ["嗯……"];
+
+  // 7. heart 兜底
+  if (!heart || !heart.trim()) {
+    const defaultHearts = [
+      "（盯着屏幕看了两秒，琢磨着该怎么回）",
+      "（嘴角抽了一下，感觉有点好笑）",
+      "（手指悬在键盘上，犹豫了一下）",
+      "（看完之后，深吸了一口气）"
+    ];
+    heart = defaultHearts[Math.floor(Math.random() * defaultHearts.length)];
+  }
+
+  // 8. 彼得条数下限校验（保持原逻辑）
+  const minReplies = (self.currentUser === "彼得·帕克") ? 2 : 1;
+  if (replies.length < minReplies) {
+    return { replies, heart, needRetry: true };
+  }
+  return { replies, heart };
 }
-
-        replies = replies.map(cleanBubble).filter(t => t && t !== "..." && t !== "…");
-
-        if (replies.length === 0) replies = isEnMode ? ["Uh..."] : ["嗯……"];
-
-        if (!heart || !heart.trim()) {
-          const defaultHearts = [
-            "（盯着屏幕看了两秒，琢磨着该怎么回）",
-            "（嘴角抽了一下，感觉有点好笑）",
-            "（手指悬在键盘上，犹豫了一下）",
-            "（看完之后，深吸了一口气）"
-          ];
-          heart = defaultHearts[Math.floor(Math.random() * defaultHearts.length)];
-        }
-// ★ 强制约束：彼得·帕克必须 2-4 条，其他联系人至少 1 条
-// 如果少于下限，返回一个标记让外层重试
-const minReplies = (self.currentUser === "彼得·帕克") ? 2 : 1;
-if (replies.length < minReplies) {
-  return { replies, heart, needRetry: true };
-}
-        return { replies, heart };
-      }
 
       let parsed = parseReplyRaw(replyRaw, isEn);
 let replyList = parsed.replies;
