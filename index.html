@@ -3451,6 +3451,23 @@ if (typeof s.phaseEnteredTurn !== "number") s.phaseEnteredTurn = s.turn || 1;  /
 },
   getChats(){return this.get("sv_chats",{});},
   setChats(c){this.set("sv_chats",c);},
+getReadState(){ return this.get("sv_read_state", {}); },
+setReadState(r){ this.set("sv_read_state", r); },
+// 标记某联系人已读到当前最新
+markRead(name){
+  if (!name) return;
+  const r = this.getReadState();
+  const arr = (this.getChats()[name]) || [];
+  r[name] = arr.length;
+  this.setReadState(r);
+},
+// 未读数 = 已读位置之后、对方发来的消息条数
+getUnread(name){
+  const arr = (this.getChats()[name]) || [];
+  const readLen = this.getReadState()[name] || 0;
+  if (readLen >= arr.length) return 0;
+  return arr.slice(readLen).filter(m => m && m.role === "them").length;
+},
   getPosts(){return this.get("sv_posts",{twitter:[],instagram:[]});},
 setPosts(p){this.set("sv_posts",p);},
   getContacts(){ 
@@ -3484,9 +3501,12 @@ setPosts(p){this.set("sv_posts",p);},
       name: c.name || "未知",
       desc: c.desc || "自定义联系人",
       affinity: (typeof c.affinity === 'number')
-  ? (c.name === "彼得·帕克" ? Math.max(0, Math.min(200, c.affinity)) : Math.max(0, Math.min(100, c.affinity)))
+  ? ((c.name === "彼得·帕克" || c.affCapUnlocked)
+      ? Math.max(0, Math.min(200, c.affinity))
+      : Math.max(0, Math.min(100, c.affinity)))
   : 0,
 heart: c.heart || "暂无",
+affCapUnlocked: c.affCapUnlocked === true,
       intervention: c.intervention || "",
       refImage: c.refImage || "",
       isGroup: c.isGroup === true,
@@ -3514,12 +3534,12 @@ if (WORLD.avengersRoster) {
   return list; 
 },
 setContacts(c){
-  // 铁律：除彼得·帕克外，所有联系人的好感度上限为 100（友情/亲情天花板）
   if (Array.isArray(c)) {
     c = c.map(item => {
       if (item && item.name && item.name !== "彼得·帕克" && typeof item.affinity === "number") {
-        item.affinity = Math.max(0, Math.min(100, item.affinity));
-      }
+  const cap = item.affCapUnlocked ? 200 : 100;
+  item.affinity = Math.max(0, Math.min(cap, item.affinity));
+}
       return item;
     });
   }
@@ -5140,6 +5160,28 @@ function buildAffinityBehaviorBlock(name, aff) {
 
   // 非彼得联系人：把好感度映射压到「熟人 / 普通朋友 / 信任好友 / 亲人」四档
   if (!isPeter) {
+    const _affUnlocked = isAffCapUnlocked(name);
+    if (_affUnlocked) {
+      let r = "";
+      if (a >= 151) {
+        r = `- 你和玩家已是亲密关系，可主动亲吻、搂抱、贴耳说话、更进一步。会主动关心、主动靠近、不怕麻烦。
+- 亲密反应要多样：若无其事 / 反客为主 / 认真直视 / 用行动代替语言，不要每回合都脸红。`;
+      } else if (a >= 101) {
+        r = `- 暧昧期，可主动牵手、拥抱、贴耳说话、故意逗弄、眼神停留。会紧张、会多想、会有小心思，但嘴上不一定承认。`;
+      } else if (a >= 51) {
+        r = `- 信任好友，可拍肩、并肩、开玩笑式地戳一下。此档暂无明显恋爱倾向，但允许轻微暧昧的苗头。`;
+      } else if (a >= 21) {
+        r = `- 普通朋友，客气礼貌，能帮就帮，不主动过度亲密。`;
+      } else if (a >= 1) {
+        r = `- 点头之交，回复简短、客气、有距离感。`;
+      } else {
+        r = `- 陌生人，态度冷淡疏离，公事公办。`;
+      }
+      return `【当前你对「${name}」的好感度：${a}/200 · ${affinityLevelHint(a)}】
+${r}
+【关系说明】你和玩家的关系可以随好感度发展到暧昧乃至恋爱。但世界线主线剧情不会参考、也不会体现这段暧昧。`;
+    }
+
     let rules = "";
     if (a >= 101) {
       rules = `- 你和玩家是非常亲近的朋友/家人，可以主动关心、开玩笑、分享心事，**但这是纯友情/亲情，不是恋爱**。
@@ -5216,14 +5258,26 @@ function getGenderInfo(profile) {
   return                        { gender: "女",   pronoun: "她", label: "女性",     desc: "女（用「她」指代）" };
 }
 
+// 该联系人是否解除了好感度上限（彼得永远解除）
+function isAffCapUnlocked(name) {
+  if (name === "彼得·帕克") return true;
+  const c = store.getContacts().find(x => x && x.name === name);
+  return !!(c && c.affCapUnlocked);
+}
+function getAffinityCapOf(name) {
+  return isAffCapUnlocked(name) ? 200 : 100;
+}
+
 // ===== 快速拿到某个联系人的好感度 =====
 function getAffinityOf(name) {
   const c = store.getContacts().find(x => x.name === name);
-  if (c && typeof c.affinity === "number") {
-    // 非彼得联系人：上限 100
-    if (name !== "彼得·帕克") return Math.max(0, Math.min(100, c.affinity));
-    return c.affinity;
+ if (c && typeof c.affinity === "number") {
+  if (name !== "彼得·帕克") {
+    const cap = c.affCapUnlocked ? 200 : 100;
+    return Math.max(0, Math.min(cap, c.affinity));
   }
+  return c.affinity;
+}
   if (name === "彼得·帕克") {
     const s = store.getState();
     if (typeof s.affinity === "number") return s.affinity;
@@ -8394,6 +8448,13 @@ body.querySelectorAll(".c-ref-trigger").forEach(btn => {
     </label>
   </div>
 </div>
+<div class="card">
+  <h3>🍬 投喂</h3>
+  <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+    感谢天使的投喂~
+  </p >
+  <button class="btn ghost" id="feedBtn">🍬 投喂作者</button>
+</div>
 <div class="card"><h3>数据管理</h3>
           <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">导出后的 JSON 文件包含：人设、世界线进度、好感度、聊天记录、推特、IG、存档等所有数据。</p >
           <button class="btn ghost" id="exportDataBtn" style="margin-bottom:8px;">📤 导出数据（JSON）</button>
@@ -8509,6 +8570,38 @@ const themeSel = body.querySelector("#s_theme");
           iKeyToggle.textContent = isPwd ? "👁️ 隐藏" : "👁️ 显示";
         };
       }
+
+const feedBtn = body.querySelector("#feedBtn");
+if (feedBtn) {
+  feedBtn.onclick = () => {
+    document.querySelectorAll(".__feed_overlay").forEach(el => el.remove());
+
+    const overlay = document.createElement("div");
+    overlay.className = "__feed_overlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;";
+
+    overlay.innerHTML = `
+      <div style="position:relative;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <img src="./feed.png"
+             style="max-width:100%;max-height:72vh;object-fit:contain;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+        <div style="display:none;color:#fff;font-size:14px;text-align:center;padding:40px 20px;">
+          图片未找到，请把图片命名为 <b>feed.png</b> 放到与网页同一目录。
+        </div>
+        <button id="feedCloseBtn"
+                style="background:linear-gradient(135deg,#e62429,#8a2be2);color:#fff;border:none;padding:12px 40px;border-radius:24px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:2px;box-shadow:0 8px 24px rgba(230,36,41,.4);">
+          关闭
+        </button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    overlay.querySelector("#feedCloseBtn").onclick = close;
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  };
+}
+
       body.querySelector("#saveTheme").onclick = () => {
         const t = themeSel.value;
         localStorage.setItem("sv_theme", t);
@@ -10048,11 +10141,23 @@ ${isSpellActiveNow() && c.name !== "彼得·帕克" ? `
       ` : ""}
       <div class="field"><label>个人简介</label><textarea id="c_desc" rows="3">${esc(c.desc)}</textarea></div>
 <div class="field"><label>备注名（显示在聊天列表和对话中，留空则用本名）</label><input id="c_note" value="${esc(c.note || "")}" placeholder="例如：小虫"></div>
+${this.currentUser !== "彼得·帕克" ? `
+      <div class="field" style="padding:10px 12px;background:var(--panel-2);border-radius:10px;">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <label style="font-size:13px;color:var(--text);">💞 解除好感度上限（最高 200）</label>
+          <label class="switch">
+            <input type="checkbox" id="affCapToggle" ${c.affCapUnlocked ? "checked" : ""}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;">开启后该联系人好感度可升至 200，聊天中会随好感度表现暧昧/亲密。但世界线主线剧情不会参考除彼得外的暧昧关系。</div>
+      </div>
+      ` : ""}
       <div class="field">
         <label>好感度 (0-${this.currentUser === "彼得·帕克" ? 200 : 100}) —— 可直接修改</label>
         <div class="row" style="gap:6px;">
           <button class="btn ghost" id="aff_minus" style="width:auto;padding:6px 14px;font-size:16px;">−</button>
-          <input id="c_aff" type="number" min="0" max="${this.currentUser === "彼得·帕克" ? 200 : 100}" value="${this.currentUser === "彼得·帕克" ? c.affinity : Math.min(100, c.affinity)}" style="flex:1;text-align:center;font-weight:bold;color:var(--accent-2);">
+          <input id="c_aff" type="number" min="0" max="${(this.currentUser === "彼得·帕克" || c.affCapUnlocked) ? 200 : 100}" value="${(this.currentUser === "彼得·帕克" || c.affCapUnlocked) ? c.affinity : Math.min(100, c.affinity)}" style="flex:1;text-align:center;font-weight:bold;color:var(--accent-2);">
           <button class="btn ghost" id="aff_plus" style="width:auto;padding:6px 14px;font-size:16px;">＋</button>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="aff_level_hint">${affinityLevelHint(c.affinity)}</div>
@@ -10097,7 +10202,7 @@ ${this.currentUser === "彼得·帕克" ? `
     };
     affInput.addEventListener("input", syncAffHint);
 affInput.addEventListener("blur", () => {
-  const cap = (this.currentUser === "彼得·帕克") ? 200 : 100;
+  const cap = (this.currentUser === "彼得·帕克" || c.affCapUnlocked) ? 200 : 100;
   let v = Math.max(0, Math.min(cap, parseInt(affInput.value) || 0));
   affInput.value = v;
   syncAffHint();
@@ -10107,7 +10212,7 @@ affInput.addEventListener("blur", () => {
       syncAffHint();
     };
     body.querySelector("#aff_plus").onclick = () => {
-      const cap = (this.currentUser === "彼得·帕克") ? 200 : 100;
+     const cap = (this.currentUser === "彼得·帕克" || c.affCapUnlocked) ? 200 : 100;
       affInput.value = Math.min(cap, (parseInt(affInput.value) || 0) + 5);
       syncAffHint();
     };
@@ -10121,23 +10226,44 @@ if (revealToggle) {
 }
 
     body.querySelector("#save").onclick = () => {
-      const rawAff = Math.max(0, Math.min(200, parseInt(affInput.value) || 0));
-      const newAff = (this.currentUser === "彼得·帕克") ? rawAff : Math.min(100, rawAff);
       const list = store.getContacts();
-      const target = list.find(x => x.name === this.currentUser);
-      if (target) {
-        target.desc = body.querySelector("#c_desc").value;
-        target.note = (body.querySelector("#c_note").value || "").trim();   // ★ 新增：写入备注
-        target.affinity = newAff;
-        store.setContacts(list);
+const target = list.find(x => x.name === this.currentUser);
+if (target) {
+  // 先保存开关
+  if (this.currentUser !== "彼得·帕克") {
+    const tog = body.querySelector("#affCapToggle");
+    if (tog) target.affCapUnlocked = tog.checked;
+  }
+  const capForSave = (this.currentUser === "彼得·帕克" || target.affCapUnlocked) ? 200 : 100;
+  const newAff = Math.max(0, Math.min(capForSave, parseInt(affInput.value) || 0));
+  target.desc = body.querySelector("#c_desc").value;
+  target.note = (body.querySelector("#c_note").value || "").trim();
+  target.affinity = newAff;
+  store.setContacts(list);
         if (this.currentUser === "彼得·帕克") {
           const s = store.getState();
           s.affinity = newAff;
           store.setState(s);
         }
       }
-      toast(`已保存 · 好感度 ${newAff} · ${affinityLevelHint(newAff)}`);
+      const shownAff = target ? target.affinity : 0;
+      toast(`已保存 · 好感度 ${shownAff} · ${affinityLevelHint(shownAff)}`);
     };
+
+const affCapToggle = body.querySelector("#affCapToggle");
+    if (affCapToggle) {
+      affCapToggle.onchange = () => {
+        const list = store.getContacts();
+        const t = list.find(x => x.name === self.currentUser);
+        if (t) {
+          t.affCapUnlocked = affCapToggle.checked;
+          if (!affCapToggle.checked && t.affinity > 100) t.affinity = 100; // 关闭时压回
+          store.setContacts(list);
+        }
+        toast(affCapToggle.checked ? "已解除好感度上限（最高 200）" : "已恢复上限（最高 100）");
+        self.renderSettings(body);
+      };
+    }
 
 // 🚫 保存聊天干预指令
     const saveInterventionBtn = body.querySelector("#save_intervention");
@@ -10293,6 +10419,9 @@ if (revealToggle) {
 async render(body) {
     body.innerHTML = "";
     const self = this;
+if (self.view === "chat" && self.currentUser) {
+  store.markRead(self.currentUser);
+}
     const realAv = (v) => {
       if (!v) return "";
       if (v.startsWith("idb:")) return _imgCache[v.slice(4)] || "";
@@ -10493,6 +10622,13 @@ sbG.querySelector("#retryBtn").onclick = (e) => {
               ? `<img src="${_avSrc}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
               : `<div style="width:40px;height:40px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--text);flex-shrink:0;">${esc((c.name || "?")[0].toUpperCase())}</div>`);
 
+// 未读角标（锁定的彼得不显示）
+const unread = isLockedPeter ? 0 : store.getUnread(c.name);
+const badge = unread > 0
+  ? `<span style="position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#8a8a99;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box;box-shadow:0 1px 3px rgba(0,0,0,.4);">${unread > 99 ? '99+' : unread}</span>`
+  : "";
+const avatarWrap = `<div style="position:relative;width:40px;height:40px;flex-shrink:0;">${avatarHtml}${badge}</div>`;
+
         const nameHtml = isLockedPeter
           ? `<span style="color:var(--muted);font-style:italic;">未知号码</span>`
           : esc(displayName);
@@ -10505,8 +10641,8 @@ const descHtml = isLockedPeter
       : esc(c.desc || ""));
 
         return `<div class="chat-row" data-user="${esc(c.name)}" data-locked="${isLockedPeter ? '1' : '0'}" style="padding:12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:12px;${isLockedPeter ? 'opacity:.75;' : ''}">
-          ${avatarHtml}
-          <div style="flex:1;min-width:0;">
+  ${avatarWrap}
+  <div style="flex:1;min-width:0;">
             <div style="font-weight:bold;color:var(--text);display:flex;align-items:center;gap:6px;">
               ${nameHtml}
               ${(!isLockedPeter && note) ? `<span style="font-size:10px;color:var(--muted);font-weight:400;">（${esc(c.name)}）</span>` : ""}
@@ -21591,6 +21727,29 @@ showMsgBanner(data.sender, data.messages[0] || "");
     console.warn("NPC主动发信失败:", e);
   }
 }
+// ===== 未读角标：收到消息自动刷新 =====
+(function hookUnreadBadge() {
+  const _origSetChats = store.setChats.bind(store);
+  store.setChats = function(c) {
+    _origSetChats(c);
+    try {
+      if (currentApp === "messages") {
+        // 正在看某人的聊天 → 自动标记已读
+        if (apps.messages.view === "chat" && apps.messages.currentUser) {
+          store.markRead(apps.messages.currentUser);
+        }
+        // 在信息列表页 → 重新渲染，刷新角标
+        else if (apps.messages.view === "list") {
+          setTimeout(() => {
+            if (currentApp === "messages" && apps.messages.view === "list") {
+              apps.messages.render(document.getElementById("appBody"));
+            }
+          }, 50);
+        }
+      }
+    } catch (e) {}
+  };
+})();
 window.showMsgBanner = (sender, preview) => {
   const el = document.getElementById("msgBanner");
   if (!el) return;
