@@ -20414,13 +20414,24 @@ const resumeBanner = body.querySelector("#dtResumeBanner");
       </div>`;
 
     const optsEl = body.querySelector("#dtOpts");
-    const opts = (session.options || "").split("\n").filter(l => /^\s*(?:\*{0,2}\s*)?[A-D]\s*[\.\、\:：\)]/.test(l.trim()));
-    optsEl.innerHTML = opts.map(o => {
-      const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
-      return `<button class="dt-opt" onclick="window.resolveDateOption('${safe}')">${formatDialogue(o)}</button>`;
-    }).join("") || `
-      <button class="dt-opt" onclick="window.resolveDateOption('（自然地聊起最近的事）')">自然地聊起最近的事</button>
-      <button class="dt-opt" onclick="window.resolveDateOption('（专心吃东西，不多话）')">专心吃东西，不多话</button>`;
+const opts = (session.options || "").split("\n").filter(l => /^\s*(?:\*{0,2}\s*)?[A-D]\s*[\.\、\:：\)]/.test(l.trim()));
+
+if (opts.length) {
+  optsEl.innerHTML = opts.map((o, i) =>
+    `<button class="dt-opt" data-opt="${i}">${formatDialogue(o)}</button>`
+  ).join("");
+  // 把选项原文存到元素上，点击时直接取，不经过字符串拼接
+  optsEl.querySelectorAll(".dt-opt").forEach((btn, i) => {
+    btn.onclick = () => window.resolveDateOption(opts[i]);
+  });
+} else {
+  optsEl.innerHTML = `
+    <button class="dt-opt" data-fb="（自然地聊起最近的事）">自然地聊起最近的事</button>
+    <button class="dt-opt" data-fb="（专心吃东西，不多话）">专心吃东西，不多话</button>`;
+  optsEl.querySelectorAll(".dt-opt").forEach(btn => {
+    btn.onclick = () => window.resolveDateOption(btn.dataset.fb);
+  });
+}
 
     const input = body.querySelector("#dtCustom");
     const send = () => {
