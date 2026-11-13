@@ -3483,8 +3483,10 @@ setPosts(p){this.set("sv_posts",p);},
       ...c,
       name: c.name || "未知",
       desc: c.desc || "自定义联系人",
-      affinity: (typeof c.affinity === 'number') ? c.affinity : 0,
-      heart: c.heart || "暂无",
+      affinity: (typeof c.affinity === 'number')
+  ? (c.name === "彼得·帕克" ? Math.max(0, Math.min(200, c.affinity)) : Math.max(0, Math.min(100, c.affinity)))
+  : 0,
+heart: c.heart || "暂无",
       intervention: c.intervention || "",
       refImage: c.refImage || "",
       isGroup: c.isGroup === true,
@@ -10094,6 +10096,12 @@ ${this.currentUser === "彼得·帕克" ? `
       affHint.textContent = affinityLevelHint(v);
     };
     affInput.addEventListener("input", syncAffHint);
+affInput.addEventListener("blur", () => {
+  const cap = (this.currentUser === "彼得·帕克") ? 200 : 100;
+  let v = Math.max(0, Math.min(cap, parseInt(affInput.value) || 0));
+  affInput.value = v;
+  syncAffHint();
+});
     body.querySelector("#aff_minus").onclick = () => {
       affInput.value = Math.max(0, (parseInt(affInput.value) || 0) - 5);
       syncAffHint();
@@ -20272,7 +20280,7 @@ const resumeBanner = body.querySelector("#dtResumeBanner");
       </div>`;
 
     const optsEl = body.querySelector("#dtOpts");
-    const opts = (session.options || "").split("\n").filter(l => /^[A-D][\.\、]/.test(l.trim()));
+    const opts = (session.options || "").split("\n").filter(l => /^\s*(?:\*{0,2}\s*)?[A-D]\s*[\.\、\:：\)]/.test(l.trim()));
     optsEl.innerHTML = opts.map(o => {
       const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
       return `<button class="dt-opt" onclick="window.resolveDateOption('${safe}')">${formatDialogue(o)}</button>`;
@@ -20379,16 +20387,41 @@ const resumeBanner = body.querySelector("#dtResumeBanner");
 },
 
   _split(res) {
-    const idx = res.indexOf("【选项】");
-    const story = (idx > -1 ? res.slice(0, idx) : res)
-      .replace("【剧情】", "")
-      .replace(/【好感度变动[:：][^】]*】/g, "")
-      .replace(/【约会结束】/g, "")
-      .replace(/【约会氛围[:：][^】]*】/g, "")
-      .trim();
-    const options = idx > -1 ? res.slice(idx + 4).replace(/【[^】]*】/g, "").trim() : "";
+  let text = String(res || "")
+    .replace("【剧情】", "")
+    .replace(/【好感度变动[:：][^】]*】/g, "")
+    .replace(/【约会结束】/g, "")
+    .replace(/【约会氛围[:：][^】]*】/g, "");
+
+  // 1. 优先找【选项】标记
+  const idx = text.indexOf("【选项】");
+  if (idx > -1) {
+    const story = text.slice(0, idx).trim();
+    const options = text.slice(idx + 4).replace(/【[^】]*】/g, "").trim();
     return { story, options };
-  },
+  }
+
+  // 2. 没标记 → 找正文里"连续的 A/B/C/D 行"作为选项起点
+  const lines = text.split("\n");
+  let firstIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(?:\*{0,2}\s*)?A\s*[\.\、\:：\)]/.test(lines[i])) {
+      const next = lines.slice(i + 1, i + 5).join("\n");
+      if (/^\s*(?:\*{0,2}\s*)?[BC]\s*[\.\、\:：\)]/m.test(next)) {
+        firstIdx = i;
+        break;
+      }
+    }
+  }
+  if (firstIdx > -1) {
+    const story = lines.slice(0, firstIdx).join("\n").trim();
+    const options = lines.slice(firstIdx).join("\n").replace(/【[^】]*】/g, "").trim();
+    return { story, options };
+  }
+
+  // 3. 实在没有选项 → story 整段，options 空（外层会兜底）
+  return { story: text.trim(), options: "" };
+},
 
   _buildPrompt(mode, ctx) {
     const s = store.getState();
