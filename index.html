@@ -4847,7 +4847,7 @@ async function callAI(messages, systemPrompt) {
   const body = JSON.stringify({
     model: cfg.model,
     messages: [{ role: "system", content: systemPrompt }, ...messages],
-    temperature: 0.85
+    temperature: 0.8
   });
 
   // ★ 关键 1：60 秒超时（世界线长剧情需要）
@@ -20074,6 +20074,19 @@ onBack() {
       { name: "防波堤看浪", emoji: "🌊" }
     ]
   },
+{
+  key: "avengers", name: "复仇者基地", emoji: "🛡️", color: "#2d6bff",
+  desc: "斯塔克大厦 · 高科技、落地窗与托尼的私人收藏。",
+  spots: [
+    { name: "顶层落地窗酒廊", emoji: "🥃" },{ name: "斯塔克私人实验室", emoji: "🔬" },
+    { name: "全息训练室", emoji: "🥽" },{ name: "机库看战甲", emoji: "🤖" },
+    { name: "屋顶停机坪夜景", emoji: "🚁" },{ name: "贾维斯值守的厨房", emoji: "🍳" },
+    { name: "复联会议大厅", emoji: "🪑" },{ name: "落地窗前的沙发", emoji: "🛋️" },
+    { name: "地下车库跑车区", emoji: "🏎️" },{ name: "纪念墙长廊", emoji: "🖼️" },
+    { name: "量子实验平台", emoji: "⚛️" },{ name: "天台花园", emoji: "🌿" },
+    { name: "深夜的指挥中心", emoji: "🖥️" }
+  ]
+},
   {
     key: "venice", name: "威尼斯", emoji: "🛶", color: "#b5743e",
     desc: "水道、石桥与黄昏的钟声。",
