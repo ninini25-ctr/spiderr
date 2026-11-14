@@ -3338,7 +3338,14 @@ function markEarlierPhasesDone(anchorIdx) {
 
 const store = {
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
-  set(k,v){localStorage.setItem(k,JSON.stringify(v));},
+  set(k,v){
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch (e) {
+    console.error("[store.set 配额超限]", k, e);
+    try { toast("⚠️ 本地空间紧张，请到 设置→数据管理 导出备份"); } catch (_) {}
+  }
+},
   getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3"});},
   setConfig(c){this.set("sv_config",c);},
 // ===== API 档位（可保存多套 URL / Key / 模型）=====
@@ -3791,13 +3798,11 @@ function detectIsOldPlayer() {
     const s = store.getState();
     if (s && Array.isArray(s.history) && s.history.length > 0) return true;
 
-    // 4. 存档槽里有非空档位
-    const slots = JSON.parse(localStorage.getItem("sv_slots") || "null");
-    if (Array.isArray(slots) && slots.some(x => x)) return true;
+   // 4. 存档槽里有非空档位（存档已迁到 IndexedDB，靠标记判断）
+if (localStorage.getItem("sv_has_slots") === "1") return true;
 
-    // 5. 人设存档里有东西（说明是老玩家）
-    const profileSlots = JSON.parse(localStorage.getItem("sv_profile_slots_10") || "null");
-    if (Array.isArray(profileSlots) && profileSlots.some(x => x)) return true;
+// 5. 人设存档里有东西
+if (localStorage.getItem("sv_has_profile_slots") === "1") return true;
 
     return false;
   } catch (e) {
@@ -4662,22 +4667,25 @@ ${name}。
 const dbHelper = {
   db: null,
   async init() {
-    return new Promise((resolve) => {
-      const req = indexedDB.open("SpiderMusicDB", 2);   // ★ 版本升到 2
-      req.onupgradeneeded = e => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains("tracks")) {
-          db.createObjectStore("tracks", { keyPath: "id" });
-        }
-        // ★ 新增：图片库（头像、参考图、壁纸）
-        if (!db.objectStoreNames.contains("images")) {
-          db.createObjectStore("images", { keyPath: "id" });
-        }
-      };
-      req.onsuccess = e => { this.db = e.target.result; resolve(); };
-      req.onerror = () => resolve();
-    });
-  },
+  return new Promise((resolve) => {
+    const req = indexedDB.open("SpiderMusicDB", 3);   // ★ 版本升到 3
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("tracks")) {
+        db.createObjectStore("tracks", { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains("images")) {
+        db.createObjectStore("images", { keyPath: "id" });
+      }
+      // ★ 新增：通用 KV 仓库（存大体积存档，避开 localStorage 5MB 限制）
+      if (!db.objectStoreNames.contains("kv")) {
+        db.createObjectStore("kv", { keyPath: "id" });
+      }
+    };
+    req.onsuccess = e => { this.db = e.target.result; resolve(); };
+    req.onerror = () => resolve();
+  });
+},
   async save(track) {
     if (!this.db) await this.init();
     return new Promise((resolve, reject) => {
@@ -4743,10 +4751,137 @@ const dbHelper = {
       const req = tx.objectStore("images").getAll();
       req.onsuccess = () => resolve(req.result || []);
     });
+  },
+
+  // ===== 通用 KV 存储（大体积存档专用）=====
+  async kvSet(key, value) {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = this.db.transaction("kv", "readwrite");
+        tx.objectStore("kv").put({ id: key, data: value });
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e);
+      } catch (e) { reject(e); }
+    });
+  },
+  async kvGet(key) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      try {
+        const tx = this.db.transaction("kv", "readonly");
+        const req = tx.objectStore("kv").get(key);
+        req.onsuccess = () => resolve(req.result ? req.result.data : null);
+        req.onerror = () => resolve(null);
+      } catch (e) { resolve(null); }
+    });
+  },
+  async kvDelete(key) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      try {
+        const tx = this.db.transaction("kv", "readwrite");
+        tx.objectStore("kv").delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      } catch (e) { resolve(); }
+    });
+  },
+  async kvAll() {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      try {
+        const tx = this.db.transaction("kv", "readonly");
+        const req = tx.objectStore("kv").getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      } catch (e) { resolve([]); }
+    });
   }
 };
 
 dbHelper.init(); // 初始化数据库
+
+// ============================================================
+// 📦 存档层：把大体积存档搬到 IndexedDB，并自动迁移 localStorage 旧档
+//   - sv_slots            世界线存档
+//   - sv_profile_slots_10 人设存档
+//   - sv_theater_slots_*  小剧场存档
+// ============================================================
+const archive = {
+  ready: null,
+  init() {
+    if (this.ready) return this.ready;
+    this.ready = (async () => {
+      await dbHelper.init();
+      await this._migrate();
+    })();
+    return this.ready;
+  },
+  async _migrate() {
+    try {
+      // 1) 世界线存档
+      const ws = localStorage.getItem("sv_slots");
+      if (ws != null) {
+        if ((await dbHelper.kvGet("sv_slots")) == null) await dbHelper.kvSet("sv_slots", ws);
+        try { const a = JSON.parse(ws); if (Array.isArray(a) && a.some(x => x)) localStorage.setItem("sv_has_slots", "1"); } catch (e) {}
+        localStorage.removeItem("sv_slots");   // ★ 释放 localStorage 空间
+      }
+      // 2) 人设存档
+      const ps = localStorage.getItem("sv_profile_slots_10");
+      if (ps != null) {
+        if ((await dbHelper.kvGet("sv_profile_slots_10")) == null) await dbHelper.kvSet("sv_profile_slots_10", ps);
+        try { const a = JSON.parse(ps); if (Array.isArray(a) && a.some(x => x)) localStorage.setItem("sv_has_profile_slots", "1"); } catch (e) {}
+        localStorage.removeItem("sv_profile_slots_10");
+      }
+      // 3) 小剧场存档（动态 key，每次都扫一遍，幂等）
+      const tKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("sv_theater_slots_")) tKeys.push(k);
+      }
+      for (const k of tKeys) {
+        const v = localStorage.getItem(k);
+        if ((await dbHelper.kvGet(k)) == null) await dbHelper.kvSet(k, v);
+        localStorage.removeItem(k);
+      }
+    } catch (e) { console.warn("[archive 迁移失败]", e); }
+  },
+  async getRaw(key) {
+    await this.init();
+    let v = await dbHelper.kvGet(key);
+    if (v == null) v = localStorage.getItem(key); // 兜底
+    return v;
+  },
+  async setRaw(key, str) {
+    await this.init();
+    await dbHelper.kvSet(key, str);
+    try { localStorage.removeItem(key); } catch (e) {}
+  },
+  async getJSON(key, def) {
+    try { const v = await this.getRaw(key); return v ? JSON.parse(v) : def; }
+    catch (e) { return def; }
+  },
+  async setJSON(key, obj) { await this.setRaw(key, JSON.stringify(obj)); }
+};
+archive.init();   // ★ 页面加载就触发迁移，尽早释放 localStorage 空间
+
+// 导出/导入/云同步用：IDB 存档整体打包
+async function dumpArchive() {
+  await archive.init();
+  const all = await dbHelper.kvAll();
+  const out = {};
+  all.forEach(r => { out[r.id] = r.data; });
+  return out;
+}
+async function restoreArchive(obj) {
+  await archive.init();
+  for (const k of Object.keys(obj || {})) {
+    await dbHelper.kvSet(k, obj[k]);
+    if (k === "sv_slots") localStorage.setItem("sv_has_slots", "1");
+    if (k === "sv_profile_slots_10") localStorage.setItem("sv_has_profile_slots", "1");
+  }
+}
 // ===== 音频转码工具（FLAC → MP3/WebM/WAV 兜底）=====
 const audioConverter = {
   // 选择当前浏览器支持的最佳输出格式
@@ -7670,16 +7805,16 @@ setTimeout(applyAppearance, 100);
 const PROFILE_SLOTS_KEY = "sv_profile_slots_10";   // 注意用新 key
 const PROFILE_SLOT_COUNT = 10;
 
-function getProfileSlots() {
-  let slots = JSON.parse(localStorage.getItem(PROFILE_SLOTS_KEY) || "null");
+async function getProfileSlots() {
+  let slots = await archive.getJSON(PROFILE_SLOTS_KEY, null);
   if (!Array.isArray(slots) || slots.length !== PROFILE_SLOT_COUNT) {
     slots = Array(PROFILE_SLOT_COUNT).fill(null);
-    localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
+    await archive.setJSON(PROFILE_SLOTS_KEY, slots);
   }
   return slots;
 }
-function setProfileSlots(slots){
-  localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
+async function setProfileSlots(slots){
+  await archive.setJSON(PROFILE_SLOTS_KEY, slots);
 }
 // ============================================================
 // 🖼️ 文件选择通用工具：显式触发 + 每次清空（解决 iOS / WebView 点不动）
@@ -9005,23 +9140,19 @@ const identity    = body.querySelector("#p_identity").value.trim();
       // ===== 存档人设：弹出 10 格选择 =====
 const profileSaveBtn = body.querySelector("#profileSaveBtn");
 if (profileSaveBtn) {
-  // ★ 用 onclick 而不是 addEventListener，避免重复绑定
-  profileSaveBtn.onclick = () => {
+  profileSaveBtn.onclick = async () => {
     try {
-      // ★ 单例保护：先移除所有已存在的存档面板
       document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
-
       ensureSaveCurrentProfile();
-      const slots = getProfileSlots();
+      const slots = await getProfileSlots();
 
       const div = document.createElement("div");
-      div.className = "__profile_slot_panel";   // ★ 唯一标识
-      div.dataset.mode = "save";                // ★ 标记模式
+      div.className = "__profile_slot_panel";
+      div.dataset.mode = "save";
       div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
       div.innerHTML = `<h2 style="color:var(--text);margin-top:0">💾 存档人设（共10格）</h2><div id="pslotList"></div><button class="btn ghost" style="margin-top:12px" id="pslotClose">关闭</button>`;
       const list = div.querySelector("#pslotList");
 
-      // ★ 用 onclick 逐个绑定，不用事件委托，避免重复触发
       slots.forEach((snap, i) => {
         const filled = !!snap;
         const label = filled
@@ -9032,44 +9163,35 @@ if (profileSaveBtn) {
         row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
           <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
 
-        // ★ 直接绑在按钮上
         const btn = row.querySelector("button[data-idx]");
-        btn.onclick = (ev) => {
-          ev.stopPropagation();
-          ev.preventDefault();
-
-          // ★ 点击时重新读一次最新 slots，不用打开面板时的旧引用
-          const latestSlots = getProfileSlots();
+        btn.onclick = async (ev) => {
+          ev.stopPropagation(); ev.preventDefault();
+          const latestSlots = await getProfileSlots();
           if (latestSlots[i] && !confirm(`档位 ${i + 1} 已有内容，是否覆盖？`)) return;
 
           const p = store.getProfile();
-const curState = store.getState();
-const curPhase = WORLD.timeline[curState.anchor] || WORLD.timeline[0];
-const autoLabel = `${p.name || "未命名"} · ${curPhase.name} · ${new Date().toLocaleString()}`;
+          const curState = store.getState();
+          const curPhase = WORLD.timeline[curState.anchor] || WORLD.timeline[0];
+          const autoLabel = `${p.name || "未命名"} · ${curPhase.name} · ${new Date().toLocaleString()}`;
 
-latestSlots[i] = {
-  label: autoLabel,
-  timestamp: Date.now(),
-  phaseName: curPhase.name,
-  phaseKey: curPhase.key,
-  profile: JSON.parse(JSON.stringify(store.getProfile())),
-  data: collectAllData()
-};
-try {
-  setProfileSlots(latestSlots);
-} catch (e) {
-  console.error("[人设存档失败]", e);
-  if (e && (e.name === "QuotaExceededError" || /quota|exceeded|storage/i.test(e.message || ""))) {
-    toast("❌ 存储空间已满！请先导出备份，再清理聊天记录/删掉旧存档后重试");
-  } else {
-    toast("❌ 存档失败：" + (e.message || "未知错误"));
-  }
-  return;
-}
-
-toast(`✅ 已保存到人设档位 ${i + 1}`);
+          latestSlots[i] = {
+            label: autoLabel,
+            timestamp: Date.now(),
+            phaseName: curPhase.name,
+            phaseKey: curPhase.key,
+            profile: JSON.parse(JSON.stringify(store.getProfile())),
+            data: collectAllData()
+          };
+          try {
+            await setProfileSlots(latestSlots);
+            localStorage.setItem("sv_has_profile_slots", "1");
+          } catch (e) {
+            console.error("[人设存档失败]", e);
+            toast("❌ 存档失败：" + (e.message || "未知错误"));
+            return;
+          }
+          toast(`✅ 已保存到人设档位 ${i + 1}`);
           div.remove();
-          // ★ 重新渲染设置页，让档位状态刷新
           apps.settings.render($("#appBody"));
         };
 
@@ -9085,15 +9207,13 @@ toast(`✅ 已保存到人设档位 ${i + 1}`);
   };
 }
 
-  // ===== 读档人设：弹出 10 格选择 =====
+// ===== 读档人设：弹出 10 格选择 =====
 const profileLoadBtn = body.querySelector("#profileLoadBtn");
 if (profileLoadBtn) {
-  profileLoadBtn.onclick = () => {
+  profileLoadBtn.onclick = async () => {
     try {
-      // ★ 单例保护
       document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
-
-      const slots = getProfileSlots();
+      const slots = await getProfileSlots();
       if (!slots.some(s => s)) return toast("还没有任何人设存档");
 
       const div = document.createElement("div");
@@ -9114,28 +9234,31 @@ if (profileLoadBtn) {
           <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px" ${filled ? "" : "disabled"}>${filled ? "读取" : "不可用"}</button>`;
 
         const btn = row.querySelector("button[data-idx]");
-        btn.onclick = (ev) => {
-  ev.stopPropagation();
-  ev.preventDefault();
-  if (btn.disabled) return;
+        btn.onclick = async (ev) => {
+          ev.stopPropagation(); ev.preventDefault();
+          if (btn.disabled) return;
+          const latestSlots = await getProfileSlots();
+          const latestSnap = latestSlots[i];
+          if (!latestSnap) return toast("该档位为空");
+          if (!confirm("读档会将当前所有数据覆盖为该存档内容，确定继续？")) return;
 
-  const latestSlots = getProfileSlots();
-  const latestSnap = latestSlots[i];
-  if (!latestSnap) return toast("该档位为空");
-  if (!confirm("读档会将当前所有数据覆盖为该存档内容，确定继续？")) return;
+          for (const k of Object.keys(latestSnap.data || {})) {
+            if (!k.startsWith("sv_")) continue;
+            if (k === PROFILE_SLOTS_KEY) continue;
+            if (k === "sv_slots" || k.startsWith("sv_theater_slots_")) {
+              try { await archive.setRaw(k, latestSnap.data[k]); } catch (e) {}
+              continue;
+            }
+            try { localStorage.setItem(k, latestSnap.data[k]); }
+            catch (e) { console.warn("读档写入失败", k, e); }
+          }
+          if (latestSnap.profile) {
+            try { localStorage.setItem("sv_profile", JSON.stringify(latestSnap.profile)); } catch (e) {}
+          }
 
-  Object.keys(latestSnap.data || {}).forEach(k => {
-    if (k.startsWith("sv_") && k !== PROFILE_SLOTS_KEY) {
-      localStorage.setItem(k, latestSnap.data[k]);
-    }
-  });
-  if (latestSnap.profile) {
-    localStorage.setItem("sv_profile", JSON.stringify(latestSnap.profile));
-  }
-
-  toast("已读档：档位 " + (i + 1));
-  setTimeout(() => location.reload(), 500);
-};
+          toast("已读档：档位 " + (i + 1));
+          setTimeout(() => location.reload(), 500);
+        };
 
         list.appendChild(row);
       });
@@ -9262,7 +9385,11 @@ if (profileLoadBtn) {
       const res = await fetch(c.url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Sync-Code": c.code },
-        body: JSON.stringify(collectLocal())
+        body: JSON.stringify(await (async () => {
+  const d = collectLocal();
+  try { d["__idb_archive"] = await dumpArchive(); } catch (e) {}
+  return d;
+})())
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
@@ -9320,11 +9447,15 @@ if (profileLoadBtn) {
         throw new Error(data.error || ("HTTP " + res.status));
       }
       const record = data.data || {};
-      Object.keys(record).forEach(k => {
-        if (k.startsWith("sv_") && k !== "sv_cloud_cfg") {
-          localStorage.setItem(k, record[k]);
-        }
-      });
+      if (record["__idb_archive"]) {
+  try { await restoreArchive(record["__idb_archive"]); } catch (e) {}
+}
+Object.keys(record).forEach(k => {
+  if (k === "__idb_archive") return;
+  if (k.startsWith("sv_") && k !== "sv_cloud_cfg") {
+    try { localStorage.setItem(k, record[k]); } catch (e) {}
+  }
+});
       statusEl.textContent = "✅ 读取成功，即将刷新";
       toast("读取成功，即将刷新");
       setTimeout(() => location.reload(), 900);
@@ -9341,24 +9472,19 @@ if (profileLoadBtn) {
   }
 })();
      // ===== 数据管理 =====
-      body.querySelector("#exportDataBtn").onclick = () => {
+      body.querySelector("#exportDataBtn").onclick = async () => {
   const dump = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k.startsWith("sv_")) {
-      dump[k] = localStorage.getItem(k);
-    }
+    if (k.startsWith("sv_")) dump[k] = localStorage.getItem(k);
   }
-
-  // 🕸️ 额外把 memoryState 和 blank4y_turns 也明确写进 dump（防止前缀被改过）
   try {
     const mem = store.getMemoryState();
     if (mem) dump["sv_memory_state"] = JSON.stringify(mem);
-    const turns = getBlank4yTurns();
-    dump["sv_blank4y_turns"] = String(turns);
-  } catch (e) {
-    console.warn("[export] 附加 memoryState 失败：", e);
-  }
+    dump["sv_blank4y_turns"] = String(getBlank4yTurns());
+  } catch (e) {}
+  // ★ 带上 IndexedDB 里的存档（世界线/人设/小剧场）
+  try { dump["__idb_archive"] = await dumpArchive(); } catch (e) {}
 
   const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -9367,7 +9493,7 @@ if (profileLoadBtn) {
   a.download = `spiderverse_save_${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  toast("已导出数据（含记忆状态）");
+  toast("已导出数据（含记忆状态与存档）");
 };
 
       body.querySelector("#importDataBtn").onclick = () => {
@@ -9383,11 +9509,17 @@ if (profileLoadBtn) {
             const data = JSON.parse(reader.result);
             if (typeof data !== "object" || data === null) throw new Error("文件格式不正确");
             if (!confirm("导入会覆盖当前所有数据，确定继续？")) return;
-            Object.keys(data).forEach(k => {
-              if (k.startsWith("sv_")) localStorage.setItem(k, data[k]);
-            });
-            toast("导入成功，即将刷新页面");
-            setTimeout(() => location.reload(), 800);
+            (async () => {
+  if (data["__idb_archive"]) {
+    try { await restoreArchive(data["__idb_archive"]); } catch (err) { console.warn(err); }
+  }
+  Object.keys(data).forEach(k => {
+    if (k === "__idb_archive") return;
+    if (k.startsWith("sv_")) { try { localStorage.setItem(k, data[k]); } catch (e) {} }
+  });
+  toast("导入成功，即将刷新页面");
+  setTimeout(() => location.reload(), 800);
+})();
           } catch (err) {
             toast("导入失败：" + err.message);
           }
@@ -17355,77 +17487,74 @@ if (closedReviewBtn) {
   // ============================================================
   // ★ 小剧场专用存档/读档（独立 key，不污染主线存档）
   // ============================================================
-  openTheaterSlots(questId, mode) {
-    const SLOT_KEY = "sv_theater_slots_" + questId;
-    let slots = JSON.parse(localStorage.getItem(SLOT_KEY) || "null");
-    if (!Array.isArray(slots) || slots.length !== 10) {
-      slots = Array(10).fill(null);
-      localStorage.setItem(SLOT_KEY, JSON.stringify(slots));
+  async openTheaterSlots(questId, mode) {
+  await archive.init();
+  const SLOT_KEY = "sv_theater_slots_" + questId;
+  let slots = await archive.getJSON(SLOT_KEY, null);
+  if (!Array.isArray(slots) || slots.length !== 10) {
+    slots = Array(10).fill(null);
+    await archive.setJSON(SLOT_KEY, slots);
+  }
+
+  const self = this;
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
+  div.innerHTML = `
+    <h2 style="color:var(--text);margin-top:0;font-size:17px;">${mode === "save" ? "💾 小剧场存档（共10格）" : "📂 小剧场读档（共10格）"}</h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">此存档独立于主线，只影响当前小剧场。</p >
+    <div id="thSlotList"></div>
+    <button class="btn ghost" style="margin-top:12px" id="thSlotClose">关闭</button>`;
+  document.querySelector(".device").appendChild(div);
+
+  const listEl = div.querySelector("#thSlotList");
+  slots.forEach((snap, i) => {
+    const filled = !!snap;
+    const label = filled
+      ? `<b>第 ${snap.turn} 轮</b><br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
+      : "（空白档）";
+    const row = document.createElement("div");
+    row.style.cssText = "background:#14141c;border:1px solid #2a2a38;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+    row.innerHTML = `
+      <div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px;">
+        <div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}
+      </div>
+      <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;${(!filled && mode === "load") ? "opacity:.4;pointer-events:none;" : ""}">
+        ${filled ? (mode === "save" ? "覆盖" : "读取") : (mode === "save" ? "保存" : "不可用")}
+      </button>`;
+    listEl.appendChild(row);
+  });
+
+  div.querySelector("#thSlotClose").onclick = () => div.remove();
+
+  listEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-idx]");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+
+    if (mode === "save") {
+      if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      const q = all.find(x => x.id === questId);
+      if (!q) return toast("剧场不存在");
+      slots[idx] = { timestamp: Date.now(), turn: (q.history || []).length + 1, data: JSON.parse(JSON.stringify(q)) };
+      await archive.setJSON(SLOT_KEY, slots);
+      toast("已保存到小剧场档位 " + (idx + 1));
+      div.remove();
+    } else {
+      if (!slots[idx]) return toast("该档位为空");
+      if (!confirm("读档会把小剧场回退到该存档时刻，确认继续？")) return;
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      const qIdx = all.findIndex(x => x.id === questId);
+      if (qIdx === -1) return toast("剧场不存在");
+      const backup = { id: all[qIdx].id, createdAt: all[qIdx].createdAt };
+      all[qIdx] = { ...slots[idx].data, ...backup };
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
+      toast("已读取小剧场档位 " + (idx + 1));
+      div.remove();
+      this.openQuest(questId);
     }
-
-    const div = document.createElement("div");
-    div.style.cssText = "position:absolute;inset:0;background:#000e;z-index:700;padding:20px;overflow-y:auto;";
-    div.innerHTML = `
-      <h2 style="color:var(--text);margin-top:0;font-size:17px;">${mode === "save" ? "💾 小剧场存档（共10格）" : "📂 小剧场读档（共10格）"}</h2>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">此存档独立于主线，只影响当前小剧场。</p>
-      <div id="thSlotList"></div>
-      <button class="btn ghost" style="margin-top:12px" id="thSlotClose">关闭</button>`;
-    document.querySelector(".device").appendChild(div);
-
-    const listEl = div.querySelector("#thSlotList");
-    slots.forEach((snap, i) => {
-      const filled = !!snap;
-      const label = filled
-        ? `<b>第 ${snap.turn} 轮</b><br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
-        : "（空白档）";
-      const row = document.createElement("div");
-      row.style.cssText = "background:#14141c;border:1px solid #2a2a38;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-      row.innerHTML = `
-        <div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px;">
-          <div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>
-          ${label}
-        </div>
-        <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;${(!filled && mode === "load") ? "opacity:.4;pointer-events:none;" : ""}">
-          ${filled ? (mode === "save" ? "覆盖" : "读取") : (mode === "save" ? "保存" : "不可用")}
-        </button>`;
-      listEl.appendChild(row);
-    });
-
-    div.querySelector("#thSlotClose").onclick = () => div.remove();
-
-    listEl.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-idx]");
-      if (!btn) return;
-      const idx = parseInt(btn.dataset.idx);
-
-      if (mode === "save") {
-        if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
-        const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-        const q = all.find(x => x.id === questId);
-        if (!q) return toast("剧场不存在");
-        slots[idx] = {
-          timestamp: Date.now(),
-          turn: (q.history || []).length + 1,
-          data: JSON.parse(JSON.stringify(q))
-        };
-        localStorage.setItem(SLOT_KEY, JSON.stringify(slots));
-        toast("已保存到小剧场档位 " + (idx + 1));
-        div.remove();
-      } else {
-        if (!slots[idx]) return toast("该档位为空");
-        if (!confirm("读档会把小剧场回退到该存档时刻，确认继续？")) return;
-        const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
-        const qIdx = all.findIndex(x => x.id === questId);
-        if (qIdx === -1) return toast("剧场不存在");
-        const backup = { id: all[qIdx].id, createdAt: all[qIdx].createdAt };
-        all[qIdx] = { ...slots[idx].data, ...backup };
-        localStorage.setItem("sv_theaters", JSON.stringify(all));
-        toast("已读取小剧场档位 " + (idx + 1));
-        div.remove();
-        this.openQuest(questId);
-      }
-    });
-  },
+  });
+},
 
   // ============================================================
   // ★ 小剧场回忆（进行中 / 完结都能看）
@@ -22414,74 +22543,61 @@ document.getElementById("desktop").addEventListener("click", (e) => {
   openApp(id);
 });
 
-// ===== 10 格存档系统 =====
+// ===== 10 格存档系统（IndexedDB 版）=====
 const SLOT_COUNT=10;
-function getSlots(){
-  let slots=JSON.parse(localStorage.getItem("sv_slots")||"null");
-  if(!Array.isArray(slots)||slots.length!==SLOT_COUNT){slots=Array(SLOT_COUNT).fill(null);localStorage.setItem("sv_slots",JSON.stringify(slots));}
+async function getSlots(){
+  let slots = await archive.getJSON("sv_slots", null);
+  if(!Array.isArray(slots)||slots.length!==SLOT_COUNT){
+    slots=Array(SLOT_COUNT).fill(null);
+    await archive.setJSON("sv_slots", slots);
+  }
   return slots;
 }
-function setSlots(slots){localStorage.setItem("sv_slots",JSON.stringify(slots));}
+async function setSlots(slots){ await archive.setJSON("sv_slots", slots); }
 
-window.openSlots=(mode)=>{
-  const slots=getSlots();
+window.openSlots = async (mode) => {
+  await archive.init();
+  const slots = await getSlots();
   const div = document.createElement("div");
-    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;";
-  div.innerHTML=`<h2 style="color:var(--text);margin-top:0">${mode==="save"?"💾 存档（共10格）":"📂 读档（共10格）"}</h2><div id="slotList"></div><button class="btn ghost" style="margin-top:12px" onclick="this.parentNode.remove()">关闭</button>`;
-  const list=div.querySelector("#slotList");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;";
+  div.innerHTML = `<h2 style="color:var(--text);margin-top:0">${mode==="save"?"💾 存档（共10格）":"📂 读档（共10格）"}</h2><div id="slotList"></div><button class="btn ghost" style="margin-top:12px" onclick="this.parentNode.remove()">关闭</button>`;
+  const list = div.querySelector("#slotList");
   slots.forEach((snap,i)=>{
     const filled=!!snap;
-    const label=filled?`${snap.label}<br><span style="color:var(--muted) ;font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`:"（空白档）";
+    const label=filled?`${snap.label}<br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`:"（空白档）";
     const row = document.createElement("div");
-      row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
-     row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
-          <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
+    row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+    row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div>
+      <button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
     list.appendChild(row);
   });
   list.addEventListener("click", async (e) => {
-  const btn = e.target.closest("button[data-idx]"); if (!btn) return;
-  const idx = parseInt(btn.dataset.idx);
-
-  if (mode === "save") {
-    // ★ 关键：每次都重新读一次，防止打开面板后数据被别处改过
-    const freshSlots = getSlots();
-    if (freshSlots[idx]) {
-      if (!confirm(`存档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+    const btn = e.target.closest("button[data-idx]"); if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    if (mode === "save") {
+      const fresh = await getSlots();
+      if (fresh[idx] && !confirm(`存档位 ${idx + 1} 已有内容，是否覆盖？`)) return;
+      try {
+        await storeSlot(idx);
+        toast(`✅ 已存档到位置 ${idx + 1}`);
+        div.remove();
+        window.openSlots("save");   // 重新打开刷新列表
+      } catch (err) {
+        console.error("[存档失败]", err);
+        toast("❌ 存档失败：" + (err.message || "未知错误"));
+      }
+    } else {
+      if (!slots[idx]) return toast("该存档位为空");
+      await loadSlot(idx);
+      div.remove();
     }
-    try {
-      storeSlot(idx);
-      // ★ 保存成功后立刻刷新列表 UI，让用户看到"已保存"
-      const newSlots = getSlots();
-      list.querySelectorAll("button[data-idx]").forEach(b => {
-        const i = parseInt(b.dataset.idx);
-        const row = b.closest("div[style*='border-radius']");
-        if (!row) return;
-        const labelDiv = row.querySelector("div > div");
-        const filled = !!newSlots[i];
-        b.textContent = filled ? "覆盖" : "保存";
-        b.style.color = filled ? "var(--text)" : "var(--muted)";
-        if (labelDiv) {
-          labelDiv.innerHTML = filled
-            ? `<div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${newSlots[i].label}<br><span style="color:var(--muted);font-size:11px">${new Date(newSlots[i].timestamp).toLocaleString()}</span>`
-            : `<div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>（空白档）`;
-        }
-      });
-      toast(`✅ 已存档到位置 ${idx + 1}`);
-    } catch (err) {
-      console.error("[存档失败]", err);
-      toast("❌ 存档失败：" + (err.message || "未知错误"));
-    }
-  } else {
-    if (!slots[idx]) return toast("该存档位为空");
-    loadSlot(idx);
-    div.remove();
-  }
-});
+  });
   document.querySelector(".device").appendChild(div);
 };
 
-function storeSlot(idx){
-  const slots = getSlots();
+async function storeSlot(idx){
+  await archive.init();
+  const slots = await getSlots();
   const s = store.getState();
   const memorySnapshot = {
     memoryState: store.getMemoryState(),
@@ -22494,58 +22610,36 @@ function storeSlot(idx){
     profile: store.getProfile(),
     memorySnapshot: memorySnapshot
   };
-  try {
-    localStorage.setItem("sv_slots", JSON.stringify(slots));
-  } catch (e) {
-    console.error("[存档失败]", e);
-    if (e && (e.name === "QuotaExceededError" || /quota|exceeded|storage/i.test(e.message || ""))) {
-      throw new Error("存储空间已满！请到设置→数据管理导出备份后，清理聊天记录/推特，或删掉不用的存档位再试。");
-    }
-    throw new Error("存档失败：" + (e.message || "未知错误"));
-  }
+  await archive.setJSON("sv_slots", slots);   // ★ 写入 IndexedDB，不占 localStorage
+  localStorage.setItem("sv_has_slots", "1");
 }
-function loadSlot(idx){
-  const slots = getSlots();
+
+async function loadSlot(idx){
+  const slots = await getSlots();
   const a = slots[idx];
   if (!a) return;
 
   if (!confirm("⚠️ 重要警告\n\n读档会把世界线回退到存档时刻。\n读档后会清空所有聊天记录、推特、Instagram 内容。\n\n确认继续？")) return;
 
-  // 1. 恢复世界线状态
-store.setState(a.state);
-store.setProfile(a.profile);
+  store.setState(a.state);
+  store.setProfile(a.profile);
 
-  // 2. 🕸️ 恢复记忆状态（魔咒、感情线、解锁、空白期回合）
   if (a.memorySnapshot) {
-    if (a.memorySnapshot.memoryState) {
-      store.setMemoryState(a.memorySnapshot.memoryState);
-    }
+    if (a.memorySnapshot.memoryState) store.setMemoryState(a.memorySnapshot.memoryState);
     if (typeof a.memorySnapshot.blank4yTurns === "number") {
       localStorage.setItem("sv_blank4y_turns", String(a.memorySnapshot.blank4yTurns));
     }
   } else {
-    // 老存档没有 memorySnapshot → 兼容处理：按当前状态推导
-    console.warn("[loadSlot] 存档缺少 memorySnapshot，使用兼容模式");
-    // 如果当前是魔咒状态，但存档是旧世界，则清掉魔咒
     const curMem = store.getMemoryState();
     if (curMem.spellActive) {
-      // 判断存档的 anchor 是不是 phase6_5 / phase6_6
       const savedPhase = WORLD.timeline[a.state.anchor] || null;
       const savedKey = savedPhase ? savedPhase.key : null;
       if (savedKey !== "phase6_5" && savedKey !== "phase6_6") {
-        // 存档是旧世界，清掉魔咒状态
-        store.setMemoryState({
-          spellActive: false,
-          phase: "legacy",
-          peterChatUnlocked: false,
-          romanceMode: null,
-          migrationAsked: true
-        });
+        store.setMemoryState({ spellActive:false, phase:"legacy", peterChatUnlocked:false, romanceMode:null, migrationAsked:true });
       }
     }
   }
 
-  // 3. 清空聊天记录和社交平台内容
   store.setChats({});
   store.setPosts({ twitter: [], instagram: [] });
 
