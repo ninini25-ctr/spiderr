@@ -4667,24 +4667,34 @@ ${name}。
 const dbHelper = {
   db: null,
   async init() {
-  return new Promise((resolve) => {
-    const req = indexedDB.open("SpiderMusicDB", 3);   // ★ 版本升到 3
+  if (this.db) return;            // ★ 已初始化，直接返回，避免重复 open
+  if (this._initing) return this._initing;  // ★ 正在初始化，复用同一个 promise
+  this._initing = new Promise((resolve) => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+
+    let req;
+    try {
+      req = indexedDB.open("SpiderMusicDB", 3);
+    } catch (e) {
+      console.warn("[dbHelper] open 抛错:", e);
+      return finish();   // ★ 打不开就直接放行（降级）
+    }
+
     req.onupgradeneeded = e => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains("tracks")) {
-        db.createObjectStore("tracks", { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains("images")) {
-        db.createObjectStore("images", { keyPath: "id" });
-      }
-      // ★ 新增：通用 KV 仓库（存大体积存档，避开 localStorage 5MB 限制）
-      if (!db.objectStoreNames.contains("kv")) {
-        db.createObjectStore("kv", { keyPath: "id" });
-      }
+      if (!db.objectStoreNames.contains("tracks")) db.createObjectStore("tracks", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("images")) db.createObjectStore("images", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv", { keyPath: "id" });
     };
-    req.onsuccess = e => { this.db = e.target.result; resolve(); };
-    req.onerror = () => resolve();
+    req.onsuccess = e => { this.db = e.target.result; finish(); };
+    req.onerror = () => { console.warn("[dbHelper] open onerror"); finish(); };
+    req.onblocked = () => { console.warn("[dbHelper] open onblocked"); finish(); };  // ★ 被占用也放行
+
+    // ★ 3 秒超时兜底：无论如何都不卡死
+    setTimeout(finish, 3000);
   });
+  return this._initing;
 },
   async save(track) {
     if (!this.db) await this.init();
@@ -4810,53 +4820,76 @@ dbHelper.init(); // 初始化数据库
 // ============================================================
 const archive = {
   ready: null,
+  _idbOk: false,      // IndexedDB 是否可用
   init() {
     if (this.ready) return this.ready;
     this.ready = (async () => {
-      await dbHelper.init();
-      await this._migrate();
+      try {
+        await dbHelper.init();
+        // 探测 kv 仓库是否真能用
+        if (dbHelper.db && dbHelper.db.objectStoreNames.contains("kv")) {
+          this._idbOk = true;
+        } else {
+          this._idbOk = false;
+          console.warn("[archive] kv 仓库不可用，降级到 localStorage");
+        }
+      } catch (e) {
+        this._idbOk = false;
+        console.warn("[archive] init 失败，降级到 localStorage:", e);
+      }
+      if (this._idbOk) {
+        try { await this._migrate(); } catch (e) { console.warn("[archive 迁移失败]", e); }
+      }
     })();
     return this.ready;
   },
   async _migrate() {
-    try {
-      // 1) 世界线存档
-      const ws = localStorage.getItem("sv_slots");
-      if (ws != null) {
-        if ((await dbHelper.kvGet("sv_slots")) == null) await dbHelper.kvSet("sv_slots", ws);
-        try { const a = JSON.parse(ws); if (Array.isArray(a) && a.some(x => x)) localStorage.setItem("sv_has_slots", "1"); } catch (e) {}
-        localStorage.removeItem("sv_slots");   // ★ 释放 localStorage 空间
-      }
-      // 2) 人设存档
-      const ps = localStorage.getItem("sv_profile_slots_10");
-      if (ps != null) {
-        if ((await dbHelper.kvGet("sv_profile_slots_10")) == null) await dbHelper.kvSet("sv_profile_slots_10", ps);
-        try { const a = JSON.parse(ps); if (Array.isArray(a) && a.some(x => x)) localStorage.setItem("sv_has_profile_slots", "1"); } catch (e) {}
-        localStorage.removeItem("sv_profile_slots_10");
-      }
-      // 3) 小剧场存档（动态 key，每次都扫一遍，幂等）
-      const tKeys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith("sv_theater_slots_")) tKeys.push(k);
-      }
-      for (const k of tKeys) {
-        const v = localStorage.getItem(k);
-        if ((await dbHelper.kvGet(k)) == null) await dbHelper.kvSet(k, v);
-        localStorage.removeItem(k);
-      }
-    } catch (e) { console.warn("[archive 迁移失败]", e); }
+    // 只在 IDB 可用时才搬迁 + 删除旧 localStorage
+    const migrateOne = async (key, markKey) => {
+      const v = localStorage.getItem(key);
+      if (v == null) return;
+      try {
+        if ((await dbHelper.kvGet(key)) == null) await dbHelper.kvSet(key, v);
+        // ★ 必须确认写进去了，才删 localStorage，防止数据丢失
+        const check = await dbHelper.kvGet(key);
+        if (check != null) {
+          if (markKey) {
+            try { const a = JSON.parse(v); if (Array.isArray(a) && a.some(x => x)) localStorage.setItem(markKey, "1"); } catch (e) {}
+          }
+          localStorage.removeItem(key);
+        }
+      } catch (e) { console.warn("[迁移]", key, e); }
+    };
+    await migrateOne("sv_slots", "sv_has_slots");
+    await migrateOne("sv_profile_slots_10", "sv_has_profile_slots");
+    const tKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("sv_theater_slots_")) tKeys.push(k);
+    }
+    for (const k of tKeys) await migrateOne(k, null);
   },
   async getRaw(key) {
     await this.init();
-    let v = await dbHelper.kvGet(key);
-    if (v == null) v = localStorage.getItem(key); // 兜底
-    return v;
+    if (this._idbOk) {
+      try {
+        const v = await dbHelper.kvGet(key);
+        if (v != null) return v;
+      } catch (e) {}
+    }
+    return localStorage.getItem(key);   // 降级/兜底
   },
   async setRaw(key, str) {
     await this.init();
-    await dbHelper.kvSet(key, str);
-    try { localStorage.removeItem(key); } catch (e) {}
+    if (this._idbOk) {
+      try {
+        await dbHelper.kvSet(key, str);
+        try { localStorage.removeItem(key); } catch (e) {}
+        return;
+      } catch (e) { console.warn("[archive.setRaw IDB 失败，回退 localStorage]", e); }
+    }
+    // 降级：写 localStorage（可能爆，但由上层 catch 处理）
+    localStorage.setItem(key, str);
   },
   async getJSON(key, def) {
     try { const v = await this.getRaw(key); return v ? JSON.parse(v) : def; }
@@ -4864,20 +4897,22 @@ const archive = {
   },
   async setJSON(key, obj) { await this.setRaw(key, JSON.stringify(obj)); }
 };
-archive.init();   // ★ 页面加载就触发迁移，尽早释放 localStorage 空间
+archive.init();
 
-// 导出/导入/云同步用：IDB 存档整体打包
 async function dumpArchive() {
   await archive.init();
-  const all = await dbHelper.kvAll();
-  const out = {};
-  all.forEach(r => { out[r.id] = r.data; });
-  return out;
+  if (!archive._idbOk) return {};
+  try {
+    const all = await dbHelper.kvAll();
+    const out = {};
+    all.forEach(r => { out[r.id] = r.data; });
+    return out;
+  } catch (e) { return {}; }
 }
 async function restoreArchive(obj) {
   await archive.init();
   for (const k of Object.keys(obj || {})) {
-    await dbHelper.kvSet(k, obj[k]);
+    try { await archive.setRaw(k, obj[k]); } catch (e) {}
     if (k === "sv_slots") localStorage.setItem("sv_has_slots", "1");
     if (k === "sv_profile_slots_10") localStorage.setItem("sv_has_profile_slots", "1");
   }
@@ -9142,9 +9177,11 @@ const profileSaveBtn = body.querySelector("#profileSaveBtn");
 if (profileSaveBtn) {
   profileSaveBtn.onclick = async () => {
     try {
-      document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
-      ensureSaveCurrentProfile();
-      const slots = await getProfileSlots();
+  document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
+  ensureSaveCurrentProfile();
+  toast("正在打开存档…");          // ★ 让用户立刻看到点击生效了
+  const slots = await getProfileSlots();
+  if (!Array.isArray(slots)) { toast("❌ 存档读取失败"); return; }
 
       const div = document.createElement("div");
       div.className = "__profile_slot_panel";
@@ -9212,9 +9249,11 @@ const profileLoadBtn = body.querySelector("#profileLoadBtn");
 if (profileLoadBtn) {
   profileLoadBtn.onclick = async () => {
     try {
-      document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
-      const slots = await getProfileSlots();
-      if (!slots.some(s => s)) return toast("还没有任何人设存档");
+  document.querySelectorAll(".__profile_slot_panel").forEach(el => el.remove());
+  toast("正在打开读档…");
+  const slots = await getProfileSlots();
+  if (!Array.isArray(slots)) { toast("❌ 存档读取失败"); return; }
+  if (!slots.some(s => s)) return toast("还没有任何人设存档");
 
       const div = document.createElement("div");
       div.className = "__profile_slot_panel";
