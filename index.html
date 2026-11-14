@@ -1,6 +1,8 @@
 ﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
@@ -13666,49 +13668,63 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
     },
 
 // ============================================================
-// ★ 新增：混合生成评论（联系人必出 + 陌生人 5 条）
-//   参数：
-//     postText   -- 帖子正文
-//     postName   -- 发帖人名字
-//   返回：Array<{user, text, replies}>
+// ★ 修复版：混合生成评论（排除发帖人自己、账号隔离、MJ纯旁观定位、楼主楼中楼回复）
 // ============================================================
 async generateMixedComments(postText, postName) {
   const sNow = store.getState();
   const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有评论必须符合这个时间点。\n\n`;
-  // ★ 复联成员关系圈（按电影交集）：两人无共同圈 = 从未交集
-const AV_CIRCLES = [
-  ["托尼·斯塔克","美国队长","雷神","绿巨人","娜塔莎·罗曼诺夫","鹰眼","洛基"],                          // 复联初代
-  ["托尼·斯塔克","美国队长","娜塔莎·罗曼诺夫","冬兵","猎鹰","绯红女巫","鹰眼","蚁人","黑豹","战争机器","彼得·帕克"], // 内战
-  ["彼得·帕克","托尼·斯塔克","奇异博士"],                                                           // 泰坦星
-  ["奇异博士","托尼·斯塔克","绿巨人","美国队长","娜塔莎·罗曼诺夫","绯红女巫","冬兵","猎鹰","黑豹","雷神","战争机器","蚁人","鹰眼"], // 终局地球
-  ["叶莲娜·贝洛娃","娜塔莎·罗曼诺夫"],
-  ["夜魔侠","彼得·帕克"],
-  ["彼得·帕克","内德·利兹","米歇尔·琼斯","梅婶"]   // 蜘蛛侠的普通朋友圈
-];
-const _isAvenger = (n) => !!WORLD.avengersRoster[n];
-const _areAcquainted = (a, b) => {
-  if (a === b) return true;
-  return AV_CIRCLES.some(cir => cir.includes(a) && cir.includes(b));
-};
+  const profile = store.getProfile();
+  const playerName = profile.name || "玩家";
+  const playerGender = profile.gender === "male" ? "男" : (profile.gender === "nonbinary" ? "非二元" : "女");
+  const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
 
-let contactsList = store.getContacts()
-  .filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || ""))
-  .map(c => c.name);
+  // 复联成员圈子判断
+  const AV_CIRCLES = [
+    ["托尼·斯塔克","美国队长","雷神","绿巨人","娜塔莎·罗曼诺夫","鹰眼","洛基"],
+    ["托尼·斯塔克","美国队长","娜塔莎·罗曼诺夫","冬兵","猎鹰","绯红女巫","鹰眼","蚁人","黑豹","战争机器","彼得·帕克"],
+    ["彼得·帕克","托尼·斯塔克","奇异博士"],
+    ["奇异博士","托尼·斯塔克","绿巨人","美国队长","娜塔莎·罗曼诺夫","绯红女巫","冬兵","猎鹰","黑豹","雷神","战争机器","蚁人","鹰眼"],
+    ["叶莲娜·贝洛娃","娜塔莎·罗曼诺夫"],
+    ["夜魔侠","彼得·帕克"],
+    ["彼得·帕克","内德·利兹","米歇尔·琼斯","梅婶"]
+  ];
+  const _isAvenger = (n) => !!WORLD.avengersRoster[n];
+  const _areAcquainted = (a, b) => {
+    if (a === b) return true;
+    return AV_CIRCLES.some(cir => cir.includes(a) && cir.includes(b));
+  };
 
-// 发帖人是复联成员或彼得时，按关系圈过滤"必评联系人"：没交集的不出现
-if (_isAvenger(postName) || postName === "彼得·帕克") {
-  contactsList = contactsList.filter(c => {
-    if (_isAvenger(c)) return _areAcquainted(postName, c);          // 复联成员：需有交集
-    if (c === "彼得·帕克") return _areAcquainted(postName, "彼得·帕克");
-    // 普通联系人（内德/MJ/梅婶/自定义）：只有彼得发帖时才认识他们
-    return postName === "彼得·帕克";
+  const isPeterPost = (postName === "彼得·帕克" || /peter/i.test(postName));
+
+  let contactsList = store.getContacts()
+    .filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || ""))
+    .map(c => c.name);
+
+  // ★ 核心修复 1：严格排除发帖人自己，杜绝自言自语
+  contactsList = contactsList.filter(n => {
+    if (n === postName) return false;
+    if (isPeterPost && (n === "彼得·帕克" || /peter/i.test(n))) return false;
+    return true;
   });
-}
 
-  // ===== 第一步：联系人评论（强约束，逐个点名）=====
+  // 发帖人是复联成员或彼得时过滤圈子
+  if (_isAvenger(postName) || isPeterPost) {
+    contactsList = contactsList.filter(c => {
+      if (_isAvenger(c)) return _areAcquainted(postName, c);
+      if (c === "彼得·帕克") return _areAcquainted(postName, "彼得·帕克");
+      return isPeterPost;
+    });
+  }
+
+  // ★ 核心修复 2：若发帖人是彼得，禁止“蜘蛛侠/Spider-Man”以独立账号形式在评论区现身；
+  // 同时加入拉黑名单，禁止本人出现
+  const banNames = [postName];
+  if (isPeterPost) {
+    banNames.push("彼得·帕克", "Peter Parker", "Peter", "Pete", "蜘蛛侠", "Spider-Man", "Spiderman");
+  }
+
   let contactComments = [];
   if (contactsList.length > 0) {
-   // ★ 为联系人里的复联成员，注入人设 + 时间线记忆，防止 OOC
     const avengerPersonaBlock = contactsList.map(n => {
       const persona = WORLD.avengersSocialPersona[n];
       const roster = WORLD.avengersRoster[n];
@@ -13716,44 +13732,43 @@ if (_isAvenger(postName) || postName === "彼得·帕克") {
       let block = `【${n}】`;
       if (persona) block += `\n社媒人设：${persona}`;
       if (roster) {
-        block += `\n性格：${roster.desc}`;
-        // 当前时间线记忆
         const y = sNow.gameYear || 0;
         const years = Object.keys(roster.memory || {}).map(Number).filter(yr => yr <= y).sort((a, b) => b - a);
         const curMem = years.length ? roster.memory[years[0]] : "";
         if (curMem) block += `\n此刻处境(${y}年)：${curMem}`;
-        if (isAvengerDeadNow(n)) block += `\n注意：此人在当前时间线已故，评论要用"超越时间的回望/释然"语气，不要绑定当下日期。`;
+        if (isAvengerDeadNow(n)) block += `\n注意：此人在当前时间线已故，评论要用“超越时间的回望”语气。`;
       }
       return block;
     }).filter(Boolean).join("\n\n");
 
-    const contactPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
-${buildBlacklistBanText([postName])}
-${avengerPersonaBlock ? `
-【复联成员人设 · 评论必须严格符合 · 违反即失败】
-以下联系人是复联成员，他们的评论必须完全贴合各自的性格和社媒口吻，严禁 OOC：
-${avengerPersonaBlock}
+    // ★ 核心修复 3：明确恋爱感情戏全属于玩家，MJ 绝对只是纯朋友旁观者
+    const mjRule = `
+【MJ（米歇尔·琼斯）评论特殊铁律 · 违反即失败】
+1. 帖子里彼得纠结、心动、提到的那个特殊对象是【${playerName}】（${playerGender}性，${playerPronoun}），绝对不是 MJ！
+2. MJ 和彼得仅仅是普通同学/好朋友关系，没有任何暧昧！
+3. MJ 绝不能以“被夸奖的对象”、“当事人”自居回复（例如绝不能说“你是在说我吗”、“不用猜了就是我”）。
+4. MJ 的回复必须是【犀利的旁观者/吃瓜人】口吻，冷面吐槽彼得在玩家面前的笨拙蠢样。
+`;
 
-【复联成员铁律】
-1. 托尼要阴阳怪气/炫技/嘴毒；美队正直老派；雷神大写狂魔自恋；娜塔莎简短冷酷；洛基居高临下管人叫凡人；奇异博士高冷文绉绉……严格按上面每个人的人设写。
-2. 评论内容只能提及他们在当前时间线（${sNow.gameYear}年）之前知道的事，禁止剧透未来。
-3. 严禁把复联成员写成普通网友的口吻。
+    const contactPrompt = buildSystem(`${dateHint}用户发了推特，发帖人是「${postName}」，内容：“${postText}”。
+${buildBlacklistBanText(banNames)}
+${isPeterPost ? mjRule : ""}
+${avengerPersonaBlock ? `
+【复联成员人设 · 评论必须严格符合】
+${avengerPersonaBlock}
 ` : ""}
 
 【任务】
-这条推文下面，以下联系人**每一个人都必须留下一条评论**，一个都不能少：
+这条推文下面，以下好友名单【每人留下一条评论】：
 ${contactsList.map(n => `- ${n}`).join("\n")}
 
 【铁律 · 违反即失败】
-1. 发帖人如果是 "${postName}"，禁止 ta 自己在评论区用"${postName}"这个名字出现。
-2. 每条评论必须符合该联系人的性格、与发帖人的关系亲疏。
-3. 评论要短（15-60字），有生活感，像真实社交平台。
-4. 必须**同时生成**，不能分批。
+1. 绝对不要生成发帖人「${postName}」自己的主评论！发帖人不会在自己的评论区开新楼评论自己。
+2. ${isPeterPost ? "绝对不要出现任何名为「蜘蛛侠」或「Spider-Man」的评论者！" : ""}
+3. 严格符合每个角色的人设与性格，评论短小真实（15-50字），有社交平台鲜活感。
 
-【格式 · 严格 · 每行一条】
-姓名 ||| 评论内容
-
-注意：只输出 ${contactsList.length} 行，不多不少。`, "twitter");
+【格式 · 严格每行一条】
+姓名 ||| 评论内容`, "twitter");
 
     try {
       const res = await callAI([{ role: "user", content: "生成联系人评论" }], contactPrompt);
@@ -13765,56 +13780,25 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
       };
       res.split('\n').filter(l => l.includes('|||')).forEach(line => {
         const [u, t] = line.split('|||').map(x => x.trim());
-        if (u && t) contactComments.push({ user: u, text: clean(t), replies: [] });
+        if (!u || !t) return;
+        // 代码硬核拦截：彻底排除发帖人和蜘蛛侠
+        if (u === postName || (isPeterPost && (u === "彼得·帕克" || u.includes("蜘蛛侠") || /spider/i.test(u)))) return;
+        contactComments.push({ user: u, text: clean(t), replies: [] });
       });
     } catch (e) {
       console.warn("联系人评论生成失败:", e);
-    }
-
-    // ★ 代码层强校验：AI 漏掉谁，手动补一条
-    const gotNames = new Set(contactComments.map(c => c.user));
-    const missing = contactsList.filter(n => !gotNames.has(n));
-    for (const missName of missing) {
-      try {
-        const missPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
-
-请**只生成**「${missName}」一个人的评论。
-要求：15-60字，符合 ta 的性格，真实感。
-
-只输出一行，不要任何前缀：
-评论内容`, "twitter");
-
-        const missRes = await callAI([{ role: "user", content: "生成" }], missPrompt);
-        let text = String(missRes || "").replace(/^.*?\|\|\|/, "").trim();
-        text = text.split('\n')[0].trim();
-        // 如果 AI 还是带名字前缀，去掉
-        text = text.replace(new RegExp("^" + missName + "\\s*[:：]\\s*"), "").trim();
-        if (text) {
-          contactComments.push({ user: missName, text, replies: [] });
-        }
-      } catch (_) {}
     }
   }
 
   // ===== 第二步：陌生人评论（5 条）=====
   let strangerComments = [];
   try {
-    const strangerPrompt = buildSystem(`${dateHint}用户发了推特，发帖人："${postName}"，内容："${postText}"。
-${buildBlacklistBanText([postName])}
+    const strangerPrompt = buildSystem(`${dateHint}推特发帖人是「${postName}」，内容：“${postText}”。
+${buildBlacklistBanText([...banNames, ...contactsList])}
 
 【任务】
-生成 5 条来自**世界各地陌生网友**的评论。
-
-【铁律 · 违反即失败】
-1. 发帖人必须**不是**以下任何人：${contactsList.join("、")}、${postName}。
-2. 网名用"英文网名(国家/语言)"的格式，如 queen_kate(美)、tokyo_ya(日)。
-3. 评论要有网感，可以互怼、抢热评、玩梗。
-4. **外语评论 → 原文（中文翻译）**；**中文评论 → 只写中文原文，不加任何括号翻译**。
-
-【格式 · 严格 · 每行一条】
-网名(国家) ||| 评论内容
-
-只输出 5 行，不多不少。`, "twitter");
+生成 5 条来自世界各地陌生网友的热门神评（禁止出现发帖人、联系人及蜘蛛侠账号）。
+格式：网名(国家) ||| 评论内容`, "twitter");
 
     const res = await callAI([{ role: "user", content: "生成陌生人评论" }], strangerPrompt);
     const isChinese = (s) => /[\u4e00-\u9fa5]/.test(s);
@@ -13825,58 +13809,66 @@ ${buildBlacklistBanText([postName])}
     };
     res.split('\n').filter(l => l.includes('|||')).forEach(line => {
       const [u, t] = line.split('|||').map(x => x.trim());
-      if (u && t) strangerComments.push({ user: u, text: clean(t), replies: [] });
+      if (u && t) {
+        if (u === postName || (isPeterPost && (u.includes("蜘蛛") || /spider/i.test(u)))) return;
+        strangerComments.push({ user: u, text: clean(t), replies: [] });
+      }
     });
   } catch (e) {
     console.warn("陌生人评论生成失败:", e);
   }
 
-  // ★ 陌生人不够 5 条，补足
-  const fillerPool = [
-    { user: "queens_boy(美)", text: "😂这是真的吗？" },
-    { user: "nyc_gossip(美)", text: "纽约人路过，笑死" },
-    { user: "tokyo_ya(日)", text: "🤔これ本当？（这是真的吗？）" },
-    { user: "paris_chic(法)", text: "😏Oh là là（哎呀）" },
-    { user: "london_fog(英)", text: "Typical.（典型。）🍵" },
-    { user: "seoul_night(韩)", text: "대박（厉害）🔥" },
-    { user: "midtown_kid(美)", text: "我同学也这样说 🤣" },
-    { user: "brooklyn_vibes(美)", text: "楼主是懂什么梗的 💯" }
-  ];
   if (strangerComments.length < 5) {
-    const need = 5 - strangerComments.length;
-    const picked = fillerPool.sort(() => Math.random() - 0.5).slice(0, need);
-    strangerComments = strangerComments.concat(picked);
+    const fillerPool = [
+      { user: "queens_boy(美)", text: "😂这是真的吗？" },
+      { user: "nyc_gossip(美)", text: "纽约人路过，笑死" },
+      { user: "tokyo_ya(日)", text: "これ本当？（这是真的吗？）" },
+      { user: "paris_chic(法)", text: "Oh là là（哎呀）" },
+      { user: "brooklyn_vibes(美)", text: "楼主是懂什么叫社交尴尬的 💯" }
+    ];
+    strangerComments = strangerComments.concat(fillerPool.slice(0, 5 - strangerComments.length));
   }
-
-  // 只保留前 5 条陌生人
   strangerComments = strangerComments.slice(0, 5);
 
-  // ===== 合并：联系人全放前面，陌生人放后面 =====
-// ★ 黑名单兜底：过滤掉任何黑名单用户（无论 AI 怎么拼凑的）
-// 🕸️ 遗忘魔咒兜底：过滤掉"彼得"作为评论者的
-const merged = [...contactComments, ...strangerComments].filter(c => {
-  if (!c || !c.user) return false;
-  if (store.isBlacklisted(c.user)) return false;
+  // ===== 第三步：楼主作为【楼中楼】回复互动 =====
+  // 楼主（如彼得）不在外层当小丑单独发主评，而是挑一条最扎心/最具互动性的评论进行楼中楼回复
+  if (contactComments.length > 0) {
+    try {
+      // 优先挑内德、MJ、托尼等熟人的评论进行互动
+      const targetIdx = Math.floor(Math.random() * Math.min(3, contactComments.length));
+      const targetComment = contactComments[targetIdx];
 
-  // 魔咒生效时，过滤掉彼得作为评论者
-  if (isSpellActiveNow()) {
-    const n = String(c.user).trim().toLowerCase();
-    if (n === "彼得·帕克" || n === "peter parker" || n === "peter" || n === "pete") return false;
-  }
+      const ownerReplyPrompt = `你现在是「${postName}」（推特楼主）。你在推特发了：“${postText}”。
+你的好友「${targetComment.user}」在评论区评论了你：“${targetComment.text}”。
 
-  // 魔咒生效时，评论内容里如果出现"彼得"，也过滤
-  if (isSpellActiveNow() && c.text) {
-    const t = String(c.text);
-    if (/彼得|Peter|Pete/i.test(t)) {
-      // 用 sanitizeBySpell 清洗一下再保留
-      c.text = sanitizeBySpell(t);
+【任务】
+请作为楼主，在【楼中楼】回复 ${targetComment.user} 一句话（15~40字）。
+语气要完全符合你的性格（如果是彼得·帕克：要慌张、羞耻、自嘲、吐槽或急忙辩解）。
+纯中文，直接输出回复文字，不要任何引号、前缀。`;
+
+      const replyRes = await callAI([{ role: "user", content: "回复该评论" }], ownerReplyPrompt);
+      if (replyRes && replyRes.trim()) {
+        targetComment.replies = targetComment.replies || [];
+        targetComment.replies.push({
+          user: postName,
+          text: replyRes.trim()
+        });
+      }
+    } catch (e) {
+      console.warn("楼主楼中楼回复生成失败:", e);
     }
   }
 
-  return true;
-});
+  // 合并并最后做一次安全清洗
+  const merged = [...contactComments, ...strangerComments].filter(c => {
+    if (!c || !c.user) return false;
+    if (store.isBlacklisted(c.user)) return false;
+    if (c.user === postName) return false;
+    if (isPeterPost && (c.user === "彼得·帕克" || c.user.includes("蜘蛛侠") || /spider/i.test(c.user))) return false;
+    return true;
+  });
 
-return merged;
+  return merged;
 },
 
     async newPost() {
