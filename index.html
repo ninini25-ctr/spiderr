@@ -2224,6 +2224,7 @@ body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); 
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
       <button class="app-icon" data-app="Dating"><span>🍜</span><label>约饭</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>社交圈</label></button>
+     <button class="app-icon" data-app="Memory"><span>🧠</span><label>记忆</label></button>
       <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
       <button class="app-icon" data-app="Appearance"><span>🎨</span><label>外观</label></button>
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
@@ -3461,6 +3462,89 @@ if (typeof s.phaseEnteredTurn !== "number") s.phaseEnteredTurn = s.turn || 1;  /
 },
   getChats(){return this.get("sv_chats",{});},
   setChats(c){this.set("sv_chats",c);},
+getSummaryApi(){
+    return this.get("sv_summary_api", { enabled:false, baseUrl:"", apiKey:"", model:"" });
+  },
+  setSummaryApi(c){ this.set("sv_summary_api", c); },
+  // 永久记忆
+  getPermanentMemory(){ return this.get("sv_permanent_memory", []); },
+  addPermanentMemory(name, fact){
+    const l = this.getPermanentMemory();
+    l.push({ id:"pm_"+Date.now()+Math.random().toString(36).slice(2,5), name, fact, ts:Date.now() });
+    this.set("sv_permanent_memory", l);
+  },
+// ===== 🧠 记忆 App =====
+getMemories(){ return this.get("sv_memories", []); },
+setMemories(m){ this.set("sv_memories", Array.isArray(m) ? m : []); },
+addMemory(mem){ const l = this.getMemories(); l.unshift(mem); this.setMemories(l); return mem; },
+updateMemory(id, patch){
+  const l = this.getMemories();
+  const i = l.findIndex(x => x.id === id);
+  if (i === -1) return;
+  l[i] = { ...l[i], ...patch };
+  this.setMemories(l);
+},
+deleteMemory(id){ this.setMemories(this.getMemories().filter(x => x.id !== id)); },
+// ★ 隔离核心：只返回标签里含该联系人的记忆
+getMemoriesFor(name){
+  if (!name) return [];
+  return this.getMemories()
+    .filter(m => Array.isArray(m.tags) && m.tags.includes(name))
+    .sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+},
+getMemoryPresets(){
+  let p = this.get("sv_memory_presets", null);
+  if (!Array.isArray(p)) {
+    p = [
+      { name: "情感向·第一人称", content: "用第一人称'我'叙述，重点记录情绪变化、心动瞬间、暧昧细节，像日记一样。" },
+      { name: "事件向·客观", content: "客观记录发生了什么事、谁做了什么、结果如何，不加个人情绪。" },
+      { name: "小说风", content: "用小说笔触总结，有画面感和氛围，保留关键对白。" }
+    ];
+    this.set("sv_memory_presets", p);
+  }
+  return p;
+},
+setMemoryPresets(p){ this.set("sv_memory_presets", p); },
+getMemoryCfg(){
+  return this.get("sv_memory_cfg", {
+    // 记忆方式
+    mode: "traditional",          // traditional | sum2vec | vector
+    // 自动总结
+    autoEnabled: true,
+    autoBasis: "count",           // count | day | h12
+    autoFreq: 20,
+    // 二次总结
+    secondEnabled: true,
+    mergeBasis: "day",            // count | day | h12
+    mergeFreq: 5,
+    dayStartHour: 6,              // 一天从几点算起
+    // 进度
+    startFrom: 0,                 // 从第几条之后开始
+    lastSummarizedIndex: {},      // { 联系人名: 已总结到第几条 }
+    excluded: {},                 // { 联系人名: [被排除的消息索引] }
+    // 自定义总结
+    wordMin: 100, wordMax: 150,
+    requirement: "",
+    globalPreset: "",
+    splitByEvent: true,
+    writePermanent: true,         // 写入永久记忆
+    readCoreSetting: false,       // 总结读取核心设定
+    // 上下文深度
+    ctxDepth: 200,
+    ctxMust: false,               // 必读原文
+    noGroupContext: true,         // 不带入群聊近况
+    crossSync: false              // 跨对话记忆同步
+  });
+},
+setMemoryCfg(c){ this.set("sv_memory_cfg", c); },
+// 永久记忆
+getPermanentMemory(){ return this.get("sv_permanent_memory", []); },
+addPermanentMemory(name, fact){
+  const l = this.getPermanentMemory();
+  l.push({ id:"pm_"+Date.now()+Math.random().toString(36).slice(2,5), name, fact, ts:Date.now() });
+  this.set("sv_permanent_memory", l);
+},
+setMemoryCfg(c){ this.set("sv_memory_cfg", c); },
 getReadState(){ return this.get("sv_read_state", {}); },
 setReadState(r){ this.set("sv_read_state", r); },
 // 标记某联系人已读到当前最新
@@ -3575,6 +3659,16 @@ getProactiveCfg(){
   });
 },
 setProactiveCfg(c){ this.set("sv_proactive_cfg", c); },
+// 每个联系人独立的主动发信配置（彼得除外，彼得用 sv_proactive_cfg）
+getContactProactive(name){
+  const all = this.get("sv_contact_proactive", {});
+  return all[name] || { enabled:false, idleCount:5, idleMinutes:30 };
+},
+setContactProactive(name, cfg){
+  const all = this.get("sv_contact_proactive", {});
+  all[name] = cfg;
+  this.set("sv_contact_proactive", all);
+},
 getCloudCfg(){ return this.get("sv_cloud_cfg", { url:"", code:"" }); },
 setCloudCfg(c){ this.set("sv_cloud_cfg", c); },
   // ===== 🕵️ MJ 笔记本 =====
@@ -4937,6 +5031,36 @@ throw new Error("API 报错: " + res.status + detail);
   }
 }
 
+// 总结专用：配置了独立总结 API 就用它，否则回退主 API
+async function callSummaryAI(messages, systemPrompt) {
+  const sa = store.getSummaryApi();
+  if (!sa.enabled || !sa.apiKey || !sa.baseUrl) {
+    return callAI(messages, systemPrompt);
+  }
+  const url = sa.baseUrl.replace(/\/+$/,"") + "/chat/completions";
+  const controller = new AbortController();
+  const t = setTimeout(()=>controller.abort(), 60000);
+  try {
+    const res = await fetch(url, {
+      method:"POST", mode:"cors", credentials:"omit", cache:"no-store",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+sa.apiKey },
+      body: JSON.stringify({
+        model: sa.model || "gpt-4o-mini",
+        messages: [{role:"system",content:systemPrompt}, ...messages],
+        temperature: 0.7
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(t);
+    if (!res.ok) throw new Error("总结API " + res.status);
+    const data = await res.json();
+    return (data.choices?.[0]?.message?.content || "").trim();
+  } catch(e){
+    clearTimeout(t);
+    return callAI(messages, systemPrompt);  // 失败回退主 API
+  }
+}
+
 async function fetchModels(baseUrl, apiKey) {
   const url = baseUrl.replace(/\/+$/,"") + "/models";
   const res = await fetch(url, {headers:{"Authorization":"Bearer "+apiKey}});
@@ -5331,6 +5455,27 @@ function getCharacterAliases(name) {
     "Happy Hogan": ["Happy Hogan", "Happy", "哈皮", "霍根"]
   };
   return map[name] || [name];
+}
+
+// 🧠 读取某联系人的记忆档案（只读带其标签的记忆，实现隔离）
+function buildMemoryPromptFor(name) {
+  const mems = store.getMemoriesFor(name);
+  if (!mems.length) return "";
+  const lines = mems.slice(-20).map(m => {
+    const others = (m.tags || []).filter(t => t !== name);
+    const who = others.length ? `（与${others.join("、")}的共同记忆）` : "";
+    return `· [${m.date || ""}]${who} ${m.title ? m.title + "：" : ""}${m.content}`;
+  }).join("\n");
+  return `
+
+【🧠 你和玩家之间的记忆档案 · 只属于你 · 可自然回忆】
+以下是「${name}」亲身经历、记得的事。你可以在合适时自然地提起、回忆、延续这些记忆：
+${lines}
+
+【记忆铁律】
+1. 这些是**你自己**的记忆，标着"共同记忆"的才是你和别人一起经历的。
+2. **绝对不要**编造没写在上面的"共同经历"。
+3. 不要逐字复述，要像真人那样自然带出来。`;
 }
 
 // ============================================================
@@ -8419,6 +8564,17 @@ body.querySelectorAll(".c-ref-trigger").forEach(btn => {
             </div>
            </div>
         </div>
+<div class="card"><h3>🧠 总结专用 AI（可选）</h3>
+  <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.6;">记忆总结单独用一个便宜/快的模型。不填则用上方主 API。</p >
+  <div class="row" style="justify-content:space-between;margin-bottom:10px;">
+    <label>启用独立总结 API</label>
+    <label class="switch"><input type="checkbox" id="sa_enabled"><span class="slider"></span></label>
+  </div>
+  <div class="field"><label>总结 API Key</label><input id="sa_key" type="text" autocomplete="off"></div>
+  <div class="field"><label>总结 Base URL</label><input id="sa_url" placeholder="https://api.openai.com/v1"></div>
+  <div class="field"><label>总结模型</label><input id="sa_model" placeholder="gpt-4o-mini"></div>
+  <button class="btn" id="sa_save">保存总结 API</button>
+</div>
         <div class="card"><h3>🎨 生图 AI 接入</h3>
           <div class="field">
             <label>生图 Key（留空则用上方文本 AI 的 Key）</label>
@@ -9551,6 +9707,20 @@ renderBlacklist();
         div.querySelector("#apiSlotClose").onclick = () => div.remove();
         document.querySelector(".device").appendChild(div);
       };
+(function(){
+  const sa = store.getSummaryApi();
+  const en = body.querySelector("#sa_enabled");
+  if (en) {
+    const key = body.querySelector("#sa_key");
+    const url = body.querySelector("#sa_url");
+    const model = body.querySelector("#sa_model");
+    en.checked = !!sa.enabled; key.value = sa.apiKey||""; url.value = sa.baseUrl||""; model.value = sa.model||"";
+    body.querySelector("#sa_save").onclick = () => {
+      store.setSummaryApi({ enabled:en.checked, apiKey:key.value.trim(), baseUrl:url.value.trim(), model:model.value.trim() });
+      toast("已保存总结 API");
+    };
+  }
+})();
  body.querySelector("#saveC").onclick = () => { store.setConfig({...cfg,enabled:body.querySelector("#c_enabled").checked,provider:sel.value,apiKey:body.querySelector("#c_key").value,baseUrl:body.querySelector("#c_url").value,model:body.querySelector("#c_model").value}); toast("已保存"); };
 // ===== 🔍 API 连通性自检 =====
 body.querySelector("#testApiBtn").onclick = async () => {
@@ -10154,6 +10324,7 @@ if (curC && curC.isGroup) {
 
   // ========== 情况 B：在单人聊天里点设置 → 联系人设置面板 ==========
   if (this.view === "chat" && this.currentUser) {
+    const self = this;
     const contacts = store.getContacts();
 
     const c = contacts.find(x => x.name === this.currentUser) || { name: this.currentUser, desc: "", affinity: 0, heart: "" };
@@ -10179,6 +10350,26 @@ ${this.currentUser !== "彼得·帕克" ? `
         <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;">开启后该联系人好感度可升至 200，聊天中会随好感度表现暧昧/亲密。但世界线主线剧情不会参考除彼得外的暧昧关系。</div>
       </div>
       ` : ""}
+${this.currentUser !== "彼得·帕克" ? `
+    <div class="card" style="margin-top:12px;">
+      <h3>💌 ${esc(this.currentUser)} 主动发信</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">当你长时间不回复，ta 会主动发消息过来。只作用于这个联系人。</p >
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <label style="font-size:13px;color:var(--text);">启用此功能</label>
+        <label class="switch"><input type="checkbox" id="cp_enabled"><span class="slider"></span></label>
+      </div>
+      <div class="field">
+        <label>连续未回复轮数</label>
+        <input id="cp_turns" type="number" min="1" max="50" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;box-sizing:border-box;">
+      </div>
+      <div class="field">
+        <label>静默分钟数</label>
+        <input id="cp_minutes" type="number" min="1" max="1440" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">💡 两个条件任一满足即触发；好感度低于 21 不触发。</div>
+      <button class="btn" id="cp_save">保存主动发信设置</button>
+    </div>
+    ` : ""}
       <div class="field">
         <label>好感度 (0-${this.currentUser === "彼得·帕克" ? 200 : 100}) —— 可直接修改</label>
         <div class="row" style="gap:6px;">
@@ -10305,6 +10496,28 @@ const affCapToggle = body.querySelector("#affCapToggle");
         }
       };
     }
+
+// 每个联系人独立主动发信（非彼得）
+if (this.currentUser !== "彼得·帕克") {
+  const cp = store.getContactProactive(this.currentUser);
+  const cpEn = body.querySelector("#cp_enabled");
+  const cpTurns = body.querySelector("#cp_turns");
+  const cpMin = body.querySelector("#cp_minutes");
+  const cpSave = body.querySelector("#cp_save");
+  if (cpEn && cpSave) {
+    cpEn.checked = !!cp.enabled;
+    cpTurns.value = cp.idleCount || 5;
+    cpMin.value = cp.idleMinutes || 30;
+    cpSave.onclick = () => {
+      store.setContactProactive(self.currentUser, {
+        enabled: cpEn.checked,
+        idleCount: Math.max(1, parseInt(cpTurns.value) || 5),
+        idleMinutes: Math.max(1, parseInt(cpMin.value) || 30)
+      });
+      toast("已保存 " + self.currentUser + " 的主动发信设置");
+    };
+  }
+}
 
     body.querySelector("#back").onclick = () => openApp('messages');
     return;
@@ -11608,6 +11821,15 @@ if (self.currentUser === "彼得·帕克") {
   localStorage.setItem("sv_peter_last_user_act", String(Date.now()));
   localStorage.setItem("sv_peter_idle_turns", "0"); // 重置连续未计数
 }
+// 通用：记录每个联系人的最后互动
+(function(){
+  const acts = store.get("sv_contact_last_act", {});
+  acts[self.currentUser] = Date.now();
+  store.set("sv_contact_last_act", acts);
+  const idle = store.get("sv_contact_idle_turns", {});
+  idle[self.currentUser] = 0;
+  store.set("sv_contact_idle_turns", idle);
+})();
 
 // 用户发的是普通文字，正常存入
 arr.push({role:"me", content:text, quote: quoteContent});
@@ -11712,7 +11934,13 @@ const groupContactForIntervention = store.getContacts().find(x => x.name === sel
         const groupInterventionRule = groupInterventionText
           ? `\n【群聊干预指令 · 玩家亲自下达 · 绝对必须遵循】\n${groupInterventionText.split(/\n/).filter(Boolean).map(l => `- ${l}`).join("\n")}\n`
           : "";
+// 群聊：每个成员带各自记忆（只读带自己标签的，互不串）
+const groupMemoryBlock = groupMembers.map(n => {
+  const mp = buildMemoryPromptFor(n);
+  return mp ? `\n===== 【${n}】的记忆 =====${mp}` : "";
+}).filter(Boolean).join("\n");
         const groupSysPrompt = `${langBrief}这是一个手机群聊，群成员有：${memberList}，以及「${playerName}」（${playerGender}，用「${playerPronoun}」指代）。
+${groupMemoryBlock}
 
 【当前日期】${nowStr}
 
@@ -11981,9 +12209,11 @@ const avengerRule = WORLD.avengersRoster[self.currentUser]
   : "";
 // 🧠 角色记忆隔离（防止托尼串彼得等角色互串）
 const memoryIsolationRule = buildMemoryIsolationRule(self.currentUser);
+const memoryRule = buildMemoryPromptFor(self.currentUser);   // ★ 新增
 
       const sysPrompt = `${langBrief}你在扮演「${self.currentUser}」，正在和「${playerName}」（${playerGender}，用「${playerPronoun}」指代）用手机发短信。
 ${memoryIsolationRule}
+${memoryRule}
 
 【当前日期】${nowStr}
 【当前关系】${attitude}
@@ -12271,6 +12501,31 @@ currentThread.innerHTML +=
           if (t) t.remove();
         }
       }
+// ===== 🧠 自动总结检查 =====
+      try {
+        const mc = store.getMemoryCfg();
+        if (mc.autoEnabled && mc.autoBasis === "count" && self.currentUser) {
+          const c = store.getContacts().find(x => x.name === self.currentUser);
+          const isGroup = c && c.isGroup;
+          if (!isGroup) {
+            const total = (store.getChats()[self.currentUser] || []).length;
+            const last = (mc.lastSummarizedIndex || {})[self.currentUser] || mc.startFrom || 0;
+            if (total - last >= mc.autoFreq) {
+              await apps.Memory.doSummarize({
+                tags: [self.currentUser],
+                sourceName: self.currentUser,
+                scope: "all",
+                wordMin: mc.wordMin, wordMax: mc.wordMax,
+                requirement: mc.requirement, split: mc.splitByEvent
+              });
+              mc.lastSummarizedIndex = mc.lastSummarizedIndex || {};
+              mc.lastSummarizedIndex[self.currentUser] = total;
+              store.setMemoryCfg(mc);
+              toast("🧠 已自动总结记忆");
+            }
+          }
+        }
+      } catch(e) { console.warn("[自动总结]", e); }
     } catch(e) {
       const load = body.querySelector("#loading"); 
       if(load) load.textContent = "失败: " + e.message; 
@@ -14501,6 +14756,15 @@ toast(_msg);
   const t = parseInt(localStorage.getItem("sv_peter_idle_turns") || "0") || 0;
   localStorage.setItem("sv_peter_idle_turns", String(t + 1));
 }
+// 所有联系人未回轮数 +1
+(function(){
+  const idle = store.get("sv_contact_idle_turns", {});
+  store.getContacts().forEach(c => {
+    if (c.isGroup) return;
+    idle[c.name] = (idle[c.name] || 0) + 1;
+  });
+  store.set("sv_contact_idle_turns", idle);
+})();
 
 triggerNpcMessage(s.currentStory);
       } catch(e) {
@@ -19787,6 +20051,731 @@ if (!existingAnchor) {
   }
 },
 
+Memory: {
+  title: "记忆",
+  curTab: "all",      // all | common | 某联系人名
+  busy: false,
+
+  render(body) {
+    const self = this;
+// 放在 apps.Memory.render 开头
+if (!document.getElementById("mem-style")) {
+  const st = document.createElement("style");
+  st.id = "mem-style";
+  st.textContent = `
+    .mset-sec{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin:16px 0 8px;}
+    .mset-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;}
+    .mset-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text);gap:8px;}
+    .mset-sub{font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px;}
+    .mset-num{width:70px;text-align:center;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--accent-2);font-weight:700;}
+    .mem-tab::-webkit-scrollbar{display:none;}
+  `;
+  document.head.appendChild(st);
+}
+    const mems = store.getMemories();
+    const contacts = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name||""));
+    const cfg = store.getMemoryCfg();
+
+    // 有记忆的联系人
+    const taggedNames = new Set();
+    mems.forEach(m => (m.tags||[]).forEach(t => taggedNames.add(t)));
+    const tabNames = contacts.map(c=>c.name).filter(n => taggedNames.has(n));
+
+    // 当前 tab 过滤
+    let list = mems;
+    if (this.curTab === "common") list = mems.filter(m => (m.tags||[]).length >= 2);
+    else if (this.curTab !== "all") list = mems.filter(m => (m.tags||[]).includes(this.curTab));
+
+    body.innerHTML = `<div style="padding:14px;">
+      <div class="card" style="padding:14px;background:linear-gradient(135deg,#8a2be218,#2d6bff14);border-left:3px solid #8a2be2;">
+        <div style="font-size:11px;color:#8a2be2;letter-spacing:3px;font-weight:700;">MEMORY</div>
+        <div style="font-size:19px;font-weight:800;color:var(--text);margin-top:4px;">🧠 记忆</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6;">
+          总结聊天，按联系人分类存档。聊天时 AI 只读取带 ta 标签的记忆，不会互串。
+        </div>
+      </div>
+
+      <div class="row" style="gap:8px;margin-bottom:12px;">
+        <button class="btn" id="memSumBtn" style="flex:1;">✨ AI 总结</button>
+        <button class="btn ghost" id="memAddBtn" style="flex:1;">✍️ 手动添加</button>
+      </div>
+      <div class="row" style="gap:8px;margin-bottom:12px;">
+  <button class="btn ghost" id="memPresetBtn" style="flex:1;font-size:12px;">📋 管理预设</button>
+  <button class="btn ghost" id="memCfgBtn" style="flex:1;font-size:12px;">⚙️ 记忆库设置</button>
+</div>
+
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;">
+        <button class="mem-tab" data-tab="all" style="${this._tabStyle(this.curTab==='all')}">全部 ${mems.length}</button>
+        <button class="mem-tab" data-tab="common" style="${this._tabStyle(this.curTab==='common')}">🔗 共同</button>
+        ${tabNames.map(n => `<button class="mem-tab" data-tab="${esc(n)}" style="${this._tabStyle(this.curTab===n)}">${esc(n)}</button>`).join("")}
+      </div>
+
+      <div id="memList"></div>
+    </div>`;
+
+    // tab
+    body.querySelectorAll(".mem-tab").forEach(el => {
+      el.onclick = () => { self.curTab = el.dataset.tab; self.render(body); };
+    });
+
+    // 列表
+    const listEl = body.querySelector("#memList");
+    if (!list.length) {
+      listEl.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">这里还没有记忆<br><span style="font-size:11px;opacity:.7;">点上方「AI 总结」开始</span></div>`;
+    } else {
+      listEl.innerHTML = list.map(m => {
+        const tags = (m.tags||[]).map(t => {
+          const common = (m.tags||[]).length >= 2;
+          return `<span style="font-size:10px;padding:2px 8px;border-radius:8px;margin-right:4px;${common?'background:rgba(138,43,226,.15);color:#8a2be2;':'background:var(--panel-2);color:var(--muted);'}">${esc(t)}</span>`;
+        }).join("");
+        return `<div class="card" style="padding:14px;margin-bottom:10px;border-left:3px solid ${(m.tags||[]).length>=2?'#8a2be2':'var(--accent-2)'};">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div style="flex:1;min-width:0;">
+              <div style="margin-bottom:6px;">${tags}</div>
+              ${m.title?`<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">${esc(m.title)}</div>`:""}
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${esc(m.date||"")} · ${m.type==="auto"?"AI总结":"手动"}</div>
+            </div>
+            <button class="mem-del" data-id="${esc(m.id)}" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;flex-shrink:0;">✕</button>
+          </div>
+          <div style="font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;">${esc(m.content)}</div>
+          <button class="mem-edit" data-id="${esc(m.id)}" style="margin-top:8px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;">✏️ 编辑</button>
+        </div>`;
+      }).join("");
+
+      listEl.querySelectorAll(".mem-del").forEach(el => {
+        el.onclick = () => {
+          if (!confirm("删除这条记忆？")) return;
+          store.deleteMemory(el.dataset.id);
+          self.render(body);
+        };
+      });
+      listEl.querySelectorAll(".mem-edit").forEach(el => {
+        el.onclick = () => self.showEdit(body, el.dataset.id);
+      });
+    }
+
+    body.querySelector("#memSumBtn").onclick = () => self.showSummarize(body);
+    body.querySelector("#memAddBtn").onclick = () => self.showEdit(body, null);
+    body.querySelector("#memPresetBtn").onclick = () => self.showPresets(body);
+    body.querySelector("#memCfgBtn").onclick = () => self.showCfg(body);
+  },
+
+  _tabStyle(active) {
+    return `flex-shrink:0;padding:7px 14px;border-radius:18px;border:1.5px solid ${active?'var(--accent-2)':'var(--line)'};background:${active?'rgba(45,107,255,.12)':'var(--panel)'};color:var(--text);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;`;
+  },
+
+showSettings(body) {
+  const self = this;
+  const cfg = store.getMemoryCfg();
+  const presets = store.getMemoryPresets();
+
+  const seg = (opts, cur, idp) => opts.map(o =>
+    `<button class="mem-seg" data-grp="${idp}" data-v="${o.v}" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid ${cur===o.v?'#4caf50':'var(--line)'};background:${cur===o.v?'rgba(76,175,80,.14)':'var(--panel)'};color:var(--text);font-size:12px;cursor:pointer;">${o.t}</button>`
+  ).join("");
+
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:18px;overflow-y:auto;color:var(--text);";
+  div.innerHTML = `<div style="max-width:500px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2 style="margin:0;font-size:17px;">⚙️ 记忆库设置</h2>
+      <button id="msetClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+    </div>
+
+    <div class="mset-sec">记忆方式</div>
+    <div class="mset-card">
+      <div style="display:flex;gap:6px;">
+        ${seg([{v:"traditional",t:"传统总结"},{v:"sum2vec",t:"总结向量"},{v:"vector",t:"向量记忆"}], cfg.mode, "mode")}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">向量模式需要 embedding 接口，暂以传统总结运行。</div>
+    </div>
+
+    <div class="mset-sec">记忆库 · 自动总结</div>
+    <div class="mset-card">
+      <div class="mset-row"><span>自动总结开关</span>
+        <label class="switch"><input type="checkbox" id="c_auto" ${cfg.autoEnabled?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">按天=一天一条；每12小时=更早总结，角色不易忘事</div>
+      <div style="display:flex;gap:6px;margin:8px 0;">
+        ${seg([{v:"count",t:"按条数"},{v:"day",t:"按天"},{v:"h12",t:"每12小时"}], cfg.autoBasis, "autoBasis")}
+      </div>
+      <div class="mset-row"><span>自动总结频率</span>
+        <input id="c_freq" type="number" value="${cfg.autoFreq}" class="mset-num"></div>
+    </div>
+
+    <div class="mset-card">
+      <div class="mset-row"><span>自动二次总结</span>
+        <label class="switch"><input type="checkbox" id="c_second" ${cfg.secondEnabled?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">小总结攒够数量/过完一天，自动合成大总结</div>
+      <div style="display:flex;gap:6px;margin:8px 0;">
+        ${seg([{v:"count",t:"按条数"},{v:"day",t:"按天"},{v:"h12",t:"每12小时"}], cfg.mergeBasis, "mergeBasis")}
+      </div>
+      <div class="mset-row"><span>一天从几点算起</span>
+        <input id="c_dayhour" type="number" min="0" max="23" value="${cfg.dayStartHour}" class="mset-num"></div>
+    </div>
+
+    <div class="mset-card">
+      <div class="mset-row"><span>批量排除聊天记录</span>
+        <button id="c_exclude" class="btn ghost" style="width:auto;padding:4px 12px;font-size:12px;">设置 ›</button></div>
+      <div class="mset-sub">整段旧记录不再发送给 AI，可随时还原</div>
+    </div>
+
+    <div class="mset-sec">自定义总结规则</div>
+    <div class="mset-card">
+      <div class="mset-row"><span>起点（从第几条后开始，0=从头）</span>
+        <input id="c_start" type="number" value="${cfg.startFrom}" class="mset-num"></div>
+      <div class="mset-row"><span>总结字数</span>
+        <span><input id="c_wmin" type="number" value="${cfg.wordMin}" class="mset-num" style="width:48px;"> - <input id="c_wmax" type="number" value="${cfg.wordMax}" class="mset-num" style="width:48px;"> 字</span></div>
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:13px;">自定义总结要求</span>
+          <select id="c_presetSel" style="background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:11px;padding:4px;">
+            <option value="">选用预设</option>
+            ${presets.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join("")}
+          </select>
+        </div>
+        <textarea id="c_req" rows="3" placeholder="例如：第一人称叙述、重点记录情感变化、小说风..." style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--text);font-size:13px;resize:vertical;">${esc(cfg.requirement||"")}</textarea>
+        <div class="row" style="gap:6px;margin-top:8px;">
+          <button id="c_saveAsPreset" class="btn ghost" style="flex:1;font-size:11px;">存为预设</button>
+          <button id="c_setGlobal" class="btn ghost" style="flex:1;font-size:11px;">设为全局</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mset-card">
+      <div class="mset-row"><span>按事件拆分记忆</span>
+        <label class="switch"><input type="checkbox" id="c_split" ${cfg.splitByEvent?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">AI 先判断含几件独立的事，分别生成 1~5 条</div>
+      <div class="mset-row" style="margin-top:10px;"><span>总结时写入永久记忆</span>
+        <label class="switch"><input type="checkbox" id="c_perm" ${cfg.writePermanent?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">每次总结抽出"关于你的事实"放进永久记忆</div>
+      <div class="mset-row" style="margin-top:10px;"><span>总结读取核心设定</span>
+        <label class="switch"><input type="checkbox" id="c_core" ${cfg.readCoreSetting?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">把核心设定放提示词最前，避免回填空内容</div>
+    </div>
+
+    <div class="mset-sec">上下文与深度</div>
+    <div class="mset-card">
+      <div class="mset-row"><span>上下文深度（最近 N 条）</span>
+        <input id="c_ctx" type="number" value="${cfg.ctxDepth}" class="mset-num"></div>
+      <div class="mset-row" style="margin-top:10px;"><span>上下文深度必读（无视已总结）</span>
+        <label class="switch"><input type="checkbox" id="c_ctxmust" ${cfg.ctxMust?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-row" style="margin-top:10px;"><span>不带入群聊近况</span>
+        <label class="switch"><input type="checkbox" id="c_nogroup" ${cfg.noGroupContext?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-row" style="margin-top:10px;"><span>跨对话记忆同步</span>
+        <label class="switch"><input type="checkbox" id="c_cross" ${cfg.crossSync?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">开启则允许 AI 读取其他角色对话记录（可能导致互串，默认关）</div>
+    </div>
+
+    <div class="row" style="gap:8px;margin-top:4px;">
+      <button class="btn" id="msetSave" style="flex:1;">💾 保存</button>
+      <button class="btn ghost" id="msetReset" style="flex:1;">恢复自动</button>
+    </div>
+  </div>`;
+  document.querySelector(".device").appendChild(div);
+
+  // segmented 选择
+  const segState = { mode:cfg.mode, autoBasis:cfg.autoBasis, mergeBasis:cfg.mergeBasis };
+  div.querySelectorAll(".mem-seg").forEach(el => {
+    el.onclick = () => {
+      const grp = el.dataset.grp;
+      segState[grp] = el.dataset.v;
+      div.querySelectorAll(`.mem-seg[data-grp="${grp}"]`).forEach(x => {
+        const on = x.dataset.v === el.dataset.v;
+        x.style.borderColor = on ? "#4caf50" : "var(--line)";
+        x.style.background = on ? "rgba(76,175,80,.14)" : "var(--panel)";
+      });
+    };
+  });
+
+  div.querySelector("#c_presetSel").onchange = (e) => {
+    if (e.target.value!=="") div.querySelector("#c_req").value = presets[parseInt(e.target.value)].content;
+  };
+  div.querySelector("#c_saveAsPreset").onclick = () => {
+    const name = prompt("预设名称："); if (!name) return;
+    const ps = store.getMemoryPresets();
+    ps.push({ name: name.trim(), content: div.querySelector("#c_req").value.trim() });
+    store.setMemoryPresets(ps);
+    toast("已存为预设");
+  };
+  div.querySelector("#c_setGlobal").onclick = () => {
+    const c = store.getMemoryCfg();
+    c.globalPreset = div.querySelector("#c_req").value.trim();
+    store.setMemoryCfg(c);
+    toast("已设为全局预设");
+  };
+  div.querySelector("#c_exclude").onclick = () => toast("批量排除：可在此扩展，当前版本占位");
+
+  div.querySelector("#msetClose").onclick = () => div.remove();
+  div.querySelector("#msetReset").onclick = () => {
+    if (!confirm("恢复为默认设置？")) return;
+    localStorage.removeItem("sv_memory_cfg");
+    div.remove(); self.showSettings(body);
+  };
+  div.querySelector("#msetSave").onclick = () => {
+    store.setMemoryCfg({
+      ...cfg,
+      mode: segState.mode,
+      autoEnabled: div.querySelector("#c_auto").checked,
+      autoBasis: segState.autoBasis,
+      autoFreq: parseInt(div.querySelector("#c_freq").value)||20,
+      secondEnabled: div.querySelector("#c_second").checked,
+      mergeBasis: segState.mergeBasis,
+      dayStartHour: Math.max(0,Math.min(23,parseInt(div.querySelector("#c_dayhour").value)||6)),
+      startFrom: parseInt(div.querySelector("#c_start").value)||0,
+      wordMin: parseInt(div.querySelector("#c_wmin").value)||100,
+      wordMax: parseInt(div.querySelector("#c_wmax").value)||150,
+      requirement: div.querySelector("#c_req").value.trim(),
+      splitByEvent: div.querySelector("#c_split").checked,
+      writePermanent: div.querySelector("#c_perm").checked,
+      readCoreSetting: div.querySelector("#c_core").checked,
+      ctxDepth: parseInt(div.querySelector("#c_ctx").value)||200,
+      ctxMust: div.querySelector("#c_ctxmust").checked,
+      noGroupContext: div.querySelector("#c_nogroup").checked,
+      crossSync: div.querySelector("#c_cross").checked
+    });
+    toast("设置已保存");
+    div.remove();
+  };
+},
+
+  // ===== AI 总结弹窗 =====
+  showSummarize(body) {
+    const self = this;
+    const cfg = store.getMemoryCfg();
+    const presets = store.getMemoryPresets();
+    const contacts = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name||""));
+
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+    div.innerHTML = `<div style="max-width:480px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h2 style="margin:0;font-size:17px;">✨ AI 总结聊天</h2>
+        <button id="msClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+      </div>
+
+      <div class="card">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">① 总结谁的聊天（勾选多个 = 共同记忆）</div>
+        <div id="msPeople" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">② 总结范围</div>
+        <select id="msScope" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;">
+          <option value="all">全部聊天记录</option>
+          <option value="50">最近 50 条</option>
+          <option value="30">最近 30 条</option>
+          <option value="20">最近 20 条</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">③ 总结字数</span>
+          <span style="font-size:13px;color:var(--text);"><input id="msMin" type="number" value="${cfg.wordMin}" style="width:52px;text-align:center;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:4px;"> - <input id="msMax" type="number" value="${cfg.wordMax}" style="width:52px;text-align:center;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:4px;"> 字</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);">④ 总结要求（留空套用全局预设）</span>
+          <select id="msPreset" style="background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:11px;padding:4px;">
+            <option value="">选用预设</option>
+            ${presets.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join("")}
+          </select>
+        </div>
+        <textarea id="msReq" rows="3" placeholder="例如：第一人称、重点记录情感变化、小说风..." style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--text);font-size:13px;resize:vertical;">${esc(cfg.requirement||"")}</textarea>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <div style="flex:1;">
+            <div style="font-size:13px;color:var(--text);">按事件拆分记忆</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">一次聊天含多件事时，拆成 1~5 条独立记忆。</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="msSplit" ${cfg.splitByEvent?"checked":""}><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <button class="btn" id="msGo" style="width:100%;">🚀 立即总结</button>
+    </div>`;
+    document.querySelector(".device").appendChild(div);
+
+    // 联系人多选
+    let sel = [];
+    const pe = div.querySelector("#msPeople");
+    // 默认勾选当前 tab 对应的人
+    if (this.curTab !== "all" && this.curTab !== "common") sel = [this.curTab];
+    const refreshPeople = () => {
+      pe.innerHTML = contacts.map(c => {
+        const on = sel.includes(c.name);
+        return `<button class="ms-p" data-n="${esc(c.name)}" style="padding:7px 13px;border-radius:16px;border:1.5px solid ${on?'var(--accent-2)':'var(--line)'};background:${on?'rgba(45,107,255,.12)':'var(--panel)'};color:var(--text);font-size:12px;cursor:pointer;">${on?'✓ ':''}${esc(c.note||c.name)}</button>`;
+      }).join("");
+      pe.querySelectorAll(".ms-p").forEach(el => {
+        el.onclick = () => {
+          const n = el.dataset.n;
+          const i = sel.indexOf(n);
+          if (i===-1) sel.push(n); else sel.splice(i,1);
+          refreshPeople();
+        };
+      });
+    };
+    refreshPeople();
+
+    div.querySelector("#msPreset").onchange = (e) => {
+      const i = e.target.value;
+      if (i!=="") div.querySelector("#msReq").value = presets[parseInt(i)].content;
+    };
+
+    div.querySelector("#msClose").onclick = () => div.remove();
+    div.querySelector("#msGo").onclick = async () => {
+      if (!sel.length) return toast("请至少选一个联系人");
+      // 多人共同记忆：聊天记录以第一个人为主来源（也可让用户选来源，这里简化取第一个有记录的）
+      const sourceName = sel.find(n => (store.getChats()[n]||[]).length) || sel[0];
+      const scope = div.querySelector("#msScope").value;
+      const wordMin = parseInt(div.querySelector("#msMin").value) || 100;
+      const wordMax = parseInt(div.querySelector("#msMax").value) || 150;
+      const req = div.querySelector("#msReq").value.trim();
+      const split = div.querySelector("#msSplit").checked;
+
+      div.querySelector("#msGo").disabled = true;
+      div.querySelector("#msGo").textContent = "总结中...";
+      try {
+        await self.doSummarize({ tags: sel, sourceName, scope, wordMin, wordMax, requirement: req, split });
+        toast("✅ 已生成记忆");
+        div.remove();
+        self.curTab = sel.length>=2 ? "common" : sel[0];
+        self.render(body);
+      } catch (e) {
+        toast("失败：" + e.message);
+        div.querySelector("#msGo").disabled = false;
+        div.querySelector("#msGo").textContent = "🚀 立即总结";
+      }
+    };
+  },
+
+  // ===== 执行总结 =====
+  async doSummarize({ tags, sourceName, scope, wordMin, wordMax, requirement, split }) {
+    const chats = store.getChats();
+    let arr = (chats[sourceName] || []).filter(m => m.content && !m.content.startsWith("[语音]"));
+    if (!arr.length) throw new Error(`「${sourceName}」还没有聊天记录`);
+    if (scope !== "all") arr = arr.slice(-parseInt(scope));
+
+    const profile = store.getProfile();
+    const playerName = profile.name || "玩家";
+    const text = arr.map(m => (m.role==="me" ? playerName : sourceName) + "：" + m.content.replace(/HEART\s*[:：][\s\S]*/i,"").trim()).join("\n");
+
+    const cfg = store.getMemoryCfg();
+    const finalReq = requirement || cfg.globalPreset || "客观记录发生的事和情感变化。";
+    const s = store.getState();
+    const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+    const isCommon = tags.length >= 2;
+
+    const splitRule = split
+      ? `先判断这段聊天包含几件独立的事，再分别生成 1~5 条记忆。本来就是一件事就只生成 1 条。`
+      : `只生成 1 条整体记忆。`;
+
+    const sysPrompt = `你是记忆整理助手。请把以下「${playerName}」和「${sourceName}」${isCommon?`（以及${tags.filter(t=>t!==sourceName).join("、")}）`:""}的聊天，总结成记忆卡片。
+
+【聊天记录】
+${text.slice(0, 4000)}
+
+【总结要求】
+1. ${splitRule}
+2. 每条记忆 ${wordMin}~${wordMax} 字。
+3. 风格要求：${finalReq}
+4. 给每条记忆起一个 6 字以内的标题。
+5. ${isCommon?`这是共同记忆，涉及 ${tags.join("、")}。`:""}
+
+【输出格式 · 严格 JSON · 不要代码块】
+{"memories":[{"title":"标题","content":"正文"}]}
+只输出 JSON。`;
+
+    const raw = await callSummaryAI([{role:"user",content:"总结"}], sysPrompt);
+    const cleaned = String(raw||"").replace(/```json/gi,"").replace(/```/g,"").trim();
+    const st = cleaned.indexOf("{"), en = cleaned.lastIndexOf("}");
+    if (st===-1||en===-1) throw new Error("格式异常");
+    const data = JSON.parse(cleaned.substring(st, en+1));
+    const items = Array.isArray(data.memories) ? data.memories : [];
+    if (!items.length) throw new Error("没生成内容");
+
+    items.forEach(it => {
+      if (!it.content) return;
+      store.addMemory({
+        id: "mem_" + Date.now() + "_" + Math.random().toString(36).slice(2,6),
+        tags: [...tags],
+        title: (it.title||"").slice(0,12),
+        content: it.content,
+        date, type: "auto", createdAt: Date.now()
+      });
+    });
+  },
+
+  // ===== 手动添加 / 编辑 =====
+  showEdit(body, id) {
+    const self = this;
+    const contacts = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name||""));
+    const mem = id ? store.getMemories().find(m=>m.id===id) : null;
+    let tags = mem ? [...(mem.tags||[])] : (this.curTab!=="all"&&this.curTab!=="common" ? [this.curTab] : []);
+
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+    div.innerHTML = `<div style="max-width:480px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h2 style="margin:0;font-size:17px;">${id?"✏️ 编辑记忆":"✍️ 手动添加"}</h2>
+        <button id="meClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+      </div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">身份标签（勾选 2+ = 共同记忆，只有被勾的人聊天时能读到）</div>
+        <div id="mePeople" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+      <div class="card">
+        <input id="meTitle" placeholder="标题（可留空）" value="${esc(mem?mem.title:"")}" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;margin-bottom:8px;">
+        <textarea id="meContent" rows="6" placeholder="记忆内容..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;line-height:1.6;resize:vertical;">${esc(mem?mem.content:"")}</textarea>
+      </div>
+      <button class="btn" id="meSave" style="width:100%;">💾 保存</button>
+    </div>`;
+    document.querySelector(".device").appendChild(div);
+
+    const pe = div.querySelector("#mePeople");
+    const refresh = () => {
+      pe.innerHTML = contacts.map(c => {
+        const on = tags.includes(c.name);
+        return `<button class="me-p" data-n="${esc(c.name)}" style="padding:7px 13px;border-radius:16px;border:1.5px solid ${on?'var(--accent-2)':'var(--line)'};background:${on?'rgba(45,107,255,.12)':'var(--panel)'};color:var(--text);font-size:12px;cursor:pointer;">${on?'✓ ':''}${esc(c.note||c.name)}</button>`;
+      }).join("");
+      pe.querySelectorAll(".me-p").forEach(el => {
+        el.onclick = () => {
+          const n = el.dataset.n;
+          const i = tags.indexOf(n);
+          if (i===-1) tags.push(n); else tags.splice(i,1);
+          refresh();
+        };
+      });
+    };
+    refresh();
+
+    div.querySelector("#meClose").onclick = () => div.remove();
+    div.querySelector("#meSave").onclick = () => {
+      const content = div.querySelector("#meContent").value.trim();
+      if (!tags.length) return toast("请至少选一个身份标签");
+      if (!content) return toast("请填写内容");
+      const title = div.querySelector("#meTitle").value.trim().slice(0,12);
+      if (id) {
+        store.updateMemory(id, { tags:[...tags], title, content });
+      } else {
+        const s = store.getState();
+        store.addMemory({
+          id: "mem_" + Date.now() + "_" + Math.random().toString(36).slice(2,6),
+          tags:[...tags], title, content,
+          date: `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`,
+          type:"manual", createdAt: Date.now()
+        });
+      }
+      toast("已保存");
+      div.remove();
+      self.render(body);
+    };
+  },
+
+  // ===== 预设管理 =====
+  showPresets(body) {
+    const self = this;
+    const presets = store.getMemoryPresets();
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+    div.innerHTML = `<div style="max-width:480px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h2 style="margin:0;font-size:17px;">📋 总结预设</h2>
+        <button id="mpClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+      </div>
+      <button class="btn" id="mpAdd" style="width:100%;margin-bottom:12px;">➕ 新建预设</button>
+      <div id="mpList"></div>
+    </div>`;
+    document.querySelector(".device").appendChild(div);
+
+    const renderList = () => {
+      const ps = store.getMemoryPresets();
+      div.querySelector("#mpList").innerHTML = ps.map((p,i)=>`
+        <div class="card" style="padding:12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <b style="font-size:14px;color:var(--text);">${esc(p.name)}</b>
+            <button class="mp-del" data-i="${i}" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;">✕</button>
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">${esc(p.content)}</div>
+        </div>`).join("") || `<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">暂无预设</div>`;
+      div.querySelectorAll(".mp-del").forEach(el=>{
+        el.onclick=()=>{ const ps2=store.getMemoryPresets(); ps2.splice(parseInt(el.dataset.i),1); store.setMemoryPresets(ps2); renderList(); };
+      });
+    };
+    renderList();
+
+    div.querySelector("#mpClose").onclick = () => div.remove();
+    div.querySelector("#mpAdd").onclick = () => {
+      const name = prompt("预设名称："); if (!name) return;
+      const content = prompt("总结要求内容："); if (!content) return;
+      const ps = store.getMemoryPresets();
+      ps.push({ name: name.trim(), content: content.trim() });
+      store.setMemoryPresets(ps);
+      renderList();
+    };
+  },
+
+  // ===== 总结设置（字数/全局预设）=====
+  showCfg(body) {
+  const self = this;
+  const cfg = store.getMemoryCfg();
+  const presets = store.getMemoryPresets();
+
+  const seg = (opts, cur, idp) => opts.map(o =>
+    `<button class="mem-seg" data-grp="${idp}" data-v="${o.v}" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid ${cur===o.v?'#4caf50':'var(--line)'};background:${cur===o.v?'rgba(76,175,80,.14)':'var(--panel)'};color:var(--text);font-size:12px;cursor:pointer;">${o.t}</button>`
+  ).join("");
+
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:18px;overflow-y:auto;color:var(--text);";
+  div.innerHTML = `<div style="max-width:500px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2 style="margin:0;font-size:17px;">⚙️ 记忆库设置</h2>
+      <button id="msetClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+    </div>
+
+    <div class="mset-sec">记忆库 · 自动总结</div>
+    <div class="mset-card">
+      <div class="mset-row"><span>自动总结开关</span>
+        <label class="switch"><input type="checkbox" id="c_auto" ${cfg.autoEnabled?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">按天=一天一条；每12小时=更早总结，角色不易忘事</div>
+      <div style="display:flex;gap:6px;margin:8px 0;">
+        ${seg([{v:"count",t:"按条数"},{v:"day",t:"按天"},{v:"h12",t:"每12小时"}], cfg.autoBasis, "autoBasis")}
+      </div>
+      <div class="mset-row"><span>自动总结频率</span>
+        <input id="c_freq" type="number" value="${cfg.autoFreq}" class="mset-num"></div>
+    </div>
+
+    <div class="mset-card">
+      <div class="mset-row"><span>自动二次总结</span>
+        <label class="switch"><input type="checkbox" id="c_second" ${cfg.secondEnabled?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">小总结攒够数量/过完一天，自动合成大总结</div>
+      <div style="display:flex;gap:6px;margin:8px 0;">
+        ${seg([{v:"count",t:"按条数"},{v:"day",t:"按天"},{v:"h12",t:"每12小时"}], cfg.mergeBasis, "mergeBasis")}
+      </div>
+      <div class="mset-row"><span>一天从几点算起</span>
+        <input id="c_dayhour" type="number" min="0" max="23" value="${cfg.dayStartHour}" class="mset-num"></div>
+    </div>
+
+    <div class="mset-sec">自定义总结规则</div>
+    <div class="mset-card">
+      <div class="mset-row"><span>起点（从第几条后开始，0=从头）</span>
+        <input id="c_start" type="number" value="${cfg.startFrom}" class="mset-num"></div>
+      <div class="mset-row"><span>总结字数</span>
+        <span><input id="c_wmin" type="number" value="${cfg.wordMin}" class="mset-num" style="width:48px;"> - <input id="c_wmax" type="number" value="${cfg.wordMax}" class="mset-num" style="width:48px;"> 字</span></div>
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:13px;">自定义总结要求</span>
+          <select id="c_presetSel" style="background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:11px;padding:4px;">
+            <option value="">选用预设</option>
+            ${presets.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join("")}
+          </select>
+        </div>
+        <textarea id="c_req" rows="3" placeholder="例如：第一人称叙述、重点记录情感变化、小说风..." style="width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--text);font-size:13px;resize:vertical;">${esc(cfg.requirement||"")}</textarea>
+        <div class="row" style="gap:6px;margin-top:8px;">
+          <button id="c_saveAsPreset" class="btn ghost" style="flex:1;font-size:11px;">存为预设</button>
+          <button id="c_setGlobal" class="btn ghost" style="flex:1;font-size:11px;">设为全局</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mset-card">
+      <div class="mset-row"><span>按事件拆分记忆</span>
+        <label class="switch"><input type="checkbox" id="c_split" ${cfg.splitByEvent?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">AI 先判断含几件独立的事，分别生成 1~5 条</div>
+      <div class="mset-row" style="margin-top:10px;"><span>总结时写入永久记忆</span>
+        <label class="switch"><input type="checkbox" id="c_perm" ${cfg.writePermanent?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">每次总结抽出"关于你的事实"放进永久记忆</div>
+      <div class="mset-row" style="margin-top:10px;"><span>总结读取核心设定</span>
+        <label class="switch"><input type="checkbox" id="c_core" ${cfg.readCoreSetting?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">把核心设定放提示词最前，避免回填空内容</div>
+    </div>
+
+    <div class="mset-sec">上下文与深度</div>
+    <div class="mset-card">
+      <div class="mset-row"><span>上下文深度（最近 N 条）</span>
+        <input id="c_ctx" type="number" value="${cfg.ctxDepth}" class="mset-num"></div>
+      <div class="mset-row" style="margin-top:10px;"><span>上下文深度必读（无视已总结）</span>
+        <label class="switch"><input type="checkbox" id="c_ctxmust" ${cfg.ctxMust?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-row" style="margin-top:10px;"><span>不带入群聊近况</span>
+        <label class="switch"><input type="checkbox" id="c_nogroup" ${cfg.noGroupContext?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-row" style="margin-top:10px;"><span>跨对话记忆同步</span>
+        <label class="switch"><input type="checkbox" id="c_cross" ${cfg.crossSync?"checked":""}><span class="slider"></span></label></div>
+      <div class="mset-sub">开启则允许 AI 读取其他角色对话记录（可能互串，默认关）</div>
+    </div>
+
+    <div class="row" style="gap:8px;margin-top:4px;">
+      <button class="btn" id="msetSave" style="flex:1;">💾 保存</button>
+      <button class="btn ghost" id="msetReset" style="flex:1;">恢复自动</button>
+    </div>
+  </div>`;
+  document.querySelector(".device").appendChild(div);
+
+  const segState = { autoBasis:cfg.autoBasis, mergeBasis:cfg.mergeBasis };
+  div.querySelectorAll(".mem-seg").forEach(el => {
+    el.onclick = () => {
+      const grp = el.dataset.grp;
+      segState[grp] = el.dataset.v;
+      div.querySelectorAll(`.mem-seg[data-grp="${grp}"]`).forEach(x => {
+        const on = x.dataset.v === el.dataset.v;
+        x.style.borderColor = on ? "#4caf50" : "var(--line)";
+        x.style.background = on ? "rgba(76,175,80,.14)" : "var(--panel)";
+      });
+    };
+  });
+
+  div.querySelector("#c_presetSel").onchange = (e) => {
+    if (e.target.value!=="") div.querySelector("#c_req").value = presets[parseInt(e.target.value)].content;
+  };
+  div.querySelector("#c_saveAsPreset").onclick = () => {
+    const name = prompt("预设名称："); if (!name) return;
+    const ps = store.getMemoryPresets();
+    ps.push({ name: name.trim(), content: div.querySelector("#c_req").value.trim() });
+    store.setMemoryPresets(ps);
+    toast("已存为预设");
+  };
+  div.querySelector("#c_setGlobal").onclick = () => {
+    const c = store.getMemoryCfg();
+    c.globalPreset = div.querySelector("#c_req").value.trim();
+    store.setMemoryCfg(c);
+    toast("已设为全局预设");
+  };
+
+  div.querySelector("#msetClose").onclick = () => div.remove();
+  div.querySelector("#msetReset").onclick = () => {
+    if (!confirm("恢复为默认设置？")) return;
+    localStorage.removeItem("sv_memory_cfg");
+    div.remove(); self.showCfg(body);
+  };
+  div.querySelector("#msetSave").onclick = () => {
+    store.setMemoryCfg({
+      ...cfg,
+      autoEnabled: div.querySelector("#c_auto").checked,
+      autoBasis: segState.autoBasis,
+      autoFreq: parseInt(div.querySelector("#c_freq").value)||20,
+      secondEnabled: div.querySelector("#c_second").checked,
+      mergeBasis: segState.mergeBasis,
+      dayStartHour: Math.max(0,Math.min(23,parseInt(div.querySelector("#c_dayhour").value)||6)),
+      startFrom: parseInt(div.querySelector("#c_start").value)||0,
+      wordMin: parseInt(div.querySelector("#c_wmin").value)||100,
+      wordMax: parseInt(div.querySelector("#c_wmax").value)||150,
+      requirement: div.querySelector("#c_req").value.trim(),
+      splitByEvent: div.querySelector("#c_split").checked,
+      writePermanent: div.querySelector("#c_perm").checked,
+      readCoreSetting: div.querySelector("#c_core").checked,
+      ctxDepth: parseInt(div.querySelector("#c_ctx").value)||200,
+      ctxMust: div.querySelector("#c_ctxmust").checked,
+      noGroupContext: div.querySelector("#c_nogroup").checked,
+      crossSync: div.querySelector("#c_cross").checked
+    });
+    toast("设置已保存");
+    div.remove();
+  };
+},
+},
+
 music: {
   title: "音乐",
   async render(body) {
@@ -21379,6 +22368,7 @@ console.log("openApp 尝试:", id, "→ 存在:", !!(id && apps[id]));
 if (typeof window.peterProactiveCheck === "function") {
   setTimeout(() => {
     try { window.peterProactiveCheck(); } catch (e) { console.warn(e); }
+    try { window.contactProactiveCheck(); } catch (e) { console.warn(e); } 
   }, 1500);
 }
   $("#desktop").classList.remove("active");
@@ -22043,6 +23033,86 @@ window.showMsgBanner = (sender, preview) => {
   openApp("messages");
 };
 };
+window.contactProactiveCheck = async function() {
+  const all = store.get("sv_contact_proactive", {});
+  const acts = store.get("sv_contact_last_act", {});
+  const idle = store.get("sv_contact_idle_turns", {});
+  const now = Date.now();
+  const lastProMap = store.get("sv_contact_last_proactive", {});
+
+  for (const name of Object.keys(all)) {
+    if (name === "彼得·帕克") continue;              // 彼得走自己的
+    const cfg = all[name];
+    if (!cfg || !cfg.enabled) continue;
+    if (isContactBlockedBySpell(name)) continue;
+    if (store.isBlacklisted(name)) continue;
+    const c = store.getContacts().find(x => x.name === name);
+    if (!c || c.isGroup) continue;
+    if (getAffinityOf(name) < 21) continue;
+
+    const lastAct = acts[name] || 0;
+    const idleTurns = idle[name] || 0;
+    const idleMin = lastAct ? Math.floor((now - lastAct) / 60000) : 0;
+    const byTurns = idleTurns >= (cfg.idleCount || 5);
+    const byMin = lastAct && idleMin >= (cfg.idleMinutes || 30);
+    if (!byTurns && !byMin) continue;
+
+    const lastPro = lastProMap[name] || 0;
+    if (now - lastPro < 5 * 60 * 1000) continue;    // 5分钟冷却
+    lastProMap[name] = now;
+    store.set("sv_contact_last_proactive", lastProMap);
+    idle[name] = 0;
+    store.set("sv_contact_idle_turns", idle);
+
+    try {
+      const s = store.getState();
+      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const profile = store.getProfile();
+      const playerName = profile.name || "玩家";
+      const gi = getGenderInfo(profile);
+      const aff = getAffinityOf(name);
+      const chats = store.getChats();
+      const arr = (chats[name] || []).slice(-6).map(m => ({
+        role: m.role === "me" ? "user" : "assistant",
+        content: (m.content || "").replace(/HEART\s*[:：][\s\S]*/i, "").trim()
+      })).filter(m => m.content);
+
+      const idleReason = byMin ? `${playerName}已经 ${idleMin} 分钟没回你` : `已经 ${idleTurns} 回合没联系`;
+
+      const sys = `你是「${name}」，正在用手机给「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代）发短信。
+${buildBlacklistBanText([])}
+${buildMemoryIsolationRule(name)}
+${buildMemoryPromptFor(name)}
+【当前日期】${date}
+【好感度】${aff}/200
+${buildAffinityBehaviorBlock(name, aff)}
+
+【情境】${idleReason}，你突然想起 ta，主动发消息。
+【规则】手机短信，严禁动作/括号/星号。1~3 条，用 || 分隔。开头别用"嘿""在吗"。不要一上来质问"怎么不回我"，用别的话题切入。${store.getChatConfig().lang==="en"?"全用英文。":"纯中文，可夹少量英文口语。"}
+只输出短信本身，多条用 || 分隔，无前缀。`;
+
+      const res = await callAI(arr.length ? arr : [{role:"user",content:"……"}], sys);
+      const msgs = String(res || "").split(/\|\|/).map(x => x.trim()).filter(Boolean);
+      if (!msgs.length) continue;
+
+      const chatsNow = store.getChats();
+      const a2 = chatsNow[name] || [];
+      msgs.forEach(m => a2.push({ role:"them", content:m }));
+      chatsNow[name] = a2;
+      store.setChats(chatsNow);
+
+      if (typeof showMsgBanner === "function") showMsgBanner(name, msgs[0] || "");
+      if (apps.messages.currentUser === name && apps.messages.view === "chat") {
+        apps.messages.render(document.getElementById("appBody"));
+      }
+      await new Promise(r => setTimeout(r, 800));
+    } catch (e) {
+      console.warn("[联系人主动发信]", name, e);
+      lastProMap[name] = 0;
+      store.set("sv_contact_last_proactive", lastProMap);
+    }
+  }
+};
 // ============================================================
 // ★ 彼得主动发信检查
 // ============================================================
@@ -22169,8 +23239,9 @@ ${idleReason}。你此刻突然想起了${playerName}，于是主动发来一条
 // ★ 定时检查（每 60 秒一次）
 if (!window._peterProactiveTimer) {
   window._peterProactiveTimer = setInterval(() => {
-    try { window.peterProactiveCheck(); } catch (e) { console.warn(e); }
-  }, 60 * 1000);
+  try { window.peterProactiveCheck(); } catch (e) { console.warn(e); }
+  try { window.contactProactiveCheck(); } catch (e) { console.warn(e); }   // ★ 新增
+}, 60 * 1000);
 }
 // ============================================================
 // 🎞️ 过场动画 · 遗忘咒生效（只讲施法瞬间，不描述四年）
