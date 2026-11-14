@@ -7678,7 +7678,7 @@ function getProfileSlots() {
   }
   return slots;
 }
-function setProfileSlots(slots) {
+function setProfileSlots(slots){
   localStorage.setItem(PROFILE_SLOTS_KEY, JSON.stringify(slots));
 }
 // ============================================================
@@ -9050,14 +9050,24 @@ const autoLabel = `${p.name || "未命名"} · ${curPhase.name} · ${new Date().
 latestSlots[i] = {
   label: autoLabel,
   timestamp: Date.now(),
-  phaseName: curPhase.name,                 // ★ 单独存一份方便读档时显示
+  phaseName: curPhase.name,
   phaseKey: curPhase.key,
   profile: JSON.parse(JSON.stringify(store.getProfile())),
-  data: collectAllData()                     // ★ 已经包含所有 sv_ 前缀数据（聊天/日记/剧场/推特等）
+  data: collectAllData()
 };
-          setProfileSlots(latestSlots);
+try {
+  setProfileSlots(latestSlots);
+} catch (e) {
+  console.error("[人设存档失败]", e);
+  if (e && (e.name === "QuotaExceededError" || /quota|exceeded|storage/i.test(e.message || ""))) {
+    toast("❌ 存储空间已满！请先导出备份，再清理聊天记录/删掉旧存档后重试");
+  } else {
+    toast("❌ 存档失败：" + (e.message || "未知错误"));
+  }
+  return;
+}
 
-          toast(`✅ 已保存到人设档位 ${i + 1}`);
+toast(`✅ 已保存到人设档位 ${i + 1}`);
           div.remove();
           // ★ 重新渲染设置页，让档位状态刷新
           apps.settings.render($("#appBody"));
@@ -22473,13 +22483,10 @@ window.openSlots=(mode)=>{
 function storeSlot(idx){
   const slots = getSlots();
   const s = store.getState();
-
-  // 🕸️ 存档时一并保存记忆状态（魔咒、感情线、解锁、空白期回合）
   const memorySnapshot = {
     memoryState: store.getMemoryState(),
     blank4yTurns: getBlank4yTurns()
   };
-
   slots[idx] = {
     timestamp: Date.now(),
     label: `第 ${s.turn} 回合 · 好感度 ${s.affinity}`,
@@ -22487,10 +22494,16 @@ function storeSlot(idx){
     profile: store.getProfile(),
     memorySnapshot: memorySnapshot
   };
-  setSlots(slots);
-  toast(`已存档到位置 ${idx + 1}`);
+  try {
+    localStorage.setItem("sv_slots", JSON.stringify(slots));
+  } catch (e) {
+    console.error("[存档失败]", e);
+    if (e && (e.name === "QuotaExceededError" || /quota|exceeded|storage/i.test(e.message || ""))) {
+      throw new Error("存储空间已满！请到设置→数据管理导出备份后，清理聊天记录/推特，或删掉不用的存档位再试。");
+    }
+    throw new Error("存档失败：" + (e.message || "未知错误"));
+  }
 }
-
 function loadSlot(idx){
   const slots = getSlots();
   const a = slots[idx];
