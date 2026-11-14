@@ -4667,34 +4667,28 @@ ${name}。
 const dbHelper = {
   db: null,
   async init() {
-  if (this.db) return;            // ★ 已初始化，直接返回，避免重复 open
-  if (this._initing) return this._initing;  // ★ 正在初始化，复用同一个 promise
+  if (this.db) return;
+  if (this._initing) return this._initing;
   this._initing = new Promise((resolve) => {
     let done = false;
     const finish = () => { if (!done) { done = true; resolve(); } };
-
     let req;
-    try {
-      req = indexedDB.open("SpiderMusicDB", 3);
-    } catch (e) {
-      console.warn("[dbHelper] open 抛错:", e);
-      return finish();   // ★ 打不开就直接放行（降级）
-    }
+    try { req = indexedDB.open("SpiderMusicDB", 3); }
+    catch (e) { console.warn("[dbHelper] open 抛错:", e); return finish(); }
 
     req.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains("tracks")) db.createObjectStore("tracks", { keyPath: "id" });
       if (!db.objectStoreNames.contains("images")) db.createObjectStore("images", { keyPath: "id" });
-      if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("kv"))     db.createObjectStore("kv", { keyPath: "id" });
     };
     req.onsuccess = e => { this.db = e.target.result; finish(); };
-    req.onerror = () => { console.warn("[dbHelper] open onerror"); finish(); };
-    req.onblocked = () => { console.warn("[dbHelper] open onblocked"); finish(); };  // ★ 被占用也放行
-
-    // ★ 3 秒超时兜底：无论如何都不卡死
-    setTimeout(finish, 3000);
+    req.onerror   = () => { console.warn("[dbHelper] open onerror"); finish(); };
+    req.onblocked = () => { console.warn("[dbHelper] open onblocked（有其它标签页占用）"); finish(); };
+    // ★ 超时只是防止永久卡死，不设 this.db；就绪与否由 this.db 判断
+    setTimeout(finish, 8000);
   });
-  return this._initing;
+  try { await this._initing; } finally { this._initing = null; }  // ★ 允许失败后重试
 },
   async save(track) {
     if (!this.db) await this.init();
@@ -4819,38 +4813,30 @@ dbHelper.init(); // 初始化数据库
 //   - sv_theater_slots_*  小剧场存档
 // ============================================================
 const archive = {
-  ready: null,
-  _idbOk: false,      // IndexedDB 是否可用
-  init() {
-    if (this.ready) return this.ready;
-    this.ready = (async () => {
-      try {
-        await dbHelper.init();
-        // 探测 kv 仓库是否真能用
-        if (dbHelper.db && dbHelper.db.objectStoreNames.contains("kv")) {
-          this._idbOk = true;
-        } else {
-          this._idbOk = false;
-          console.warn("[archive] kv 仓库不可用，降级到 localStorage");
-        }
-      } catch (e) {
-        this._idbOk = false;
-        console.warn("[archive] init 失败，降级到 localStorage:", e);
-      }
-      if (this._idbOk) {
-        try { await this._migrate(); } catch (e) { console.warn("[archive 迁移失败]", e); }
-      }
-    })();
-    return this.ready;
+  _migrated: false,
+
+  // 每次都真实确认 IndexedDB 是否就绪（不缓存失败态）
+  async ensureIdb() {
+    if (dbHelper.db && dbHelper.db.objectStoreNames.contains("kv")) return true;
+    try { await dbHelper.init(); } catch (e) {}
+    return !!(dbHelper.db && dbHelper.db.objectStoreNames.contains("kv"));
   },
+
+  async init() {
+    const ok = await this.ensureIdb();
+    if (ok && !this._migrated) {
+      this._migrated = true;
+      try { await this._migrate(); } catch (e) { console.warn("[archive 迁移失败]", e); }
+    }
+    return ok;
+  },
+
   async _migrate() {
-    // 只在 IDB 可用时才搬迁 + 删除旧 localStorage
     const migrateOne = async (key, markKey) => {
       const v = localStorage.getItem(key);
       if (v == null) return;
       try {
         if ((await dbHelper.kvGet(key)) == null) await dbHelper.kvSet(key, v);
-        // ★ 必须确认写进去了，才删 localStorage，防止数据丢失
         const check = await dbHelper.kvGet(key);
         if (check != null) {
           if (markKey) {
@@ -4869,28 +4855,26 @@ const archive = {
     }
     for (const k of tKeys) await migrateOne(k, null);
   },
+
   async getRaw(key) {
-    await this.init();
-    if (this._idbOk) {
-      try {
-        const v = await dbHelper.kvGet(key);
-        if (v != null) return v;
-      } catch (e) {}
+    const ok = await this.ensureIdb();
+    if (ok) {
+      try { const v = await dbHelper.kvGet(key); if (v != null) return v; } catch (e) {}
     }
-    return localStorage.getItem(key);   // 降级/兜底
+    return localStorage.getItem(key);   // 读取：IDB 没有就看 localStorage（兼容迁移前）
   },
+
   async setRaw(key, str) {
-    await this.init();
-    if (this._idbOk) {
-      try {
-        await dbHelper.kvSet(key, str);
-        try { localStorage.removeItem(key); } catch (e) {}
-        return;
-      } catch (e) { console.warn("[archive.setRaw IDB 失败，回退 localStorage]", e); }
+    const ok = await this.ensureIdb();
+    if (ok) {
+      await dbHelper.kvSet(key, str);            // ★ 写进 IndexedDB
+      try { localStorage.removeItem(key); } catch (e) {}
+      return;
     }
-    // 降级：写 localStorage（可能爆，但由上层 catch 处理）
-    localStorage.setItem(key, str);
+    // ★ IndexedDB 不可用：不要往满的 localStorage 硬塞（那只会崩溃）
+    throw new Error("浏览器数据库(IndexedDB)暂时不可用，可能有多个标签页占用。请关闭本页其它标签后刷新重试。");
   },
+
   async getJSON(key, def) {
     try { const v = await this.getRaw(key); return v ? JSON.parse(v) : def; }
     catch (e) { return def; }
@@ -4900,8 +4884,8 @@ const archive = {
 archive.init();
 
 async function dumpArchive() {
-  await archive.init();
-  if (!archive._idbOk) return {};
+  const ok = await archive.ensureIdb();
+  if (!ok) return {};
   try {
     const all = await dbHelper.kvAll();
     const out = {};
@@ -4910,9 +4894,8 @@ async function dumpArchive() {
   } catch (e) { return {}; }
 }
 async function restoreArchive(obj) {
-  await archive.init();
   for (const k of Object.keys(obj || {})) {
-    try { await archive.setRaw(k, obj[k]); } catch (e) {}
+    try { await archive.setRaw(k, obj[k]); } catch (e) { console.warn(e); }
     if (k === "sv_slots") localStorage.setItem("sv_has_slots", "1");
     if (k === "sv_profile_slots_10") localStorage.setItem("sv_has_profile_slots", "1");
   }
