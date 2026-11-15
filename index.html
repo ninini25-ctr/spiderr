@@ -4469,14 +4469,27 @@ function buildBrandNewDayPrompt() {
 ✅ 用户与彼得的所有亲密互动（按 romanceMode 节奏）
 `;
 }
+function buildPeterChatterPersona() {
+  return `
+【🕷️ 彼得·帕克 · 人设基调 · 青涩话痨期 · 铁律 · 违反即失败】
+1. 话痨：容易一条接一条，爱补充"其实…""等等…""对了…""算了没事"。
+2. 自嘲 + 焦虑：会吐槽自己蠢、搞砸了，担心成绩、梅婶、钱。
+3. 突然认真：跑题到一半突然冒出一句很真诚的话，然后赶紧岔开。
+4. 口语化："真的""老实说""怎么说呢""反正""天哪""我服了"。
+5. 善良、笨拙、带点紧张，但对在意的人很用心、会护着。
+6. 严禁写成压抑、疏离、冷淡、自我放逐的样子——他此刻还是那个没心没肺又热心肠的高中生。`;
+}
 // ============================================================
 // 🕷️ 崭新之日 · 彼得人设细化（2024 遗忘魔咒生效后）
 //   - 日常不再话痨
 //   - 自我放逐、压抑、表面平静
 //   - 只在面对"熟悉的人"时才重新敞开心扉
 // ============================================================
-function buildPeterBrandNewDayPersona() {
-  if (!isSpellActiveNow()) return "";
+function buildPeterBrandNewDayPersona(scope) {
+  // 🏫 高中场景永远锁定青涩话痨期，无视遗忘魔咒
+  if (scope === "School") return buildPeterChatterPersona();
+  // 魔咒未生效时，彼得就是那个青涩话痨高中生
+  if (!isSpellActiveNow()) return buildPeterChatterPersona();
 
   const mem = store.getMemoryState();
   // 未解锁彼得聊天时，彼得还没和玩家重新建立关系，人设更冷
@@ -18601,6 +18614,7 @@ School: {
 
       const sysPrompt = buildSystem(`你正在生成一段**中城高中的课堂小事件**（校园日常，独立于主线，不影响主线进度）。
 ${buildBlacklistBanText([])}
+${buildPeterChatterPersona()}
 
 【设定 · 铁律】你（${playerName}）和彼得·帕克、内德·利兹、米歇尔·琼斯(MJ) 等人是中城高中${semLabel}的同班同学，你们一起上学。本剧情从【你（玩家）】的视角展开，用「${playerPronoun}」或第二人称"你"称呼玩家，玩家是主角。**彼得只是你的同学之一，绝对不要让玩家代入彼得、不要以彼得为主视角。**
 
@@ -18732,8 +18746,9 @@ D. 选项内容`, "School");
       const playerName = profile.name || "你";
       const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
 
-      const sysPrompt = buildSystem(`续写一段中城高中课堂小事件的结局。
+     const sysPrompt = buildSystem(`续写一段中城高中课堂小事件的结局。
 ${buildBlacklistBanText([])}
+${buildPeterChatterPersona()}
 
 【设定】你（${playerName}）和彼得等人是中城高中的同学，一起上学。从【你（玩家）】的视角（用「${playerPronoun}」或"你"）续写，彼得只是同学之一。
 
@@ -18871,6 +18886,7 @@ ${buildBlacklistBanText([])}
 
       const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中「同桌日常」**小剧场（校园向，独立于主线）。
 ${buildBlacklistBanText([])}
+${buildPeterChatterPersona()}
 
 【设定】你（${playerName}）和彼得等人是中城高中${semLabel}的同学。本剧情从【你（玩家）】视角展开，你是主角。
 【玩家】${playerName}（用「${playerPronoun}」指代）
@@ -19236,13 +19252,14 @@ ${isFinal ? "【特别】这是高三下学期，也是毕业季，要写出毕�
 
       const sysPrompt = buildSystem(`生成一段**中城高中「放学后留堂」**的开场剧情（校园日常，略带压力感）。
 ${buildBlacklistBanText([])}
+${buildPeterChatterPersona()}
 
 【设定】你（${playerName}）是中城高中${semLabel}的学生，和彼得等人是同学。从【你（玩家）】的视角（用「${playerPronoun}」或"你"），你是被留堂的主角。
 【原因】${failTxt}
 【当前时期】${phase.name}（${semLabel}，放学后的傍晚，是哪一天不必强调）
 
 【要求 · 铁律】
-1. 写一段 400~500 字的留堂开场：放学后空荡荡的教室，老师（可用哈灵顿老师/沃伦老师）把你留下谈成绩，语气严肃但关心。可以提到彼得/同学已经走了、窗外天色变暗。
+1. 写一段 400~500 字的留堂开场：放学后空荡荡的教室，老师（可用哈灵顿老师/沃伦老师）把你留下谈成绩，语气严肃但关心。可以提到同学已经走了、窗外天色变暗，但要有彼得陪伴的剧情。
 2. 玩家是视角中心，不替玩家决定。严禁超能力、主线大事件。
 3. 结尾用【选项】列出 A. B. C. D. 四个你面对老师的反应（认错补课/找借口/坦白最近很忙/请求再给一次机会等）。
 4. 语言纯中文。
@@ -19420,6 +19437,7 @@ ${buildBlacklistBanText([])}
       const semLabel = this.semLabel();
       const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中十项全能队训练**的开场小剧场（校园日常，独立于主线）。
 ${buildBlacklistBanText([])}
+${buildPeterChatterPersona()}
 
 【设定】你（${playerName}）和彼得等人都是队员，一起训练。从【你（玩家）】视角展开，你是主角。
 【队员】${team}，以及玩家「${playerName}」
@@ -19583,6 +19601,7 @@ ${peterAff >= 151 ? "- 彼得对你好感度很高，这一场是告白的最佳
 
       const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中返校节舞会**的开场小剧场（校园日常/情感向）。
 ${buildBlacklistBanText([])}
+${buildPeterChatterPersona()}
 
 【设定】你（${playerName}）和彼得·帕克、内德、MJ 等人是中城高中${semLabel}的同学，一起参加舞会。从【你（玩家）】视角展开，你是主角，彼得只是你的同学之一（绝不要让玩家代入彼得）。
 【玩家】${playerName}
@@ -22979,10 +22998,13 @@ if (opts.length) {
 
     // 每个同行人的好感度行为块
     const peopleBlocks = (ctx.people || []).map(n => {
-      const aff = getAffinityOf(n);
-      const c = store.getContacts().find(x => x.name === n) || {};
-      return `—— ${n}（简介：${c.desc || "—"}）\n${buildAffinityBehaviorBlock(n, aff)}`;
-    }).join("\n\n");
+  const aff = getAffinityOf(n);
+  const c = store.getContacts().find(x => x.name === n) || {};
+  return `—— ${n}（简介：${c.desc || "—"}）\n${buildAffinityBehaviorBlock(n, aff)}`;
+}).join("\n\n");
+const peterPersonaBlock = (ctx.people || []).includes("彼得·帕克")
+  ? buildPeterBrandNewDayPersona("Dating")
+  : "";
 
     const styleRule = `
 【文风铁律 · 与世界线一致 · 违反即失败】
@@ -23003,6 +23025,7 @@ ${buildSpellBanText()}
 
 【各人与玩家的关系 · 必须严格据此决定态度/亲密度/语气】
 ${peopleBlocks}
+${peterPersonaBlock}
 
 【关于恋爱/暧昧 · 约饭专属】
 约饭是独立的私人约会场景。如果某位同行人好感度已进入暧昧（≥101）或恋人（≥151）档，你应当在本次约会里自然演出对应的亲密互动（牵手、靠近、告白、亲吻等），不要因为"这不是彼得"而刻意回避。但这只发生在约饭/聊天里，不写进世界线主线。
