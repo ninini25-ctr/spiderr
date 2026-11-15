@@ -18143,64 +18143,420 @@ ${buildMjRelationToPlayer().block}
 
 School: {
   title: "中城高中",
-  currentTab: "course", // course | score | team | dance
+  currentTab: "status",
 
-  // 科目配置
   COURSES: [
-    { key: "chem",    name: "化学",     emoji: "⚗️", teacher: "沃伦老师",   color: "#2d6bff" },
-    { key: "phys",    name: "物理",     emoji: "🔭", teacher: "科布老师",   color: "#8a2be2" },
-    { key: "span",    name: "西班牙语", emoji: "💬", teacher: "莫拉莱斯老师", color: "#e62429" },
-    { key: "pe",      name: "体育",     emoji: "🏃", teacher: "威尔逊教练",  color: "#4caf50" },
-    { key: "decath",  name: "十项全能", emoji: "🏆", teacher: "哈灵顿老师",  color: "#c8a15a" },
-    { key: "shop",    name: "技术课",   emoji: "🔧", teacher: "德尔·托罗老师", color: "#00bcd4" }
+    { key: "chem",    name: "化学",     emoji: "⚗️", teacher: "沃伦老师",     color: "#2d6bff" },
+    { key: "phys",    name: "物理",     emoji: "🔭", teacher: "科布老师",     color: "#8a2be2" },
+    { key: "span",    name: "西班牙语", emoji: "💬", teacher: "莫拉莱斯老师",   color: "#e62429" },
+    { key: "pe",      name: "体育",     emoji: "🏃", teacher: "威尔逊教练",    color: "#4caf50" },
+    { key: "decath",  name: "十项全能", emoji: "🏆", teacher: "哈灵顿老师",    color: "#c8a15a" },
+    { key: "shop",    name: "技术课",   emoji: "🔧", teacher: "德尔·托罗老师",  color: "#00bcd4" }
   ],
 
+  DESKMATES: [
+    { name: "彼得·帕克",   emoji: "🕸️", color: "#e62429", tag: "秘密满身的男孩" },
+    { name: "米歇尔·琼斯", emoji: "📓", color: "#8a2be2", tag: "毒舌观察家" },
+    { name: "内德·利兹",   emoji: "💻", color: "#2d6bff", tag: "技术宅搭档" },
+    { name: "Flash Thompson", emoji: "😏", color: "#c8a15a", tag: "爱炫耀的刺头" },
+    { name: "Liz Allan",   emoji: "🌸", color: "#e06b9a", tag: "完美的前队长" }
+  ],
+
+  // ===== 年级学期（6 个学期一轮回）=====
+  SEMESTERS: [
+    { grade: "高一", term: "上学期", label: "高一·上学期" },
+    { grade: "高一", term: "下学期", label: "高一·下学期" },
+    { grade: "高二", term: "上学期", label: "高二·上学期" },
+    { grade: "高二", term: "下学期", label: "高二·下学期" },
+    { grade: "高三", term: "上学期", label: "高三·上学期" },
+    { grade: "高三", term: "下学期", label: "高三·下学期" }
+  ],
+  SEMESTER_DAYS: 7,
+
+  // ============================================================
+  // 🎨 样式
+  // ============================================================
+  _injectCss() {
+    if (document.getElementById("school-ext-style")) return;
+    const st = document.createElement("style");
+    st.id = "school-ext-style";
+    st.textContent = `
+      .sch-hud{background:linear-gradient(135deg,#1a2a4a,#0f1829);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px;position:relative;overflow:hidden;}
+      body.theme-light .sch-hud{background:linear-gradient(135deg,#e8eef8,#d5e0f0);}
+      .sch-hud::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#4caf50,#2d6bff,#e62429);}
+      .sch-hud-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+      .sch-hud-title{font-size:12px;font-weight:700;color:var(--text);letter-spacing:1px;}
+      .sch-ap{display:flex;gap:3px;}
+      .sch-ap-dot{width:12px;height:18px;border-radius:3px;background:var(--panel-2);border:1px solid var(--line);}
+      .sch-ap-dot.on{background:#c8a15a;border-color:#c8a15a;box-shadow:0 0 6px rgba(200,161,90,.5);}
+      .sch-sem-line{font-size:10.5px;color:var(--muted);margin-bottom:10px;opacity:.95;display:flex;justify-content:space-between;gap:8px;}
+      .sch-bar-row{margin-bottom:10px;}
+      .sch-bar-row:last-child{margin-bottom:0;}
+      .sch-bar-label{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-bottom:4px;}
+      .sch-bar-label b{color:var(--text);font-weight:700;}
+      .sch-bar-track{height:8px;background:var(--panel-2);border-radius:5px;overflow:hidden;}
+      .sch-bar-fill{height:100%;border-radius:5px;transition:width .4s cubic-bezier(.2,.8,.2,1);}
+
+      .sch-det-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(230,36,41,.18),rgba(0,0,0,.05));border:1px solid rgba(230,36,41,.5);border-radius:14px;padding:12px 14px;margin-bottom:12px;cursor:pointer;animation:schDetPulse 2.5s ease-in-out infinite;}
+      @keyframes schDetPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,36,41,.3);}50%{box-shadow:0 0 18px 3px rgba(230,36,41,.15);}}
+      .sch-det-icon{font-size:26px;flex-shrink:0;}
+      .sch-det-body{flex:1;min-width:0;}
+      .sch-det-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+      .sch-det-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+      .sch-det-go{font-size:18px;color:#e62429;flex-shrink:0;}
+
+      .sch-tabs2{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;}
+      .sch-tabs2::-webkit-scrollbar{display:none;}
+      .sch-tab2{flex-shrink:0;padding:8px 14px;border-radius:18px;border:1.5px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
+      .sch-tab2.on{border-color:var(--accent-2);background:rgba(45,107,255,.12);color:var(--text);}
+
+      .sch-slot{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;}
+      .sch-slot::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--s-color,var(--accent-2));}
+      .sch-slot:hover{border-color:var(--s-color,var(--accent-2));transform:translateX(2px);}
+      .sch-slot.locked{opacity:.4;cursor:not-allowed;}
+      .sch-slot-emoji{font-size:24px;flex-shrink:0;}
+      .sch-slot-info{flex:1;min-width:0;}
+      .sch-slot-name{font-size:14px;font-weight:700;color:var(--text);}
+      .sch-slot-eff{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4;}
+      .sch-flavor{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;color:var(--text);font-family:"FangSong","仿宋",serif;}
+
+      .sch-desk-pick{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;}
+      .sch-desk-pick::-webkit-scrollbar{display:none;}
+      .sch-desk-opt{flex-shrink:0;width:88px;padding:12px 8px;border-radius:14px;border:2px solid var(--line);background:var(--panel);text-align:center;cursor:pointer;transition:all .15s;}
+      .sch-desk-opt.on{border-color:var(--d-color);background:color-mix(in srgb,var(--d-color) 12%,var(--panel));transform:translateY(-2px);}
+      .sch-desk-opt-emoji{font-size:26px;}
+      .sch-desk-opt-name{font-size:12px;font-weight:700;color:var(--text);margin-top:4px;}
+      .sch-desk-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;position:relative;overflow:hidden;margin-bottom:14px;}
+      .sch-desk-ring{width:90px;height:90px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;position:relative;background:conic-gradient(var(--d-color) 0%,var(--d-color) calc(var(--pct,0)*1%),var(--panel-2) calc(var(--pct,0)*1%),var(--panel-2) 100%);}
+      .sch-desk-ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--panel);}
+      .sch-desk-ring-inner{position:relative;z-index:1;font-size:32px;}
+      .sch-desk-name{font-size:17px;font-weight:800;color:var(--text);}
+      .sch-desk-tag{font-size:11px;color:var(--muted);margin-top:2px;}
+      .sch-desk-prog{font-size:11px;color:var(--d-color);font-weight:700;margin-top:8px;}
+
+      .sch-exam-hero{background:linear-gradient(135deg,#3a1a1a,#1a0f0f);border:1px solid var(--line);border-radius:16px;padding:22px 18px;text-align:center;position:relative;overflow:hidden;margin-bottom:14px;}
+      body.theme-light .sch-exam-hero{background:linear-gradient(135deg,#faeaea,#f0dede);}
+      .sch-exam-hero::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#e62429,#c8a15a,#e62429);}
+      .sch-exam-logo{font-size:40px;margin-bottom:8px;}
+      .sch-exam-title{font-size:20px;font-weight:800;color:var(--text);letter-spacing:2px;}
+      .sch-exam-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+      .sch-exam-desc{font-size:12px;color:var(--muted);line-height:1.7;margin:14px 0 18px;}
+      .sch-q-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;}
+      .sch-q-head{font-size:11px;color:var(--accent-2);font-weight:700;margin-bottom:8px;}
+      .sch-q-text{font-size:14px;color:var(--text);line-height:1.6;margin-bottom:12px;font-weight:600;}
+      .sch-q-opt{display:block;width:100%;text-align:left;padding:11px 14px;margin-bottom:8px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s;}
+      .sch-q-opt:hover{border-color:var(--accent-2);}
+      .sch-q-opt.sel{border-color:var(--accent-2);background:rgba(45,107,255,.14);}
+      .sch-q-opt.correct{border-color:#4caf50;background:rgba(76,175,80,.15);}
+      .sch-q-opt.wrong{border-color:#e62429;background:rgba(230,36,41,.15);}
+
+      .sch-det-scene{background:linear-gradient(160deg,#14141c,#0a0a10);border:1px solid var(--line);border-radius:16px;padding:20px;position:relative;overflow:hidden;}
+      body.theme-light .sch-det-scene{background:linear-gradient(160deg,#eceef2,#e0e3e8);}
+      .sch-det-scene::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#555,#e62429,#555);}
+      .sch-det-tag{display:inline-block;font-size:10px;font-weight:700;color:#e62429;background:rgba(230,36,41,.15);padding:3px 10px;border-radius:8px;letter-spacing:1px;margin-bottom:10px;}
+    `;
+    document.head.appendChild(st);
+  },
+
+  // ============================================================
+  // 📦 数据
+  // ============================================================
+  _todayStr() {
+    const n = new Date();
+    return `${n.getFullYear()}-${n.getMonth() + 1}-${n.getDate()}`;
+  },
   getScores() {
     return store.get("sv_school_scores", { chem: 85, phys: 82, span: 70, pe: 60, decath: 90, shop: 88 });
   },
   setScores(sc) { store.set("sv_school_scores", sc); },
-
   getTeam() {
     return store.get("sv_school_team", ["彼得·帕克", "米歇尔·琼斯", "内德·利兹", "Flash Thompson", "Liz Allan"]);
   },
+  getDeskmate() {
+    return store.get("sv_school_deskmate", { name: "", progress: 0 });
+  },
+  setDeskmate(d) { store.set("sv_school_deskmate", d); },
 
+  // ===== 学期系统（含老数据迁移）=====
+  getSemester() {
+    let sem = store.get("sv_school_semester", null);
+    // 全新
+    if (!sem || typeof sem !== "object") {
+      sem = { index: 0, cycle: 1, dayCount: 0, lastDay: "", settled: false };
+      store.set("sv_school_semester", sem);
+      return sem;
+    }
+    // 老数据迁移：旧结构只有 term/dayCount/lastDay/settled，没有 index/cycle
+    if (typeof sem.index !== "number") {
+      const oldDay = typeof sem.dayCount === "number" ? sem.dayCount : 0;
+      sem = {
+        index: 0,                       // 统一从高一上学期开始
+        cycle: 1,
+        dayCount: Math.max(0, Math.min(this.SEMESTER_DAYS, oldDay)),
+        lastDay: typeof sem.lastDay === "string" ? sem.lastDay : "",
+        settled: false
+      };
+      store.set("sv_school_semester", sem);
+    }
+    // 字段补全 + 夹紧
+    if (typeof sem.cycle !== "number") sem.cycle = 1;
+    if (typeof sem.dayCount !== "number") sem.dayCount = 0;
+    if (typeof sem.lastDay !== "string") sem.lastDay = "";
+    if (typeof sem.settled !== "boolean") sem.settled = false;
+    sem.index = Math.max(0, Math.min(this.SEMESTERS.length - 1, sem.index));
+    return sem;
+  },
+  setSemester(sem) { store.set("sv_school_semester", sem); },
+  semLabel() {
+    const sem = this.getSemester();
+    return (this.SEMESTERS[sem.index] || this.SEMESTERS[0]).label;
+  },
+  // 现实换一天则累计上学天数
+  bumpSemesterDay() {
+    const today = this._todayStr();
+    const sem = this.getSemester();
+    if (sem.lastDay !== today) {
+      sem.lastDay = today;
+      sem.dayCount = (sem.dayCount || 0) + 1;
+      sem.settled = false;
+      this.setSemester(sem);
+    }
+    return sem;
+  },
+  needSemesterSettle() {
+    const sem = this.getSemester();
+    return sem.dayCount >= this.SEMESTER_DAYS && !sem.settled;
+  },
+
+  // ===== 每日状态（用户自己的状态）=====
+  getStatus() {
+    const today = this._todayStr();
+    this.bumpSemesterDay();
+    let st = store.get("sv_school_status", null);
+    if (!st || st.day !== today) {
+      const prevAcademic = st ? (typeof st.academic === "number" ? st.academic : 70) : 70;
+      const prevMood = st ? (typeof st.mood === "number" ? st.mood : (typeof st.mayTrust === "number" ? st.mayTrust : 70)) : 70;
+      st = { day: today, academic: prevAcademic, energy: 100, mood: prevMood, ap: 4 };
+      store.set("sv_school_status", st);
+    }
+    if (typeof st.academic !== "number") st.academic = 70;
+    if (typeof st.energy !== "number") st.energy = (typeof st.spider === "number" ? st.spider : 100);
+    if (typeof st.mood !== "number") st.mood = (typeof st.mayTrust === "number" ? st.mayTrust : 70);
+    st.academic = Math.max(0, Math.min(100, st.academic));
+    st.energy = Math.max(0, Math.min(100, st.energy));
+    st.mood = Math.max(0, Math.min(100, st.mood));
+    if (typeof st.ap !== "number") st.ap = 4;
+    return st;
+  },
+  setStatus(st) {
+    st.academic = Math.max(0, Math.min(100, st.academic));
+    st.energy = Math.max(0, Math.min(100, st.energy));
+    st.mood = Math.max(0, Math.min(100, st.mood));
+    st.ap = Math.max(0, Math.min(4, st.ap));
+    store.set("sv_school_status", st);
+  },
+  _applyAff(name, delta) {
+    if (!name || !delta) return;
+    const list = store.getContacts();
+    const c = list.find(x => x.name === name);
+    if (!c) return;
+    const cap = (typeof getAffinityCapOf === "function") ? getAffinityCapOf(name) : (name === "彼得·帕克" ? 200 : 100);
+    c.affinity = Math.max(0, Math.min(cap, (c.affinity || 0) + delta));
+    store.setContacts(list);
+    if (name === "彼得·帕克") { const s = store.getState(); s.affinity = c.affinity; store.setState(s); }
+  },
+
+  // ============================================================
+  // 🏫 主渲染
+  // ============================================================
   async render(body) {
-    const self = this;
+    this._injectCss();
     $("#appSettingsBtn").style.display = "none";
+    const self = this;
+    this.getStatus(); // 触发每日重置 + 学期累计
+
+    const needSettle = this.needSemesterSettle();
+    const settleBanner = needSettle ? `
+      <div class="sch-det-banner" id="schSemBanner" style="animation:none;border-color:rgba(200,161,90,.6);background:linear-gradient(135deg,rgba(200,161,90,.18),rgba(0,0,0,.05));">
+        <div class="sch-det-icon">🎓</div>
+        <div class="sch-det-body">
+          <div class="sch-det-title">${this.semLabel()} 结课了</div>
+          <div class="sch-det-desc">这一学期结束了，去看看期末总结。</div>
+        </div>
+        <div class="sch-det-go" style="color:#c8a15a;">›</div>
+      </div>` : "";
+
+    const detention = this.checkDetention();
+    const detBanner = detention ? `
+      <div class="sch-det-banner" id="schDetBanner">
+        <div class="sch-det-icon">🕯️</div>
+        <div class="sch-det-body">
+          <div class="sch-det-title">放学后留堂</div>
+          <div class="sch-det-desc">${detention.failed.length ? `${detention.failedNames.join("、")} 亮红灯了，老师点名让你留下。` : "你最近太不在状态，老师留了你。"}</div>
+        </div>
+        <div class="sch-det-go">›</div>
+      </div>` : "";
+
+    const tabs = [
+      { k: "status", t: "📅 日程" },
+      { k: "course", t: "📚 课堂" },
+      { k: "deskmate", t: "👥 同桌" },
+      { k: "exam", t: "📝 考试" },
+      { k: "score", t: "📊 成绩" },
+      { k: "team", t: "🏆 十项" },
+      { k: "dance", t: "💃 舞会" }
+    ];
 
     body.innerHTML = `
       <div class="sch-wrap">
         <div class="sch-header">
           <div class="sch-header-label">MIDTOWN SCHOOL</div>
           <div class="sch-header-title">中城科学技术高中</div>
-          <div class="sch-header-sub">Science · Technology · Engineering</div>
+          <div class="sch-header-sub">和彼得一起度过的高中时光</div>
         </div>
-        <div class="sch-tabs">
-          <div class="sch-tab ${this.currentTab==='course'?'active':''}" data-tab="course">📚 课堂</div>
-          <div class="sch-tab ${this.currentTab==='score'?'active':''}" data-tab="score">📊 成绩</div>
-          <div class="sch-tab ${this.currentTab==='team'?'active':''}" data-tab="team">🏆 十项全能</div>
-          <div class="sch-tab ${this.currentTab==='dance'?'active':''}" data-tab="dance">💃 舞会</div>
+        ${this.renderStatusHUD()}
+        ${settleBanner}
+        ${detBanner}
+        <div class="sch-tabs2">
+          ${tabs.map(x => `<div class="sch-tab2 ${this.currentTab === x.k ? "on" : ""}" data-tab="${x.k}">${x.t}</div>`).join("")}
         </div>
         <div id="schContent"></div>
       </div>`;
 
     const content = body.querySelector("#schContent");
-
-    if (this.currentTab === "course") this.renderCourse(content);
+    if (this.currentTab === "status") this.renderStatus(content);
+    else if (this.currentTab === "course") this.renderCourse(content);
+    else if (this.currentTab === "deskmate") this.renderDeskmate(content);
+    else if (this.currentTab === "exam") this.renderExam(content);
     else if (this.currentTab === "score") this.renderScore(content);
     else if (this.currentTab === "team") this.renderTeam(content);
     else this.renderDance(content);
 
-    body.querySelectorAll(".sch-tab").forEach(el => {
+    body.querySelectorAll(".sch-tab2").forEach(el => {
       el.onclick = () => { self.currentTab = el.dataset.tab; self.render(body); };
+    });
+    const semBannerEl = body.querySelector("#schSemBanner");
+    if (semBannerEl) semBannerEl.onclick = () => self.startSemesterSettle();
+    const dBanner = body.querySelector("#schDetBanner");
+    if (dBanner) dBanner.onclick = () => self.startDetention();
+  },
+
+  // ============================================================
+  // 📊 状态 HUD
+  // ============================================================
+  renderStatusHUD() {
+    const st = this.getStatus();
+    const sem = this.getSemester();
+    const semLabel = (this.SEMESTERS[sem.index] || this.SEMESTERS[0]).label;
+    const colorOf = (v) => v >= 60 ? "#4caf50" : v >= 30 ? "#c8a15a" : "#e62429";
+    const bar = (label, v) => `
+      <div class="sch-bar-row">
+        <div class="sch-bar-label"><span>${label}</span><b style="color:${colorOf(v)};">${v}</b></div>
+        <div class="sch-bar-track"><div class="sch-bar-fill" style="width:${v}%;background:${colorOf(v)};"></div></div>
+      </div>`;
+    const apDots = Array.from({ length: 4 }).map((_, i) =>
+      `<div class="sch-ap-dot ${i < st.ap ? "on" : ""}"></div>`).join("");
+    return `
+      <div class="sch-hud">
+        <div class="sch-hud-top">
+          <div class="sch-hud-title">🎒 校园生活 · 今日</div>
+          <div class="sch-ap" title="今日精力点">${apDots}</div>
+        </div>
+        <div class="sch-sem-line">
+          <span>🏫 ${esc(semLabel)}${sem.cycle > 1 ? ` · 第 ${sem.cycle} 轮` : ""}</span>
+          <span style="color:var(--accent-2);font-weight:600;">上学第 ${sem.dayCount} / ${this.SEMESTER_DAYS} 天</span>
+        </div>
+        ${bar("📖 学业精力", st.academic)}
+        ${bar("⚡ 精力", st.energy)}
+        ${bar("😊 校园心情", st.mood)}
+      </div>`;
+  },
+
+  // ============================================================
+  // 📅 日程（用户视角：和彼得一起上学）
+  // ============================================================
+  renderStatus(content) {
+    const self = this;
+    const st = this.getStatus();
+
+    const SLOTS = [
+      { key: "study",    emoji: "📖", color: "#2d6bff", name: "认真上一天课",            eff: "学业 +10 · 精力 -6" },
+      { key: "withpeter",emoji: "💬", color: "#e62429", name: "和彼得坐一起上课",        eff: "心情 +8 · 彼得好感 +2 · 精力 -4" },
+      { key: "library",  emoji: "📚", color: "#8a2be2", name: "泡图书馆复习",            eff: "学业 +13 · 精力 -8" },
+      { key: "cover",    emoji: "🕵️", color: "#c8a15a", name: "帮神秘消失的彼得打掩护",  eff: "彼得好感 +3 · 心情 +4 · 学业 -3" },
+      { key: "rest",     emoji: "😴", color: "#4caf50", name: "回家补个觉",              eff: "精力 +22 · 心情 +4" },
+      { key: "allnight", emoji: "🌙", color: "#00bcd4", name: "熬夜赶作业",              eff: "学业 +13 · 精力 -16" }
+    ];
+
+    const locked = st.ap <= 0;
+    content.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+        你和彼得、内德、MJ 是中城高中的同学。每天 4 个精力点，决定今天怎么过。<br>
+        <b style="color:${st.ap > 0 ? "var(--accent-2)" : "#e62429"};">剩余精力点：${st.ap} / 4</b>${locked ? " · 今天累了，明天再来" : ""}
+      </div>
+      <div id="schSlotFlavor"></div>
+      ${SLOTS.map(s => `
+        <div class="sch-slot ${locked ? "locked" : ""}" data-key="${s.key}" style="--s-color:${s.color};">
+          <div class="sch-slot-emoji">${s.emoji}</div>
+          <div class="sch-slot-info">
+            <div class="sch-slot-name">${esc(s.name)}</div>
+            <div class="sch-slot-eff">${esc(s.eff)}</div>
+          </div>
+        </div>
+      `).join("")}`;
+
+    content.querySelectorAll(".sch-slot").forEach(el => {
+      el.onclick = () => {
+        if (st.ap <= 0) return toast("今天的精力点用完了，明天再来");
+        self.doTimeSlot(el.dataset.key);
+      };
     });
   },
 
-  // ===== 模块 1：课堂 =====
+  doTimeSlot(key) {
+    const st = this.getStatus();
+    if (st.ap <= 0) return toast("今天的精力点用完了");
+
+    const flavorPool = {
+      study: ["你把注意力钉在黑板上，笔记记了满满三页。", "尽管困得不行，你还是撑过了一整天的课。"],
+      withpeter: ["你和彼得挤在一起上课，他小声跟你吐槽老师的领带。", "彼得偷偷传给你一张画着蛛网涂鸦的纸条，你没忍住笑出声。"],
+      library: ["你一个人泡在图书馆，把今天的难题啃了个遍。", "图书馆很安静，你难得地把进度赶了上来。"],
+      cover: ["彼得又一次神秘地消失了，你帮他跟老师圆了个谎。", "你不知道彼得整天在忙什么，但你还是替他打了掩护。"],
+      rest: ["你一回家就瘫在床上，睡得昏天黑地。", "久违地睡了个好觉，整个人轻快了不少。"],
+      allnight: ["台灯亮到后半夜，你灌了第三杯咖啡。", "作业赶完时天都快亮了，你累得手在抖。"]
+    };
+
+    const apply = (dAca, dEne, dMood, aff) => {
+      st.academic += dAca; st.energy += dEne; st.mood += dMood; st.ap -= 1;
+      this.setStatus(st);
+      if (aff) { for (const n of Object.keys(aff)) this._applyAff(n, aff[n]); }
+    };
+
+    switch (key) {
+      case "study": apply(10, -6, 0, null); break;
+      case "withpeter": apply(0, -4, 8, { "彼得·帕克": 2 }); break;
+      case "library": apply(13, -8, -2, null); break;
+      case "cover": apply(-3, -4, 4, { "彼得·帕克": 3 }); toast("🕸️ 你替彼得打了掩护，他好感 +3"); break;
+      case "rest": apply(2, 22, 4, null); break;
+      case "allnight": apply(13, -16, -4, null); break;
+    }
+
+    const pool = flavorPool[key] || ["这一刻就这样过去了。"];
+    const flavor = pool[Math.floor(Math.random() * pool.length)];
+    this.render($("#appBody"));
+    const flavorEl = document.getElementById("schSlotFlavor");
+    if (flavorEl) flavorEl.innerHTML = `<div class="sch-flavor">${esc(flavor)}</div>`;
+
+    const after = this.getStatus();
+    if (after.energy < 20) toast("⚠️ 精力见底，该休息了");
+  },
+
+  // ============================================================
+  // 📚 课堂
+  // ============================================================
   renderCourse(content) {
     const self = this;
-    const now = new Date();
-    const realDay = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+    const realDay = this._todayStr();
     let used = store.get("sv_school_class_used", { day: realDay, count: 0 });
     if (used.day !== realDay) used = { day: realDay, count: 0 };
     const MAX = 3;
@@ -18209,11 +18565,11 @@ School: {
     content.innerHTML = `
       <div class="card" style="padding:12px;margin-bottom:12px;">
         <div style="font-size:12px;color:var(--muted);">📅 今日课堂事件：${used.count} / ${MAX}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">点一节课，看看今天上课发生了什么。剩余 ${remaining} 次。</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">点一节课，看看今天和同学们在课上发生了什么。剩余 ${remaining} 次。上课会提升学业精力。</div>
       </div>
       <div class="sch-course-grid">
         ${this.COURSES.map(c => `
-          <div class="sch-course-card" data-key="${c.key}" style="--c-color:${c.color};opacity:${remaining>0?1:0.5};cursor:${remaining>0?'pointer':'not-allowed'};">
+          <div class="sch-course-card" data-key="${c.key}" style="--c-color:${c.color};opacity:${remaining > 0 ? 1 : 0.5};cursor:${remaining > 0 ? "pointer" : "not-allowed"};">
             <div class="sch-course-emoji">${c.emoji}</div>
             <div class="sch-course-name">${c.name}</div>
             <div class="sch-course-teacher">${c.teacher}</div>
@@ -18236,37 +18592,66 @@ School: {
     try {
       const s = store.getState();
       const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
-      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
       const profile = store.getProfile();
       const playerName = profile.name || "你";
       const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
       const peterAff = getAffinityOf("彼得·帕克");
       const mjAff = getAffinityOf("米歇尔·琼斯");
+      const semLabel = this.semLabel();
 
       const sysPrompt = buildSystem(`你正在生成一段**中城高中的课堂小事件**（校园日常，独立于主线，不影响主线进度）。
 ${buildBlacklistBanText([])}
 
+【设定 · 铁律】你（${playerName}）和彼得·帕克、内德·利兹、米歇尔·琼斯(MJ) 等人是中城高中${semLabel}的同班同学，你们一起上学。本剧情从【你（玩家）】的视角展开，用「${playerPronoun}」或第二人称"你"称呼玩家，玩家是主角。**彼得只是你的同学之一，绝对不要让玩家代入彼得、不要以彼得为主视角。**
+
 【当前课程】${course.name}（${course.teacher}）
-【当前游戏内日期】${date}
-【当前阶段】${phase.name}
+【当前时期】${phase.name}（高中时代·${semLabel}，是哪一天不必强调，用"今天""这节课""这周"等相对说法）
 【玩家】${playerName}（${getGenderInfo(profile).gender}，用「${playerPronoun}」指代）
 【彼得好感度】${peterAff}/200
 【MJ好感度】${mjAff}/100
 
 【核心要求 · 铁律】
-1. 写一段 150~280 字的课堂小事件开场，贴近中城高中的真实校园氛围。
-2. 可以出现：彼得走神/被点名、内德传纸条、Flash 捣乱、小组作业分组、老师布置任务、同学间的小互动。
-3. 玩家是视角中心（用「${playerPronoun}」或第二人称），不替玩家做决定。
-4. **严禁出现蜘蛛侠战衣、超能力、主线大事件**，这是普通校园日常。
-5. 结尾必须用【选项】列出 A. B. C. D. 四个玩家的行动方向。
+1. 写一段 600~800 字的课堂小事件开场，贴近中城高中的真实校园氛围。
+2. 可以出现：彼得走神/被点名、内德传纸条、Flash 捣乱、小组作业分组、老师布置任务、同学间的小互动。彼得可能神秘兮兮地想溜号，但不要暴露超能力。
+3. 玩家是视角中心，不替玩家做决定。
+4. 严禁出现蜘蛛侠战衣、超能力当众暴露、主线大事件，这是普通校园日常。
+5. 剧情结束后，必须另起一行写【选项】，并在其下方列出 A. B. C. D. 四个不同的行动选项（都是"你"的行动），每个选项单独占一行。
 6. 语言纯中文，对白可用 *"English"*（中文翻译）格式。
 
-【文风】轻松、有校园生活感，像青春校园小说，严禁 AI 腔。`, "School");
+【格式规范】
+剧情正文...
+
+【选项】
+A. 选项内容
+B. 选项内容
+C. 选项内容
+D. 选项内容`, "School");
 
       const res = await callAI([{ role: "user", content: "生成课堂事件" }], sysPrompt);
-      const optIdx = res.indexOf("【选项】");
-      const story = (optIdx > -1 ? res.slice(0, optIdx) : res).replace("【剧情】", "").trim();
-      const optsText = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
+
+      let rawText = String(res || "").replace("【剧情】", "").trim();
+      let story = rawText;
+      let optsText = "";
+
+      const titleMatch = rawText.match(/[【\[]\s*(?:选项|你的下一步行动|你的选择|行动选择|请选择|选择)\s*[】\]]/i);
+      if (titleMatch && typeof titleMatch.index === "number") {
+        story = rawText.slice(0, titleMatch.index).trim();
+        optsText = rawText.slice(titleMatch.index + titleMatch[0].length).trim();
+      } else {
+        const lines = rawText.split("\n");
+        let firstOptIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (/^\s*(?:\*{0,3}\s*)?A\s*[\.\、\:：\)]/i.test(lines[i])) {
+            const lookAhead = lines.slice(i + 1, i + 5).join("\n");
+            if (/^\s*(?:\*{0,3}\s*)?[BC]\s*[\.\、\:：\)]/im.test(lookAhead)) { firstOptIdx = i; break; }
+          }
+        }
+        if (firstOptIdx !== -1) {
+          story = lines.slice(0, firstOptIdx).join("\n").trim();
+          optsText = lines.slice(firstOptIdx).join("\n").trim();
+        }
+      }
+      story = story.replace(/\n\s*---\s*$/g, "").trim();
 
       store.set("sv_school_class_pending", { course: course.key, courseName: course.name, story, options: optsText });
       self.renderClassEvent(content, { course, story, options: optsText });
@@ -18285,20 +18670,53 @@ ${buildBlacklistBanText([])}
       <div class="sch-event-detail">
         <div class="sch-event-story">${formatDialogue(pending.story)}</div>
         <div id="schClassOpts"></div>
+        <div class="sch-custom-action" style="display:flex;gap:8px;margin-top:12px;">
+          <input id="schCustomAct" class="th-form-input" placeholder="自定义行动... 用（括号）可下达干预指令" style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;">
+          <button class="btn" id="schSendCustomBtn" style="width:auto;padding:0 16px;white-space:nowrap;font-size:13px;">发送</button>
+        </div>
       </div>`;
 
+    const lines = (pending.options || "").split("\n");
+    const parsedOpts = [];
+    let currentOpt = null;
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      const m = line.match(/^(?:\*{0,3}\s*)?([A-D])\s*[\.\、\:：\)]\s*(.*)$/);
+      if (m) {
+        if (currentOpt) parsedOpts.push(currentOpt);
+        const optLetter = m[1].toUpperCase();
+        let optBody = m[2].replace(/\*\*/g, "").trim();
+        if (/自定义输入|自己输入|自定义行动/i.test(optBody)) { currentOpt = null; continue; }
+        currentOpt = `${optLetter}. ${optBody}`;
+      } else if (currentOpt) {
+        currentOpt += " " + line.replace(/\*\*/g, "").trim();
+      }
+    }
+    if (currentOpt) parsedOpts.push(currentOpt);
+
     const optsEl = content.querySelector("#schClassOpts");
-    const opts = (pending.options || "").split("\n").filter(l => /^[A-D][\.\、]/.test(l.trim()));
-    if (opts.length) {
-      optsEl.innerHTML = opts.map(o => {
+    if (parsedOpts.length > 0) {
+      optsEl.innerHTML = parsedOpts.map(o => {
         const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
-        return `<button class="sch-event-opt" onclick="apps.School.resolveClass('${safe}')">${esc(o)}</button>`;
+        return `<button class="sch-event-opt" onclick="apps.School.resolveClass('${safe}')">${formatDialogue(o)}</button>`;
       }).join("");
     } else {
-      optsEl.innerHTML = `<button class="sch-event-opt" onclick="apps.School.resolveClass('（认真听课）')">认真听课</button>
-        <button class="sch-event-opt" onclick="apps.School.resolveClass('（走神发呆）')">走神发呆</button>
-        <button class="sch-event-opt" onclick="apps.School.resolveClass('（找同学聊天）')">找同学聊天</button>`;
+      optsEl.innerHTML = `
+        <button class="sch-event-opt" onclick="apps.School.resolveClass('认真听课，做好课堂笔记')">认真听课，做好课堂笔记</button>
+        <button class="sch-event-opt" onclick="apps.School.resolveClass('悄悄转头和彼得小声聊天')">悄悄转头和彼得小声聊天</button>
+        <button class="sch-event-opt" onclick="apps.School.resolveClass('手托着下巴看着窗外走神发呆')">手托着下巴看着窗外走神发呆</button>`;
     }
+
+    const customInput = content.querySelector("#schCustomAct");
+    const sendBtn = content.querySelector("#schSendCustomBtn");
+    const handleCustomSend = () => {
+      const val = customInput.value.trim();
+      if (!val) return toast("请输入行动内容");
+      apps.School.resolveClass(val);
+    };
+    sendBtn.onclick = handleCustomSend;
+    customInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); handleCustomSend(); } });
   },
 
   async resolveClass(choice) {
@@ -18310,18 +18728,21 @@ ${buildBlacklistBanText([])}
 
     content.innerHTML = `<div class="loader"><div class="spin"></div>处理中...</div>`;
     try {
-      const s = store.getState();
-      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
+      const profile = store.getProfile();
+      const playerName = profile.name || "你";
+      const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
 
       const sysPrompt = buildSystem(`续写一段中城高中课堂小事件的结局。
 ${buildBlacklistBanText([])}
+
+【设定】你（${playerName}）和彼得等人是中城高中的同学，一起上学。从【你（玩家）】的视角（用「${playerPronoun}」或"你"）续写，彼得只是同学之一。
 
 【课程】${courseObj.name}
 【开场】${pending.story}
 【玩家选择】${choice}
 
 【要求 · 铁律】
-1. 写 120~220 字结局，承接玩家选择，收束这节课。
+1. 写 600~800 字结局，承接玩家选择，收束这节课。
 2. 校园日常，严禁超能力、蜘蛛侠、主线大事件。
 3. 末尾如果玩家的选择影响了彼得或 MJ 的关系，输出一行【好感度变动: 角色=+X】（X 为 -3~3，可选）。
 4. 末尾如果影响成绩，输出一行【成绩变动: 科目key=+X】（${courseObj.name} 的 key 见下，X 为 -5~5，可选）。科目 key 对应：化学=chem 物理=phys 西班牙语=span 体育=pe 十项全能=decath 技术课=shop。
@@ -18331,33 +18752,20 @@ ${buildBlacklistBanText([])}
 
       const res = await callAI([{ role: "user", content: "生成课堂结局" }], sysPrompt);
 
-      // 解析好感度变动
       const affM = [...res.matchAll(/【好感度变动[:：]\s*([^=]+)=\s*([+-]?\d+)】/g)];
       affM.forEach(m => {
         const name = m[1].trim();
-        let delta = parseInt(m[2]) || 0;
-        delta = Math.max(-3, Math.min(3, delta));
+        let delta = Math.max(-3, Math.min(3, parseInt(m[2]) || 0));
         const target = { "彼得": "彼得·帕克", "彼得·帕克": "彼得·帕克", "MJ": "米歇尔·琼斯", "米歇尔·琼斯": "米歇尔·琼斯", "内德": "内德·利兹", "内德·利兹": "内德·利兹" }[name];
-        if (target && delta) {
-          const list = store.getContacts();
-          const c = list.find(x => x.name === target);
-          if (c) {
-            const cap = target === "彼得·帕克" ? 200 : 100;
-            c.affinity = Math.max(0, Math.min(cap, (c.affinity || 0) + delta));
-            store.setContacts(list);
-            if (target === "彼得·帕克") { const st = store.getState(); st.affinity = c.affinity; store.setState(st); }
-          }
-        }
+        if (target && delta) self._applyAff(target, delta);
       });
 
-      // 解析成绩变动
       const scM = [...res.matchAll(/【成绩变动[:：]\s*(\w+)=\s*([+-]?\d+)】/g)];
       if (scM.length) {
         const scores = self.getScores();
         scM.forEach(m => {
           const k = m[1].trim();
-          let delta = parseInt(m[2]) || 0;
-          delta = Math.max(-5, Math.min(5, delta));
+          let delta = Math.max(-5, Math.min(5, parseInt(m[2]) || 0));
           if (scores[k] !== undefined && delta) scores[k] = Math.max(0, Math.min(100, scores[k] + delta));
         });
         self.setScores(scores);
@@ -18365,14 +18773,14 @@ ${buildBlacklistBanText([])}
 
       const cleanRes = res.replace(/【好感度变动[:：][^】]*】/g, "").replace(/【成绩变动[:：][^】]*】/g, "").trim();
 
-      // 消耗一次
-      const now = new Date();
-      const realDay = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+      const realDay = self._todayStr();
       let used = store.get("sv_school_class_used", { day: realDay, count: 0 });
       if (used.day !== realDay) used = { day: realDay, count: 0 };
       used.count = Math.min(3, used.count + 1);
       store.set("sv_school_class_used", used);
       store.set("sv_school_class_pending", null);
+
+      const st = self.getStatus(); st.academic += 4; self.setStatus(st);
 
       content.innerHTML = `
         <div class="card" style="padding:12px;margin-bottom:10px;border-left:3px solid ${courseObj.color};">
@@ -18388,20 +18796,285 @@ ${buildBlacklistBanText([])}
     }
   },
 
-  // ===== 模块 2：成绩 =====
+  // ============================================================
+  // 👥 同桌系统
+  // ============================================================
+  renderDeskmate(content) {
+    const self = this;
+    const desk = this.getDeskmate();
+    const realDay = this._todayStr();
+    let used = store.get("sv_school_desk_used", { day: realDay, count: 0 });
+    if (used.day !== realDay) used = { day: realDay, count: 0 };
+    const canEvent = used.count < 2;
+
+    const pickHtml = this.DESKMATES.map(d => `
+      <div class="sch-desk-opt ${desk.name === d.name ? "on" : ""}" data-name="${esc(d.name)}" style="--d-color:${d.color};">
+        <div class="sch-desk-opt-emoji">${d.emoji}</div>
+        <div class="sch-desk-opt-name">${esc(d.name.length > 4 ? d.name.slice(0, 3) : d.name)}</div>
+      </div>`).join("");
+
+    let detailHtml = "";
+    if (desk.name) {
+      const cfg = this.DESKMATES.find(x => x.name === desk.name) || { emoji: "🙂", color: "#2d6bff", tag: "" };
+      const prog = desk.progress || 0;
+      detailHtml = `
+        <div class="sch-desk-card" style="--d-color:${cfg.color};--pct:${prog};">
+          <div class="sch-desk-ring"><div class="sch-desk-ring-inner">${cfg.emoji}</div></div>
+          <div class="sch-desk-name">${esc(desk.name)}</div>
+          <div class="sch-desk-tag">${esc(cfg.tag)}</div>
+          <div class="sch-desk-prog">同桌默契度 ${prog} / 100</div>
+        </div>
+        <button class="btn" id="schDeskEvent" ${canEvent ? "" : "disabled"} style="width:100%;${canEvent ? "" : "opacity:.5;"}">
+          ${canEvent ? "📖 和同桌一起上自习（触发专属剧情）" : "今天的同桌互动用完了，明天再来"}
+        </button>`;
+    } else {
+      detailHtml = `<div class="sch-empty">选一个人当你这学期的同桌吧。<br>不同的人会有完全不同的日常。</div>`;
+    }
+
+    content.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">选择你的固定同桌（可随时更换，但默契度会从头开始）</div>
+      <div class="sch-desk-pick">${pickHtml}</div>
+      ${detailHtml}`;
+
+    content.querySelectorAll(".sch-desk-opt").forEach(el => {
+      el.onclick = () => {
+        const name = el.dataset.name;
+        const cur = self.getDeskmate();
+        if (cur.name === name) return;
+        if (cur.name && !confirm(`换成「${name}」当同桌吗？和「${cur.name}」的默契度会清零。`)) return;
+        self.setDeskmate({ name, progress: 0 });
+        self.render(document.getElementById("appBody"));
+        toast("新同桌：" + name);
+      };
+    });
+
+    const evBtn = content.querySelector("#schDeskEvent");
+    if (evBtn && canEvent) evBtn.onclick = () => self.startDeskmateEvent();
+  },
+
+  async startDeskmateEvent() {
+    const self = this;
+    const content = document.getElementById("schContent");
+    const desk = this.getDeskmate();
+    if (!desk.name) return toast("请先选一个同桌");
+    content.innerHTML = `<div class="loader"><div class="spin"></div>和${desk.name}一起上自习...</div>`;
+    try {
+      const s = store.getState();
+      const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+      const profile = store.getProfile();
+      const playerName = profile.name || "你";
+      const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
+      const aff = getAffinityOf(desk.name);
+      const prog = desk.progress || 0;
+      const cfg = this.DESKMATES.find(x => x.name === desk.name) || { tag: "" };
+      const semLabel = this.semLabel();
+
+      const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中「同桌日常」**小剧场（校园向，独立于主线）。
+${buildBlacklistBanText([])}
+
+【设定】你（${playerName}）和彼得等人是中城高中${semLabel}的同学。本剧情从【你（玩家）】视角展开，你是主角。
+【玩家】${playerName}（用「${playerPronoun}」指代）
+【同桌】${desk.name}（${cfg.tag}）
+【当前好感度】${aff}/200 · 同桌默契度 ${prog}/100
+【当前时期】${phase.name}（${semLabel}，是哪一天不必强调）
+
+【要求 · 铁律】
+1. 写一段 600~800 字围绕"你和${desk.name}同桌"的校园小剧场：传纸条、借笔记、分享零食、小打小闹、或一起躲避老师点名等。
+2. 玩家是视角中心，不替玩家决定。
+3. 严格符合${desk.name}的性格。校园日常，严禁超能力、主线大事件。
+4. ${desk.name === "米歇尔·琼斯" ? "MJ 与玩家只是朋友/同桌，冷幽默旁观风格。" : ""}${desk.name === "彼得·帕克" ? "彼得话痨、自嘲、焦虑，但秘密身份绝不在课堂暴露。" : ""}
+5. 结尾用【选项】列出 A. B. C. D.，每个一行。
+6. 最后一行：【小剧场标题: 同桌的一天】
+7. 对白用 *"English"*（中文翻译）格式。
+
+【文风】青春校园，轻松细腻。`, "School");
+
+      const res = await callAI([{ role: "user", content: "生成同桌剧情" }], sysPrompt);
+      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+      const optIdx = res.indexOf("【选项】");
+      const story = (optIdx > -1 ? res.slice(0, optIdx) : res).replace("【剧情】", "").replace(/【小剧场标题[:：].*?】/g, "").trim();
+      const opts = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
+      const title = titleMatch ? titleMatch[1].trim() : "同桌的一天";
+
+      const q = {
+        id: "th_desk_" + Date.now(),
+        title: `👥 ${desk.name} · ${title}`,
+        background: `中城高中${semLabel}，你的同桌是${desk.name}（${cfg.tag}）。你是主角，校园日常，无超能力。`,
+        identity: "同桌",
+        tone: "日常",
+        pov: s.pov || "second",
+        userName: playerName,
+        date: semLabel, story, options: opts,
+        history: [], closed: false, createdAt: Date.now(),
+        openingStory: story, openingOptions: opts
+      };
+      const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
+      all.unshift(q);
+      localStorage.setItem("sv_theaters", JSON.stringify(all));
+
+      const realDay = self._todayStr();
+      let used = store.get("sv_school_desk_used", { day: realDay, count: 0 });
+      if (used.day !== realDay) used = { day: realDay, count: 0 };
+      used.count = Math.min(2, used.count + 1);
+      store.set("sv_school_desk_used", used);
+      const d2 = self.getDeskmate();
+      d2.progress = Math.min(100, (d2.progress || 0) + 8);
+      self.setDeskmate(d2);
+      self._applyAff(desk.name, 2);
+
+      toast("同桌剧情开始：" + title);
+      apps.Theater.openQuest(q.id);
+    } catch (e) {
+      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
+    }
+  },
+
+  // ============================================================
+  // 📝 考试周
+  // ============================================================
+  renderExam(content) {
+    const self = this;
+    content.innerHTML = `
+      <div class="sch-exam-hero">
+        <div class="sch-exam-logo">📝</div>
+        <div class="sch-exam-title">${this.semLabel()} 测验</div>
+        <div class="sch-exam-sub">MIDTOWN HIGH · ${esc(this.semLabel())}</div>
+        <div class="sch-exam-desc">4 道随机考题（化学/物理/文学等），答对加分、答错扣分。<br>成绩会实时写回你的成绩单。考砸了，小心被留堂。</div>
+        <button class="btn primary" id="schExamStart" style="background:linear-gradient(135deg,#e62429,#c8a15a);">🖊️ 开始一场测验</button>
+      </div>
+      <div class="card" style="font-size:11px;color:var(--muted);line-height:1.7;">
+        💡 提示：考前在「日程」里泡图书馆、熬夜赶作业能让学业精力更高，更容易答对。
+      </div>`;
+    content.querySelector("#schExamStart").onclick = () => self.startExam();
+  },
+
+  async startExam() {
+    const self = this;
+    const content = document.getElementById("schContent");
+    content.innerHTML = `<div class="loader"><div class="spin"></div>监考老师正在发卷...</div>`;
+    try {
+      const sysPrompt = `你是中城高中的出题老师。请出 4 道高中难度的单项选择题，覆盖化学、物理、数学/逻辑、文学常识。
+
+【输出格式 · 严格 JSON · 不要 markdown 代码块】
+{"questions":[{"q":"题目","options":["选项A","选项B","选项C","选项D"],"answer":0,"subject":"chem"}]}
+
+【说明】
+1. answer 是正确选项的下标（0-3）。
+2. subject 从 chem / phys / decath 里选（化学=chem，物理=phys，其它学科统一填 decath）。
+3. 必须正好 4 道题，每题 4 个选项。
+只输出 JSON。`;
+      const raw = await callAI([{ role: "user", content: "出题" }], sysPrompt);
+      const cleaned = String(raw || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+      const st = cleaned.indexOf("{"), en = cleaned.lastIndexOf("}");
+      if (st === -1 || en === -1) throw new Error("出题失败");
+      const data = JSON.parse(cleaned.substring(st, en + 1));
+      let qs = Array.isArray(data.questions) ? data.questions : [];
+      qs = qs.filter(q => q && q.q && Array.isArray(q.options) && q.options.length === 4 && typeof q.answer === "number").slice(0, 4);
+      if (!qs.length) throw new Error("题目格式异常");
+
+      self._examState = { qs, picks: Array(qs.length).fill(-1), submitted: false };
+      self.renderExamQuiz(content);
+    } catch (e) {
+      content.innerHTML = `<div class="card">出题失败：${esc(e.message)}<br><button class="btn ghost" style="margin-top:10px;" onclick="apps.School.currentTab='exam';apps.School.render(document.getElementById('appBody'))">返回</button></div>`;
+    }
+  },
+
+  renderExamQuiz(content) {
+    const self = this;
+    const ex = self._examState;
+    if (!ex) return;
+    const letters = ["A", "B", "C", "D"];
+
+    content.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">共 ${ex.qs.length} 题 · ${ex.submitted ? "已交卷" : "请作答后交卷"}</div>
+      ${ex.qs.map((q, qi) => `
+        <div class="sch-q-card">
+          <div class="sch-q-head">第 ${qi + 1} 题</div>
+          <div class="sch-q-text">${esc(q.q)}</div>
+          ${q.options.map((op, oi) => {
+            let cls = "sch-q-opt";
+            if (ex.submitted) {
+              if (oi === q.answer) cls += " correct";
+              else if (ex.picks[qi] === oi) cls += " wrong";
+            } else if (ex.picks[qi] === oi) cls += " sel";
+            return `<button class="${cls}" data-qi="${qi}" data-oi="${oi}" ${ex.submitted ? "disabled" : ""}>${letters[oi]}. ${esc(op)}</button>`;
+          }).join("")}
+        </div>
+      `).join("")}
+      ${ex.submitted ? `
+        <div class="card" style="text-align:center;">
+          <div style="font-size:14px;font-weight:700;color:var(--text);">本次得分：${ex.correct} / ${ex.qs.length}</div>
+          <button class="btn" style="margin-top:12px;" onclick="apps.School.currentTab='score';apps.School.render(document.getElementById('appBody'))">查看成绩单</button>
+          <button class="btn ghost" style="margin-top:8px;" onclick="apps.School.currentTab='exam';apps.School.render(document.getElementById('appBody'))">再考一次</button>
+        </div>
+      ` : `<button class="btn" id="schExamSubmit" style="width:100%;">📤 交卷</button>`}`;
+
+    if (!ex.submitted) {
+      content.querySelectorAll(".sch-q-opt").forEach(el => {
+        el.onclick = () => {
+          const qi = parseInt(el.dataset.qi), oi = parseInt(el.dataset.oi);
+          ex.picks[qi] = oi;
+          self.renderExamQuiz(content);
+        };
+      });
+      content.querySelector("#schExamSubmit").onclick = () => self.submitExam(content);
+    }
+  },
+
+  submitExam(content) {
+    const self = this;
+    const ex = self._examState;
+    if (!ex) return;
+    if (ex.picks.some(p => p === -1)) { if (!confirm("还有题没答，确定交卷吗？")) return; }
+
+    let correct = 0;
+    const scoreDelta = {};
+    ex.qs.forEach((q, qi) => {
+      const subj = (self.getScores()[q.subject] !== undefined) ? q.subject : "decath";
+      if (ex.picks[qi] === q.answer) { correct++; scoreDelta[subj] = (scoreDelta[subj] || 0) + 5; }
+      else { scoreDelta[subj] = (scoreDelta[subj] || 0) - 4; }
+    });
+
+    const scores = self.getScores();
+    Object.keys(scoreDelta).forEach(k => {
+      if (scores[k] !== undefined) scores[k] = Math.max(0, Math.min(100, scores[k] + scoreDelta[k]));
+    });
+    self.setScores(scores);
+
+    const stat = self.getStatus();
+    if (stat.academic >= 70 && correct > 0) {
+      const anyKey = Object.keys(scoreDelta)[0];
+      if (anyKey && scores[anyKey] !== undefined) { scores[anyKey] = Math.min(100, scores[anyKey] + 2); self.setScores(scores); }
+    }
+
+    ex.submitted = true;
+    ex.correct = correct;
+    self.renderExamQuiz(content);
+
+    const pct = correct / ex.qs.length;
+    if (pct >= 0.75) toast("🎉 考得不错！成绩提升了");
+    else if (pct <= 0.25) toast("😣 考砸了，成绩下滑");
+    else toast("成绩已更新");
+  },
+
+  // ============================================================
+  // 📊 成绩 + 🕯️ 留堂
+  // ============================================================
   renderScore(content) {
     const self = this;
     const scores = this.getScores();
     const vals = Object.values(scores);
-    const gpa = vals.length ? (vals.reduce((a,b)=>a+b,0) / vals.length).toFixed(1) : "0";
+    const gpa = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : "0";
     const gradeOf = (v) => v >= 90 ? "A" : v >= 80 ? "B" : v >= 70 ? "C" : v >= 60 ? "D" : "F";
     const colorOf = (v) => v >= 80 ? "#4caf50" : v >= 60 ? "#e0c070" : "#e62429";
+    const det = this.checkDetention();
 
     content.innerHTML = `
       <div class="sch-gpa-box">
         <div class="sch-gpa-num">${gpa}</div>
-        <div class="sch-gpa-label">平均分 · ${gradeOf(parseFloat(gpa))}</div>
+        <div class="sch-gpa-label">${esc(this.semLabel())} · 平均分 ${gradeOf(parseFloat(gpa))}</div>
       </div>
+      ${det ? `<button class="btn" id="schGoDet" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#e62429,#8a2be2);">🕯️ 有科目亮红灯，去面对留堂</button>` : ""}
       <div class="sch-score-list">
         ${this.COURSES.map(c => {
           const v = scores[c.key] ?? 0;
@@ -18415,7 +19088,7 @@ ${buildBlacklistBanText([])}
         }).join("")}
       </div>
       <div class="card" style="margin-top:14px;font-size:11px;color:var(--muted);line-height:1.7;">
-        💡 翘课去当蜘蛛侠会让成绩下滑；认真上课、完成作业会提分。成绩太低会触发梅婶签字、老师留堂等事件。
+        💡 认真上课、考试、泡图书馆、和同桌复习能提分；熬夜/替彼得打掩护会影响状态。<b style="color:#e62429;">任一科目低于 55 会触发留堂。</b>
       </div>
       <button class="btn ghost" id="schScoreReset" style="margin-top:10px;font-size:12px;">🔄 重置成绩为初始值</button>`;
 
@@ -18425,9 +19098,286 @@ ${buildBlacklistBanText([])}
       toast("成绩已重置");
       self.render(document.getElementById("appBody"));
     };
+    const goDet = content.querySelector("#schGoDet");
+    if (goDet) goDet.onclick = () => self.startDetention();
   },
 
-  // ===== 模块 3：十项全能队 =====
+  checkDetention() {
+    const sc = this.getScores();
+    const failedKeys = Object.keys(sc).filter(k => sc[k] < 55);
+    const st = this.getStatus();
+    if (failedKeys.length > 0 || st.academic < 25) {
+      const failedNames = failedKeys.map(k => {
+        const c = this.COURSES.find(x => x.key === k);
+        return c ? c.name : k;
+      });
+      return { failed: failedKeys, failedNames };
+    }
+    return null;
+  },
+
+  // ============================================================
+  // 🎓 期末结课（含大轮回毕业→重开高一）
+  // ============================================================
+  async startSemesterSettle() {
+    const self = this;
+    this.currentTab = "status";
+    this.render($("#appBody"));
+    const content = document.getElementById("schContent");
+    if (!content) return;
+    content.innerHTML = `<div class="loader"><div class="spin"></div>${this.semLabel()} 期末成绩正在汇总...</div>`;
+
+    try {
+      const sem = this.getSemester();
+      const curLabel = (this.SEMESTERS[sem.index] || this.SEMESTERS[0]).label;
+      const isFinal = (sem.index === this.SEMESTERS.length - 1); // 高三下学期 = 大轮回
+      const scores = this.getScores();
+      const vals = Object.values(scores);
+      const gpa = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+      const gpaFixed = gpa.toFixed(1);
+      const gradeOf = (v) => v >= 90 ? "A" : v >= 80 ? "B" : v >= 70 ? "C" : v >= 60 ? "D" : "F";
+      const desk = this.getDeskmate();
+
+      let verdict, mood;
+      if (gpa >= 85) { verdict = "优等生"; mood = "🏅"; }
+      else if (gpa >= 70) { verdict = "稳住了"; mood = "🙂"; }
+      else if (gpa >= 55) { verdict = "勉强及格"; mood = "😮‍💨"; }
+      else { verdict = "险些留级"; mood = "😰"; }
+
+      const profile = store.getProfile();
+      const playerName = profile.name || "你";
+      const phase = WORLD.timeline[store.getState().anchor] || WORLD.timeline[0];
+
+      const sysPrompt = buildSystem(`写一段中城高中「${curLabel}」期末学期总结的旁白。
+${buildBlacklistBanText([])}
+
+【设定】你（${playerName}）和彼得·帕克、内德、MJ 等人是中城高中的同学，一起走过这个学期。从【你（玩家）】的视角回顾，你是主角，彼得只是你的同学之一。
+【时期】${phase.name} · ${curLabel}
+【本学期 GPA】${gpaFixed}（评价：${verdict}）
+${desk.name ? `【同桌】${desk.name}（默契度 ${desk.progress || 0}/100）` : ""}
+${isFinal ? "【特别】这是高三下学期，也是毕业季，要写出毕业的离别感、和彼得这几年同窗的回忆、对未来的怅惘与期待。" : ""}
+
+【要求】
+1. 写 400~500 字，回顾${playerName}这一学期在中城高中的状态：成绩、和同学/同桌的点滴、和彼得的相处（他总是神神秘秘的）。
+2. 贴合 GPA 评价的基调（优等生自豪 / 及格松口气 / 险些留级心虚）。
+3. 校园生活感，严禁超能力当众暴露、严禁主线大事件。
+4. 纯中文，不要选项，不要绝对日期。`, "School");
+
+      let narr = "";
+      try { narr = await callAI([{ role: "user", content: "学期总结" }], sysPrompt); } catch (e) { narr = "又一个学期结束了。"; }
+
+      if (desk.name && (desk.progress || 0) >= 60) self._applyAff(desk.name, 3);
+
+      let newSem, headerLabel, headerSub, extraNote;
+      if (isFinal) {
+        // 大轮回：毕业 → 重开高一上学期
+        newSem = { index: 0, cycle: (sem.cycle || 1) + 1, dayCount: 0, lastDay: this._todayStr(), settled: true };
+        this.setScores({ chem: 85, phys: 82, span: 70, pe: 60, decath: 90, shop: 88 }); // 新轮回成绩重置
+        headerLabel = "毕业季 🎓";
+        headerSub = `${curLabel} · GPA ${gpaFixed} · ${verdict}`;
+        extraNote = `🎓 你和彼得的高中生涯走到了终点。<br>但命运像一个圆环——你们又将从<b>高一·上学期</b>重新相遇（第 ${newSem.cycle} 轮）。成绩已重置，一切重新开始。`;
+      } else {
+        newSem = { index: sem.index + 1, cycle: sem.cycle || 1, dayCount: 0, lastDay: this._todayStr(), settled: true };
+        const nextLabel = (this.SEMESTERS[newSem.index] || this.SEMESTERS[0]).label;
+        headerLabel = `${curLabel} · 期末`;
+        headerSub = `GPA ${gpaFixed} · ${verdict}`;
+        extraNote = `🎒 新学期开始了：<b>${nextLabel}</b>。上学天数已清零，继续加油。${desk.name && (desk.progress || 0) >= 60 ? `<br>💛 和 ${desk.name} 的默契度很高，关系更近了一步。` : ""}`;
+      }
+      this.setSemester(newSem);
+
+      const scoreRows = this.COURSES.map(c => {
+        const v = scores[c.key] ?? 0;
+        const col = v >= 80 ? "#4caf50" : v >= 60 ? "#e0c070" : "#e62429";
+        return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);">
+          <span style="color:var(--text);">${c.emoji} ${c.name}</span>
+          <span style="color:${col};font-weight:700;">${v} · ${gradeOf(v)}</span>
+        </div>`;
+      }).join("");
+
+      content.innerHTML = `
+        <div class="sch-exam-hero" style="background:linear-gradient(135deg,${isFinal ? "#2a1a3a,#140a24" : "#2a2416,#14110a"});">
+          <div class="sch-exam-logo">${isFinal ? "🎓" : mood}</div>
+          <div class="sch-exam-title" style="letter-spacing:3px;">${esc(headerLabel)}</div>
+          <div class="sch-exam-sub">${esc(headerSub)}</div>
+        </div>
+        <div class="card" style="padding:14px;margin-bottom:12px;">
+          ${scoreRows}
+        </div>
+        <div class="sch-flavor">${formatDialogue(narr)}</div>
+        <div class="card" style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:12px;">
+          ${extraNote}
+        </div>
+        <button class="btn" onclick="apps.School.currentTab='status';apps.School.render(document.getElementById('appBody'))">${isFinal ? "🔄 重新开学" : "进入新学期"}</button>`;
+      toast(isFinal ? `🎓 高中毕业 · 开启第 ${newSem.cycle} 轮` : `🎓 ${curLabel} 结束 · GPA ${gpaFixed}`);
+    } catch (e) {
+      content.innerHTML = `<div class="card">结算失败：${esc(e.message)}</div>`;
+    }
+  },
+
+  async startDetention() {
+    const self = this;
+    const det = this.checkDetention();
+    if (!det) return toast("当前没有需要留堂的情况");
+
+    currentApp = "School";
+    this.currentTab = "score";
+    this.render($("#appBody"));
+    const c2 = document.getElementById("schContent");
+    c2.innerHTML = `<div class="loader"><div class="spin"></div>放学铃响了，你被留下了...</div>`;
+
+    try {
+      const s = store.getState();
+      const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+      const profile = store.getProfile();
+      const playerName = profile.name || "你";
+      const playerPronoun = profile.gender === "male" ? "他" : (profile.gender === "nonbinary" ? "TA" : "她");
+      const failTxt = det.failed.length ? det.failedNames.join("、") + " 不及格" : "整体状态太差";
+      const semLabel = this.semLabel();
+
+      const sysPrompt = buildSystem(`生成一段**中城高中「放学后留堂」**的开场剧情（校园日常，略带压力感）。
+${buildBlacklistBanText([])}
+
+【设定】你（${playerName}）是中城高中${semLabel}的学生，和彼得等人是同学。从【你（玩家）】的视角（用「${playerPronoun}」或"你"），你是被留堂的主角。
+【原因】${failTxt}
+【当前时期】${phase.name}（${semLabel}，放学后的傍晚，是哪一天不必强调）
+
+【要求 · 铁律】
+1. 写一段 400~500 字的留堂开场：放学后空荡荡的教室，老师（可用哈灵顿老师/沃伦老师）把你留下谈成绩，语气严肃但关心。可以提到彼得/同学已经走了、窗外天色变暗。
+2. 玩家是视角中心，不替玩家决定。严禁超能力、主线大事件。
+3. 结尾用【选项】列出 A. B. C. D. 四个你面对老师的反应（认错补课/找借口/坦白最近很忙/请求再给一次机会等）。
+4. 语言纯中文。
+
+【格式】
+剧情...
+
+【选项】
+A. ...
+B. ...
+C. ...
+D. ...`, "School");
+
+      const res = await callAI([{ role: "user", content: "生成留堂开场" }], sysPrompt);
+      let raw = String(res || "").replace("【剧情】", "").trim();
+      let story = raw, opts = "";
+      const titleMatch = raw.match(/[【\[]\s*(?:选项|你的选择|行动选择|请选择|选择)\s*[】\]]/i);
+      if (titleMatch && typeof titleMatch.index === "number") {
+        story = raw.slice(0, titleMatch.index).trim();
+        opts = raw.slice(titleMatch.index + titleMatch[0].length).trim();
+      } else {
+        const lines = raw.split("\n");
+        let idx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (/^\s*(?:\*{0,3}\s*)?A\s*[\.\、\:：\)]/i.test(lines[i])) {
+            const la = lines.slice(i + 1, i + 5).join("\n");
+            if (/^\s*(?:\*{0,3}\s*)?[BC]\s*[\.\、\:：\)]/im.test(la)) { idx = i; break; }
+          }
+        }
+        if (idx !== -1) { story = lines.slice(0, idx).join("\n").trim(); opts = lines.slice(idx).join("\n").trim(); }
+      }
+      story = story.replace(/\n\s*---\s*$/g, "").trim();
+
+      store.set("sv_school_det_pending", { story, options: opts, failed: det.failed });
+      self.renderDetentionEvent(c2, { story, options: opts });
+    } catch (e) {
+      c2.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
+    }
+  },
+
+  renderDetentionEvent(content, pending) {
+    const self = this;
+    content.innerHTML = `
+      <div class="sch-det-scene">
+        <div class="sch-det-tag">🕯️ 放学后 · 留堂</div>
+        <div class="sch-event-story">${formatDialogue(pending.story)}</div>
+        <div id="schDetOpts" style="margin-top:12px;"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <input id="schDetCustom" placeholder="自定义回应..." style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;">
+          <button class="btn" id="schDetSend" style="width:auto;padding:0 16px;font-size:13px;">发送</button>
+        </div>
+      </div>`;
+
+    const lines = (pending.options || "").split("\n");
+    const parsed = [];
+    let cur = null;
+    for (const rl of lines) {
+      const line = rl.trim();
+      if (!line) continue;
+      const m = line.match(/^(?:\*{0,3}\s*)?([A-D])\s*[\.\、\:：\)]\s*(.*)$/);
+      if (m) {
+        if (cur) parsed.push(cur);
+        let bodyTxt = m[2].replace(/\*\*/g, "").trim();
+        if (/自定义/i.test(bodyTxt)) { cur = null; continue; }
+        cur = `${m[1].toUpperCase()}. ${bodyTxt}`;
+      } else if (cur) cur += " " + line.replace(/\*\*/g, "").trim();
+    }
+    if (cur) parsed.push(cur);
+
+    const optsEl = content.querySelector("#schDetOpts");
+    if (parsed.length) {
+      optsEl.innerHTML = parsed.map(o => {
+        const safe = String(o).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+        return `<button class="sch-event-opt" onclick="apps.School.resolveDetention('${safe}')">${formatDialogue(o)}</button>`;
+      }).join("");
+    } else {
+      optsEl.innerHTML = `
+        <button class="sch-event-opt" onclick="apps.School.resolveDetention('低下头，诚恳认错，保证会补课')">低下头，诚恳认错，保证会补课</button>
+        <button class="sch-event-opt" onclick="apps.School.resolveDetention('坦白说自己最近家里有事，分身乏术')">坦白说自己最近家里有事，分身乏术</button>
+        <button class="sch-event-opt" onclick="apps.School.resolveDetention('请求老师再给一次机会')">请求老师再给一次机会</button>`;
+    }
+
+    const input = content.querySelector("#schDetCustom");
+    const send = () => { const v = input.value.trim(); if (!v) return toast("请输入回应"); apps.School.resolveDetention(v); };
+    content.querySelector("#schDetSend").onclick = send;
+    input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); send(); } });
+  },
+
+  async resolveDetention(choice) {
+    const self = this;
+    const content = document.getElementById("schContent");
+    const pending = store.get("sv_school_det_pending", null);
+    if (!pending || !content) return;
+    content.innerHTML = `<div class="loader"><div class="spin"></div>处理中...</div>`;
+    try {
+      const sysPrompt = buildSystem(`续写中城高中留堂谈话的结局。
+${buildBlacklistBanText([])}
+
+【设定】你是被留堂的学生主角，和彼得等人是同学。从【你（玩家）】视角续写。
+
+【开场】${pending.story}
+【玩家回应】${choice}
+
+【要求】
+1. 写 400~500 字结局，承接玩家回应。老师根据玩家态度给出反应（补课安排/警告/鼓励/小小的宽容）。
+2. 校园日常，严禁超能力、主线。
+3. 结尾不要选项。
+4. 语言纯中文。`, "School");
+
+      const res = await callAI([{ role: "user", content: "留堂结局" }], sysPrompt);
+
+      const scores = self.getScores();
+      (pending.failed || []).forEach(k => { if (scores[k] !== undefined && scores[k] < 58) scores[k] = 58; });
+      self.setScores(scores);
+      const st = self.getStatus();
+      st.academic = Math.max(st.academic, 40);
+      self.setStatus(st);
+      store.set("sv_school_det_pending", null);
+
+      content.innerHTML = `
+        <div class="sch-det-scene">
+          <div class="sch-det-tag">🕯️ 留堂结束</div>
+          <div class="sch-event-story">${formatDialogue(res)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:12px;">📌 补课后，亮红灯的科目已经拉回及格线，学业精力有所恢复。</div>
+          <button class="btn" style="margin-top:12px;" onclick="apps.School.currentTab='score';apps.School.render(document.getElementById('appBody'))">查看成绩单</button>
+        </div>`;
+      toast("留堂结束，成绩已补救");
+    } catch (e) {
+      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
+    }
+  },
+
+  // ============================================================
+  // 🏆 十项全能
+  // ============================================================
   renderTeam(content) {
     const self = this;
     const team = this.getTeam();
@@ -18438,11 +19388,10 @@ ${buildBlacklistBanText([])}
       "Flash Thompson": "成员 · 爱炫耀",
       "Liz Allan": "前队长"
     };
-
     content.innerHTML = `
       <div class="card" style="padding:12px;margin-bottom:12px;">
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">🏆 学术十项全能队</div>
-        <div style="font-size:11px;color:var(--muted);">备战全国赛。点「开始训练」生成一段队内互动小剧场。</div>
+        <div style="font-size:11px;color:var(--muted);">你和彼得等人都在队里，备战全国赛。点「开始训练」生成一段队内互动小剧场。</div>
       </div>
       <div style="margin-bottom:14px;">
         ${team.map(name => `
@@ -18456,7 +19405,6 @@ ${buildBlacklistBanText([])}
         `).join("")}
       </div>
       <button class="btn" id="schTrainBtn">📖 开始一场训练</button>`;
-
     content.querySelector("#schTrainBtn").onclick = () => self.startTraining();
   },
 
@@ -18466,20 +19414,19 @@ ${buildBlacklistBanText([])}
     content.innerHTML = `<div class="loader"><div class="spin"></div>十项全能队集训中...</div>`;
     try {
       const s = store.getState();
-      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
       const profile = store.getProfile();
       const playerName = profile.name || "你";
       const team = self.getTeam().join("、");
-
-      // 复用小剧场系统：生成一个训练主题的小剧场
+      const semLabel = this.semLabel();
       const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中十项全能队训练**的开场小剧场（校园日常，独立于主线）。
 ${buildBlacklistBanText([])}
 
+【设定】你（${playerName}）和彼得等人都是队员，一起训练。从【你（玩家）】视角展开，你是主角。
 【队员】${team}，以及玩家「${playerName}」
-【当前日期】${date}
+【时期】${semLabel}
 
 【要求 · 铁律】
-1. 写一段 400~700 字的训练开场：哈灵顿老师出题、队员抢答、MJ 冷幽默吐槽、Flash 炫耀、内德技术宅发言、彼得走神。
+1. 写一段 600~800 字的训练开场：哈灵顿老师出题、队员抢答、MJ 冷幽默吐槽、Flash 炫耀、内德技术宅发言、彼得走神。
 2. 玩家是视角中心，不替玩家决定。
 3. 校园日常氛围，严禁超能力、蜘蛛侠、主线大事件。
 4. 结尾用【选项】列出 A. B. C. D.，每个一行。
@@ -18495,24 +19442,21 @@ ${buildBlacklistBanText([])}
       const opts = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
       const title = titleMatch ? titleMatch[1].trim() : "十项全能训练";
 
-      // 建一个小剧场存档，直接跳转到 Theater
       const q = {
         id: "th_sch_" + Date.now(),
         title: "🏆 " + title,
-        background: `中城高中学术十项全能队训练。队员：${team}。校园日常，无超能力。`,
+        background: `中城高中${semLabel}，学术十项全能队训练。你是主角，队员：${team}。校园日常，无超能力。`,
         identity: "十项全能队员",
         tone: "日常",
         pov: s.pov || "second",
         userName: playerName,
-        date,
-        story, options: opts,
+        date: semLabel, story, options: opts,
         history: [], closed: false, createdAt: Date.now(),
         openingStory: story, openingOptions: opts
       };
       const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
       all.unshift(q);
       localStorage.setItem("sv_theaters", JSON.stringify(all));
-
       toast("训练开始：" + title);
       apps.Theater.openQuest(q.id);
     } catch (e) {
@@ -18520,20 +19464,37 @@ ${buildBlacklistBanText([])}
     }
   },
 
-  // ===== 模块 4：舞会 =====
-  renderDance(content) {
-    const self = this;
-    const s = store.getState();
-    const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
-    const danceHistory = store.get("sv_school_dance", []);
+  // ============================================================
+  // 💃 舞会
+  // ============================================================
+  // ===== 返校节舞会 · 只在下学期开启（高一下/高二下/高三下）=====
+DANCE_SEMESTERS: {
+  1: { emoji: "🌱", name: "初遇的舞会", sub: "FRESHMAN · SPRING", color: "#4caf50",
+       desc: "高一下学期，你第一次参加返校节舞会。<br>一切都新鲜又笨拙，彼得穿着不合身的西装缩在角落。" },
+  3: { emoji: "💗", name: "心动的舞会", sub: "SOPHOMORE · SPRING", color: "#e06b9a",
+       desc: "高二下学期的舞会。<br>两年同窗，有些感觉在慢舞的灯光里悄悄发酵。" },
+  5: { emoji: "🌙", name: "毕业的舞会", sub: "SENIOR · SPRING", color: "#8a2be2",
+       desc: "高三下学期，最后一场返校节舞会。<br>散场之后就是毕业，有些话再不说，就没机会了。" }
+},
 
+renderDance(content) {
+  const self = this;
+  const sem = this.getSemester();
+  const danceHistory = store.get("sv_school_dance", []);
+  const cfg = this.DANCE_SEMESTERS[sem.index];
+
+  if (!cfg) {
+    // 非舞会学期 → 锁定，提示下一场
+    const upcoming = [1, 3, 5].filter(i => i > sem.index);
+    const nextLabel = upcoming.length
+      ? (this.SEMESTERS[upcoming[0]] || this.SEMESTERS[0]).label
+      : (this.SEMESTERS[1] || this.SEMESTERS[0]).label + "（下一轮）";
     content.innerHTML = `
-      <div class="sch-dance-card">
-        <div class="sch-dance-logo">💃</div>
-        <div class="sch-dance-title">返校节舞会</div>
-        <div class="sch-dance-sub">HOMECOMING · MIDTOWN HIGH</div>
-        <div class="sch-dance-desc">体育馆挂满气球和彩带。穿上正装，邀请心仪的人，或者……被邀请。<br>一场关于勇气和心动的夜晚。</div>
-        <button class="btn primary" id="schDanceBtn" style="background:linear-gradient(135deg,#8a2be2,#e62429);">💃 参加舞会</button>
+      <div class="sch-dance-card" style="opacity:.85;">
+        <div class="sch-dance-logo">🔒</div>
+        <div class="sch-dance-title">未到舞会季</div>
+        <div class="sch-dance-sub">当前：${esc(this.semLabel())}</div>
+        <div class="sch-dance-desc">返校节舞会只在每年的下学期举办。<br>下一场舞会将在 <b style="color:var(--accent-2);">${esc(nextLabel)}</b> 开启。</div>
       </div>
       ${danceHistory.length ? `
         <div style="margin-top:16px;font-size:12px;color:var(--muted);margin-bottom:8px;">📂 往届回忆</div>
@@ -18542,82 +19503,129 @@ ${buildBlacklistBanText([])}
             <div class="card" style="padding:12px;cursor:pointer;" data-dh="${i}">
               <div style="font-size:13px;font-weight:700;color:var(--text);">${esc(d.title)}</div>
               <div style="font-size:11px;color:var(--muted);margin-top:4px;">${esc(d.date)}</div>
-            </div>
-          `).join("")}
+            </div>`).join("")}
         </div>
       ` : ""}`;
-
-    content.querySelector("#schDanceBtn").onclick = () => self.startDance();
     content.querySelectorAll("[data-dh]").forEach(el => {
       el.onclick = () => {
         const d = danceHistory[parseInt(el.dataset.dh)];
         if (d) apps.Theater.openQuest(d.questId);
       };
     });
-  },
+    return;
+  }
+
+  // 舞会学期 → 可开启，主题随学期不同
+  content.innerHTML = `
+    <div class="sch-dance-card" style="background:linear-gradient(135deg,color-mix(in srgb,${cfg.color} 22%,#1a0f29),#1a0f29);">
+      <div class="sch-dance-logo">${cfg.emoji}</div>
+      <div class="sch-dance-title">${esc(cfg.name)}</div>
+      <div class="sch-dance-sub">${esc(cfg.sub)} · ${esc(this.semLabel())}</div>
+      <div class="sch-dance-desc">${cfg.desc}</div>
+      <button class="btn primary" id="schDanceBtn" style="background:linear-gradient(135deg,${cfg.color},#e62429);">💃 参加${esc(cfg.name)}</button>
+    </div>
+    ${danceHistory.length ? `
+      <div style="margin-top:16px;font-size:12px;color:var(--muted);margin-bottom:8px;">📂 往届回忆</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${danceHistory.map((d, i) => `
+          <div class="card" style="padding:12px;cursor:pointer;" data-dh="${i}">
+            <div style="font-size:13px;font-weight:700;color:var(--text);">${esc(d.title)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">${esc(d.date)}</div>
+          </div>`).join("")}
+      </div>
+    ` : ""}`;
+  content.querySelector("#schDanceBtn").onclick = () => self.startDance();
+  content.querySelectorAll("[data-dh]").forEach(el => {
+    el.onclick = () => {
+      const d = danceHistory[parseInt(el.dataset.dh)];
+      if (d) apps.Theater.openQuest(d.questId);
+    };
+  });
+},
 
   async startDance() {
     const self = this;
     const content = document.getElementById("schContent");
-    content.innerHTML = `<div class="loader"><div class="spin"></div>走进返校节舞会...</div>`;
+    const sem = this.getSemester();
+    const cfg = this.DANCE_SEMESTERS[sem.index];
+    if (!cfg) return toast("现在不是舞会季");
+
+    content.innerHTML = `<div class="loader"><div class="spin"></div>走进${cfg.name}...</div>`;
     try {
       const s = store.getState();
-      const date = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
       const profile = store.getProfile();
       const playerName = profile.name || "你";
       const peterAff = getAffinityOf("彼得·帕克");
+      const semLabel = this.semLabel();
 
-      const confessHint = peterAff >= 151
-        ? `\n【告白氛围】彼得对玩家好感度已达 ${peterAff}，舞会是告白的天然舞台。如果氛围到位，可以让彼得紧张地靠近、欲言又止，为告白做铺垫（但不要强行告白，顺其自然）。`
-        : "";
+      // 不同学期的剧情侧重
+      const FOCUS = {
+        1: `【本场舞会侧重 · 高一下·初遇】
+这是你高中第一场返校节舞会。基调是**青涩、新鲜、笨拙**：
+- 你和彼得、内德、MJ 都是初来乍到的新生，大家都对"舞会"手足无措。
+- 彼得穿着明显不合身、像是借来的西装，紧张得不知道手往哪放。
+- 可以写第一次踩着别人的脚、不敢上场、躲在饮料桌旁、被 Flash 嘲笑。
+- 氛围是懵懂的好奇和同窗间的小打小闹，**不要有明显的恋爱张力**，顶多一点说不清的悸动。`,
+        3: `【本场舞会侧重 · 高二下·心动】
+这是高二下学期的舞会。基调是**暧昧升温、试探、心跳**：
+- 你和彼得已经同窗两年，彼此之间多了一些说不清的默契。
+- 慢舞的灯光、不经意的对视、找借口站得更近一点。
+- 彼得会笨拙地想邀你跳舞又拉不下脸，或是帮你挡下 Flash 的骚扰。
+- 氛围是心照不宣的暧昧，有试探、有脸红、有欲言又止，但还没捅破那层窗户纸。`,
+        5: `【本场舞会侧重 · 高三下·毕业】
+这是高三下学期、也是最后一场返校节舞会。基调是**离别、怅惘、鼓起勇气**：
+- 散场之后就是毕业，所有人都隐隐知道这是"最后一次"。
+- 走廊上贴着毕业倒计时，同学们拍合照、互相在校服上签名。
+- 彼得比以往任何时候都想说点什么，又总是被打断（他可能神秘地接到"电话"要离开）。
+- 氛围是浓烈的不舍与成长，可以有郑重的告白、最后一支舞、"以后还会再见吗"的约定。
+${peterAff >= 151 ? "- 彼得对你好感度很高，这一场是告白的最佳舞台，可以让他鼓起全部勇气（但顺其自然，不要生硬）。" : "- 即使没到告白程度，也要写出毕业将至、想珍惜彼此的怅惘。"}`
+      };
 
       const sysPrompt = buildSystem(`你是剧情 DM，生成一段**中城高中返校节舞会**的开场小剧场（校园日常/情感向）。
 ${buildBlacklistBanText([])}
 
-【当前日期】${date}
+【设定】你（${playerName}）和彼得·帕克、内德、MJ 等人是中城高中${semLabel}的同学，一起参加舞会。从【你（玩家）】视角展开，你是主角，彼得只是你的同学之一（绝不要让玩家代入彼得）。
 【玩家】${playerName}
 【彼得好感度】${peterAff}/200
-${confessHint}
+
+${FOCUS[sem.index] || ""}
 
 【要求 · 铁律】
-1. 写一段 400~700 字的舞会开场：体育馆布置、音乐、同学们跳舞、彼得穿着不合身的西装在角落紧张、MJ 在看书。
-2. 玩家是视角中心，不替玩家决定。
-3. 情感细腻、有青春气息，可以有心动瞬间。
-4. 结尾用【选项】列出 A. B. C. D.，每个一行。
-5. 最后一行：【小剧场标题: 返校节舞会】
-6. 对白用 *"English"*（中文翻译）格式。
+1. 写一段 800~900 字的舞会开场，**严格贴合上面"本场舞会侧重"的基调**（${sem.index === 1 ? "青涩初遇" : sem.index === 3 ? "暧昧心动" : "毕业离别"}）。
+2. 场景：体育馆布置、音乐、同学们跳舞、彼得的状态、MJ 的冷幽默旁观。
+3. 玩家是视角中心，不替玩家决定、不替玩家说话。
+4. 严禁超能力当众暴露、严禁主线大事件。
+5. 结尾用【选项】列出 A. B. C. D.，每个一行（都是"你"的行动）。
+6. 最后一行：【小剧场标题: ${cfg.name}】
+7. 对白用 *"English"*（中文翻译）格式。
 
-【文风】青春、浪漫、细腻，严禁 AI 腔。`, "School");
+【文风】青春、细腻，${sem.index === 1 ? "带点笨拙的喜感" : sem.index === 3 ? "暧昧又克制" : "浓烈而怅惘"}，严禁 AI 腔。`, "School");
 
       const res = await callAI([{ role: "user", content: "生成舞会" }], sysPrompt);
-      const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
-      const optIdx = res.indexOf("【选项】");
-      const story = (optIdx > -1 ? res.slice(0, optIdx) : res).replace("【剧情】", "").replace(/【小剧场标题[:：].*?】/g, "").trim();
-      const opts = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
-      const title = titleMatch ? titleMatch[1].trim() : "返校节舞会";
+const titleMatch = res.match(/【小剧场标题[:：]\s*(.+?)】/);
+const optIdx = res.indexOf("【选项】");
+const story = (optIdx > -1 ? res.slice(0, optIdx) : res).replace("【剧情】", "").replace(/【小剧场标题[:：].*?】/g, "").trim();
+const opts = optIdx > -1 ? res.slice(optIdx + 4).trim() : "";
+const title = titleMatch ? titleMatch[1].trim() : cfg.name;
 
       const q = {
         id: "th_dance_" + Date.now(),
-        title: "💃 " + title,
-        background: `中城高中返校节舞会。体育馆，音乐，正装。情感向校园夜晚。`,
+        title: `${cfg.emoji} ${semLabel} · ${title}`,
+        background: `中城高中${semLabel}返校节舞会（${cfg.name}）。你是主角，体育馆，音乐，正装。情感向校园夜晚。`,
         identity: "舞会参加者",
         tone: "情感",
         pov: s.pov || "second",
         userName: playerName,
-        date,
-        story, options: opts,
+        date: semLabel, story, options: opts,
         history: [], closed: false, createdAt: Date.now(),
         openingStory: story, openingOptions: opts
-      };
+  ,   };
       const all = JSON.parse(localStorage.getItem("sv_theaters") || "[]");
       all.unshift(q);
       localStorage.setItem("sv_theaters", JSON.stringify(all));
-
-      // 记到舞会历史
       const danceHistory = store.get("sv_school_dance", []);
-      danceHistory.unshift({ title: q.title, date, questId: q.id });
+      danceHistory.unshift({ title: q.title, date: semLabel, questId: q.id });
       store.set("sv_school_dance", danceHistory);
-
       toast("舞会开始：" + title);
       apps.Theater.openQuest(q.id);
     } catch (e) {
