@@ -5643,7 +5643,8 @@ ${lines}
 【记忆铁律】
 1. 这些是**你自己**的记忆，标着"共同记忆"的才是你和别人一起经历的。
 2. **绝对不要**编造没写在上面的"共同经历"。
-3. 不要逐字复述，要像真人那样自然带出来。`;
+3. 不要逐字复述，要像真人那样自然带出来。
+4. 共同记忆里出现的其他人的言行、口吻、想法，**不是你的**——不许用他们的语气说话，不许把他们说过的话当成你说的。你只以「${name}」本人的身份回忆。`;
 }
 
 // ============================================================
@@ -5659,16 +5660,13 @@ function buildMemoryIsolationRule(currentUser) {
     return aliases.some(a => text.includes(a));
   };
 
-  const history = s.history || [];
-  const shared = [];
-  history.forEach(h => {
-    const story = h && h.story ? h.story : "";
-    if (inScene(story)) shared.push(story.slice(0, 300));
-  });
-  if (s.currentStory && inScene(s.currentStory)) {
-    shared.push(s.currentStory.slice(0, 300));
-  }
-  const sharedText = shared.slice(-5).join("\n———\n");
+  // ★ 不再把主线剧情原文喂进聊天。
+//   原文含大量第三人称台词，是角色互串的根源。
+//   只判断"是否有共同经历"，绝不提供任何台词素材。
+const history = s.history || [];
+let hasSharedScene = history.some(h => inScene(h && h.story ? h.story : ""));
+if (s.currentStory && inScene(s.currentStory)) hasSharedScene = true;
+const sharedText = "";  // 永远为空：不喂原文
 
   // 列出"除自己外的主要角色"，明确告诉 AI 不准变成他们
   const OTHER_CHARS = ["彼得·帕克", "内德·利兹", "米歇尔·琼斯", "梅婶", "哈皮·霍根", "托尼·斯塔克"];
@@ -5690,17 +5688,18 @@ function buildMemoryIsolationRule(currentUser) {
 2. 你**不知道**玩家和其他人的私聊内容，不知道别人的内心想法、私人经历。
 3. 只能基于"你和玩家的直接聊天"+"你亲身在场的剧情"来回应。`;
 
-  if (sharedText) {
+ if (hasSharedScene) {
     rule += `
 
-【你亲身经历过的剧情（你在场，可自然提及）】
-${sharedText}
-
-⚠️ 即使这些剧情里出现了别人，你也只知道"你在场时亲眼看到/听到的部分"，不知道他们背着你发生的事和内心活动。`;
+【你和玩家有过共同经历 · 但你只能凭"你自己的视角"回忆】
+1. 你**不会**在脑海里逐字回放当时的对话，也看不到任何原始剧情文本。
+2. 只能基于"你和玩家的直接聊天记录"+"你的记忆档案"来回应。
+3. **绝对不要**引用、模仿、复述任何其他角色（尤其 MJ）当时说过的话、语气、口头禅——你根本不记得他们原话怎么说的。
+4. 想不起的细节就模糊带过（"上次那事""之前在学校"），不要硬编。`;
   } else {
     rule += `
 
-【你和玩家目前没有共同经历的主线剧情】
+【你和玩家目前没有共同经历】
 对玩家的了解仅限于你们的直接聊天记录，不要编造共同回忆。`;
   }
 
@@ -13721,13 +13720,17 @@ async generateMixedComments(postText, postName) {
   });
 
   // 发帖人是复联成员或彼得时过滤圈子
-  if (_isAvenger(postName) || isPeterPost) {
-    contactsList = contactsList.filter(c => {
-      if (_isAvenger(c)) return _areAcquainted(postName, c);
-      if (c === "彼得·帕克") return _areAcquainted(postName, "彼得·帕克");
-      return isPeterPost;
-    });
-  }
+if (_isAvenger(postName) || isPeterPost) {
+  const filtered = contactsList.filter(c => {
+    if (_isAvenger(c)) return _areAcquainted(postName, c);
+    if (c === "彼得·帕克") return _areAcquainted(postName, "彼得·帕克");
+    return isPeterPost;
+  });
+  // 兜底：圈子过滤后一个熟人都不剩 → 至少让其他复联成员来评论
+  contactsList = filtered.length >= 1
+    ? filtered
+    : contactsList.filter(c => _isAvenger(c) && c !== postName);
+}
 
   // ★ 核心修复 2：若发帖人是彼得，禁止“蜘蛛侠/Spider-Man”以独立账号形式在评论区现身；
   // 同时加入拉黑名单，禁止本人出现
@@ -13791,19 +13794,26 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
         if (m && isChinese(m[1]) && isChinese(m[2])) return m[1].trim();
         return s;
       };
-      res.split('\n').filter(l => l.includes('|||')).forEach(line => {
-        const [u, t] = line.split('|||').map(x => x.trim());
-        if (!u || !t) return;
-        // 代码硬核拦截：彻底排除发帖人和蜘蛛侠
-        if (u === postName || (isPeterPost && (u === "彼得·帕克" || u.includes("蜘蛛侠") || /spider/i.test(u)))) return;
-        contactComments.push({ user: u, text: clean(t), replies: [] });
-      });
+     res.split('\n').filter(l => l.includes('|||')).forEach(line => {
+  const [u, t] = line.split('|||').map(x => x.trim());
+  if (!u || !t) return;
+  // 代码硬核拦截：彻底排除发帖人和蜘蛛侠
+  if (u === postName || (isPeterPost && (u === "彼得·帕克" || u.includes("蜘蛛侠") || /spider/i.test(u)))) return;
+  contactComments.push({ user: u, text: clean(t), replies: [], _isContact: true });
+});
     } catch (e) {
-      console.warn("联系人评论生成失败:", e);
-    }
+    console.warn("联系人评论生成失败:", e);
   }
+  // 兜底：AI 没产出联系人评论，但确实有熟人该出现 → 本地补几条
+  if (!contactComments.length && contactsList.length) {
+    const fb = ["看到了👀", "哈，有意思", "这也太你了", "？？？", "笑死", "评论区报到"];
+    contactsList.slice(0, 3).forEach((n, i) => {
+      contactComments.push({ user: n, text: fb[i % fb.length], replies: [], _isContact: true });
+    });
+  }
+}
 
-  // ===== 第二步：陌生人评论（5 条）=====
+// ===== 第二步：陌生人评论（5 条）=====
   let strangerComments = [];
   try {
     const strangerPrompt = buildSystem(`${dateHint}推特发帖人是「${postName}」，内容：“${postText}”。
@@ -13881,7 +13891,21 @@ ${buildBlacklistBanText([...banNames, ...contactsList])}
     return true;
   });
 
-  return merged;
+ return merged;
+},
+
+// 带一次重试 + 超时保护的评论生成
+async generateMixedCommentsSafe(postText, postName) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const mixed = await this.generateMixedComments(postText, postName);
+      if (Array.isArray(mixed) && mixed.length) return mixed;
+    } catch (e) {
+      console.warn(`[评论生成] 第 ${attempt + 1} 次失败:`, e.message);
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1200)); // 重试前稍等
+    }
+  }
+  return []; // 两次都失败 → 返回空，让调用方保留第一步的陌生人评论
 },
 
     async newPost() {
@@ -14098,11 +14122,19 @@ const cleanName = (raw) => {
 store.setPosts(all);
 this.render(body);
 
-// ★ 后处理：给刚才生成的每条推文，补齐"联系人全出 + 陌生人 5 条"
-const newPosts = all.twitter.filter(p => p.feed === (isFollowing ? "following" : "foryou")).slice(0, 8);
-for (const p of newPosts) {
+// ★ 后处理：只给前 4 条帖补"联系人全出"，串行 + 节流，避免限流/超时
+// （第 5 条及之后保留第一步 parseComments 产出的陌生人评论，不再额外调 AI）
+const newPosts = all.twitter.filter(p => p.feed === (isFollowing ? "following" : "foryou")).slice(0, 4);
+for (let _i = 0; _i < newPosts.length; _i++) {
+  const p = newPosts[_i];
   try {
-    const mixed = await this.generateMixedComments(p.text, p.name);
+    // 节流：从第 2 条开始，每条之间隔 1500ms
+    if (_i > 0) await new Promise(r => setTimeout(r, 1500));
+
+    const mixed = await this.generateMixedCommentsSafe(p.text, p.name);
+    // 两次都失败 → 跳过这条，保留它第一步的陌生人评论
+    if (!mixed.length) continue;
+
     // ★ 合并去重：优先保留 AI 原本生成的（如果有），补足联系人
     const existingUsers = new Set((p.comments || []).map(c => c.user));
     const contactNames = store.getContacts()
@@ -14112,8 +14144,8 @@ for (const p of newPosts) {
 
     const finalComments = [];
     // 先放联系人（走 mixed 里联系人部分）
-    const mixedContacts = mixed.filter(c => contactNames.includes(c.user));
-    const mixedStrangers = mixed.filter(c => !contactNames.includes(c.user));
+    const mixedContacts = mixed.filter(c => c._isContact === true);
+    const mixedStrangers = mixed.filter(c => c._isContact !== true);
 
     // 联系人必出：以 mixedContacts 为准
     finalComments.push(...mixedContacts);
