@@ -7350,13 +7350,25 @@ window.addComment = async (platform, postIndex, text, parentCommentIndex = null)
   try {
     const sNow = store.getState();
     const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。\n\n`;
-    const contextStr = parentCommentIndex !== null ? `某网友的评论："${p.comments[parentCommentIndex].text}"` : `帖子内容："${p.text}"`;
-    const sysPrompt = buildSystem(`${dateHint}用户刚在${platform}上评论了${contextStr}，内容是："${text.trim()}"。
+    const isReplyToComment = parentCommentIndex !== null;
+    const replyTargetUser = isReplyToComment ? (p.comments[parentCommentIndex].user || "该网友") : "";
+    const contextStr = isReplyToComment
+      ? `「${replyTargetUser}」之前的评论："${p.comments[parentCommentIndex].text}"`
+      : `帖子内容："${p.text}"`;
+
+    const roleReq = isReplyToComment
+      ? `1. 用户（名字叫"我"）在「${replyTargetUser}」的评论下回复了 ta。
+2. 请**以「${replyTargetUser}」本人的身份**回复用户这条评论（第一条必须是 ${replyTargetUser}）。
+3. 可以再追加 0~2 条其他围观网友的回复，网友用英文网名。
+4. **绝对禁止**冒充"我"——"我"是用户本人，你不能替用户发言。`
+      : `1. 生成 1 到 3 条回复。
+2. 其中必须有 1 条是楼主（发帖人：${p.name}）的回复，另外的可以是随机网友。
+3. 格式：如果是楼主，名字直接写 "${p.name}"；网友则起个英文网名。`;
+
+    const sysPrompt = buildSystem(`${dateHint}用户刚在${platform}上针对${contextStr}回复了，内容是："${text.trim()}"。
 
 【要求】
-1. 生成 1 到 3 条回复。
-2. 其中必须有 1 条是楼主（发帖人：${p.name}）的回复，另外的可以是随机网友。
-3. 格式：如果是楼主，名字直接写 "${p.name}"；网友则起个英文网名。
+${roleReq}
 4. 符合网友语气，有生活感。
 5. **翻译规则（极重要）**：
    - 如果评论用**外语**（英文/日文/法文/韩文等），后面紧接中文翻译，格式：原文（中文翻译）
@@ -7388,13 +7400,14 @@ const cleanTranslation = (s) => {
 
 res.split('\n').filter(l=>l.includes('|||')).forEach(l=>{
   const [u, t] = l.split('|||').map(x => x.trim());
-  if (u && t) {
-    const cleanT = cleanTranslation(t);
-    if (parentCommentIndex !== null) {
-      np.comments[parentCommentIndex].replies.push({ user: u, text: cleanT });
-    } else {
-      np.comments.push({ user: u, text: cleanT, replies: [] });
-    }
+  if (!u || !t) return;
+  // ★ 过滤掉 AI 冒充用户发言的行
+  if (u === "我" || u === "Me" || u.toLowerCase() === "me") return;
+  const cleanT = cleanTranslation(t);
+  if (parentCommentIndex !== null) {
+    np.comments[parentCommentIndex].replies.push({ user: u, text: cleanT });
+  } else {
+    np.comments.push({ user: u, text: cleanT, replies: [] });
   }
 });
     newAll[platform] = newList;
@@ -10709,8 +10722,16 @@ if (this.currentUser !== "彼得·帕克") {
   const maxCtx = cfg.maxContext || 10;
 
   body.innerHTML = `<div style="padding:14px">
-    <div class="card">
-      <h3>🌐 聊天语言模式</h3>
+  <div class="card">
+    <h3>🔕 免打扰</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">开启后不再弹出新消息横幅，消息仍会收到，进入信息后以未读角标显示。</p >
+    <div class="row" style="justify-content:space-between;align-items:center;">
+      <label style="font-size:13px;color:var(--text);">开启免打扰</label>
+      <label class="switch"><input type="checkbox" id="dndToggle" ${window.isDndOn && window.isDndOn() ? "checked" : ""}><span class="slider"></span></label>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🌐 聊天语言模式</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">选择角色回复的语言（心声始终为中文）。</p >
       <div class="field">
         <select id="cc_lang">
@@ -10777,7 +10798,13 @@ if (this.currentUser !== "彼得·帕克") {
     </div>
   </div>`;
 
-  body.querySelector("#save_lang").onclick = () => {
+ const dndToggle = body.querySelector("#dndToggle");
+if (dndToggle) dndToggle.onchange = () => {
+  window.setDnd(dndToggle.checked);
+  toast(dndToggle.checked ? "已开启免打扰" : "已关闭免打扰");
+};
+
+body.querySelector("#save_lang").onclick = () => {
     const newCfg = store.getChatConfig();
     newCfg.lang = body.querySelector("#cc_lang").value;
     store.setChatConfig(newCfg);
@@ -11073,7 +11100,7 @@ const descHtml = isLockedPeter
         </div>`;
       }).join("");
 
-      body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn">➕ 添加联系人</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contactsWithNote}</div></div>`;
+      body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn" style="margin-bottom:8px;">➕ 添加联系人</button><button class="btn ghost" id="heartLogBtn">💭 心声记录</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contactsWithNote}</div></div>`;
 
       body.querySelectorAll(".chat-row").forEach(el => {
         el.onclick = () => {
@@ -11083,7 +11110,10 @@ const descHtml = isLockedPeter
         };
       });
 
-      body.querySelector("#addContactBtn").onclick = async () => {
+      const heartLogBtn = body.querySelector("#heartLogBtn");
+if (heartLogBtn) heartLogBtn.onclick = () => window.showHeartLog();
+
+body.querySelector("#addContactBtn").onclick = async () => {
         const ans = prompt("添加联系人：\n\n可选：1 彼得·帕克  2 内德·利兹  3 米歇尔·琼斯  4 梅婶\n或直接输入自定义名字，或输入「随机」让AI生成");
         if (!ans) return;
         let name = ans.trim();
@@ -12651,12 +12681,13 @@ ${isPeterHeart && heartAff >= 151 ? `【彼得深爱时的心声 · 铁律】\n�
         } catch (e) {}
 
         try {
-          const heartBox = document.createElement("div");
-          heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
-          heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(heartText.trim());
-          document.body.appendChild(heartBox);
-          setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
-        } catch (e) {}
+  window.recordHeart(self.currentUser, heartText.trim());
+  const heartBox = document.createElement("div");
+  heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
+  heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(heartText.trim());
+  document.body.appendChild(heartBox);
+  setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
+} catch (e) {}
       }
 
       const load = body.querySelector("#loading"); 
@@ -13084,12 +13115,13 @@ REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
       } catch (_) {}
 
       try {
-        const heartBox = document.createElement("div");
-        heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
-        heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(voiceHeart.trim());
-        document.body.appendChild(heartBox);
-        setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
-      } catch (_) {}
+  window.recordHeart(self.currentUser, voiceHeart.trim());
+  const heartBox = document.createElement("div");
+  heartBox.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(230,36,41,0.95);border:1px solid #e62429;border-radius:12px;padding:12px 16px;font-size:13px;color:#fff;z-index:99999;animation:fadeInOut 5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.5);";
+  heartBox.innerHTML = "<b>💭 " + esc(self.currentUser) + "的心声：</b>" + esc(voiceHeart.trim());
+  document.body.appendChild(heartBox);
+  setTimeout(() => { if (heartBox.parentNode) heartBox.remove(); }, 5000);
+} catch (_) {}
 
       const load = body.querySelector("#loading");
       if (load) load.remove();
@@ -15205,6 +15237,37 @@ instagram: {
     const text = prompt("回复该评论：");
     if (text) window.addComment('instagram', postIdx, text, commentIdx);
   },
+  findRefByPrompt(prompt) {
+    const lower = String(prompt || "").toLowerCase();
+    const nameAliases = [
+      { zh: "彼得·帕克", en: ["peter parker","peter","spider-man","spiderman"] },
+      { zh: "内德·利兹", en: ["ned leeds","ned"] },
+      { zh: "米歇尔·琼斯", en: ["michelle jones","mj"] },
+      { zh: "梅婶", en: ["aunt may","may parker","may"] },
+      { zh: "托尼·斯塔克", en: ["tony stark","iron man"] },
+      { zh: "美国队长", en: ["steve rogers","captain america","cap"] },
+      { zh: "娜塔莎·罗曼诺夫", en: ["natasha romanoff","black widow"] },
+      { zh: "雷神", en: ["thor"] },
+      { zh: "绿巨人", en: ["bruce banner","hulk"] },
+      { zh: "鹰眼", en: ["clint barton","hawkeye"] },
+      { zh: "绯红女巫", en: ["wanda maximoff","scarlet witch"] },
+      { zh: "冬兵", en: ["bucky barnes","winter soldier"] },
+      { zh: "猎鹰", en: ["sam wilson","falcon"] },
+      { zh: "蚁人", en: ["scott lang","ant-man","antman"] },
+      { zh: "黑豹", en: ["t'challa","tchalla","black panther"] },
+      { zh: "战争机器", en: ["james rhodes","war machine","rhodey"] },
+      { zh: "奇异博士", en: ["stephen strange","doctor strange"] },
+      { zh: "夜魔侠", en: ["matt murdock","daredevil"] }
+    ];
+    const contacts = store.getContacts();
+    for (const item of nameAliases) {
+      if (item.en.some(k => lower.includes(k))) {
+        const c = contacts.find(x => x.name === item.zh);
+        if (c && c.refImage) return c.refImage;
+      }
+    }
+    return null;
+  },
   async render(body) {
     const posts = store.getPosts().instagram || [];
     // 🕸️ 遗忘魔咒：过滤掉"彼得·帕克"作为发帖人的 IG 帖子
@@ -15222,11 +15285,17 @@ if (isSpellActiveNow()) {
     store.setPosts(all);
   }
 }
-    body.innerHTML = `<div style="padding:14px">
-      <div class="row" style="gap:8px;margin-bottom:12px">
-        <button class="btn" id="igNewPostBtn" style="flex:1">✍️ 发布新帖子</button>
-        <button class="btn ghost" id="igRefreshBtn" style="flex:1">🔄 刷新</button>
-      </div>
+    const igCount = parseInt(localStorage.getItem("sv_ig_refresh_count") || "5") || 5;
+body.innerHTML = `<div style="padding:14px">
+  <div class="row" style="gap:8px;margin-bottom:8px">
+    <button class="btn" id="igNewPostBtn" style="flex:1">✍️ 发布新帖子</button>
+    <button class="btn ghost" id="igRefreshBtn" style="flex:1">🔄 刷新</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px;color:var(--muted);">
+    <span>每次刷新生成</span>
+    <input id="igCount" type="number" min="1" max="10" value="${igCount}" style="width:56px;text-align:center;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);">
+    <span>条（图片默认不生成，点图片再生成）</span>
+  </div>
       ${filteredPosts && filteredPosts.length > 0 ? filteredPosts.map((p,i)=>`
       <div class="tweet" data-post-idx="${i}">
         <div class="head" style="position:relative;">
@@ -15234,9 +15303,12 @@ if (isSpellActiveNow()) {
           <div style="flex:1;min-width:0;"><div class="name" style="color:var(--text)">${esc(p.name)}</div><div class="handle">${esc(p.handle || '@user')}</div></div>
           ${p.img && p.img !== "ERROR" ? `<button class="ig-more-btn" data-idx="${i}" style="background:none;border:none;color:var(--muted);font-size:22px;font-weight:700;cursor:pointer;padding:0 8px;line-height:1;">…</button>` : ""}
         </div>
-       ${p.img === "ERROR" 
-          ? `<div style="width:100%; aspect-ratio:1; background:#222; display:flex; align-items:center; justify-content:center; border-radius:12px; margin-bottom:8px; color:#888;">[图片生成失败]<br>${esc(p.text)}</div>` 
-          : `<img src="${p.img}" class="ig-image" data-idx="${i}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block; cursor:pointer;">`}
+       ${(p.img === "ERROR" || p.img === "PENDING" || !p.img)
+   ? `<div class="ig-gen-placeholder" data-idx="${i}" style="width:100%;aspect-ratio:1;background:var(--panel-2);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;margin-bottom:8px;color:var(--muted);cursor:pointer;gap:8px;">
+        <div style="font-size:34px;">🖼️</div>
+        <div style="font-size:13px;">${p.img === "ERROR" ? "生成失败 · 点击重试" : "点击生成配图"}</div>
+      </div>`
+   : `<img src="${p.img}" class="ig-image" data-idx="${i}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block; cursor:pointer;">`}
         <div class="text" style="color:var(--text)">${esc(p.text)}</div>
         <div class="foot"><span>♡ ${p.likes||0}</span></div>
         
@@ -15297,49 +15369,8 @@ ${buildBlacklistBanText([myName])}
           return { user, text: `${orig}（${trans}）`, replies: [] };
         }).filter(x => x.user);
 
-        body.innerHTML = `<div class="loader"><div class="spin"></div>绘制中...</div>`;
-
-// ★ 智能匹配参考图：如果生图提示词里出现某个角色的名字，自动带上该角色的参考图
-const allContactsForRef = store.getContacts();
-const matchedRef = (() => {
-  const lower = String(imgPrompt || "").toLowerCase();
-  const nameAliases = [
-    { zh: "彼得·帕克", en: ["peter parker", "peter", "spider-man", "spiderman"] },
-    { zh: "内德·利兹", en: ["ned leeds", "ned"] },
-    { zh: "米歇尔·琼斯", en: ["michelle jones", "mj"] },
-    { zh: "梅婶", en: ["aunt may", "may parker", "may"] },
-    { zh: "托尼·斯塔克", en: ["tony stark", "iron man"] },
-    { zh: "美国队长", en: ["steve rogers", "captain america", "cap"] },
-    { zh: "娜塔莎·罗曼诺夫", en: ["natasha romanoff", "black widow"] },
-    { zh: "雷神", en: ["thor"] },
-    { zh: "绿巨人", en: ["bruce banner", "hulk"] },
-    { zh: "鹰眼", en: ["clint barton", "hawkeye"] },
-    { zh: "绯红女巫", en: ["wanda maximoff", "scarlet witch"] },
-    { zh: "冬兵", en: ["bucky barnes", "winter soldier"] },
-    { zh: "猎鹰", en: ["sam wilson", "falcon"] },
-    { zh: "蚁人", en: ["scott lang", "ant-man", "antman"] },
-    { zh: "黑豹", en: ["t'challa", "tchalla", "black panther"] },
-    { zh: "战争机器", en: ["james rhodes", "war machine", "rhodey"] },
-    { zh: "奇异博士", en: ["stephen strange", "doctor strange"] },
-    { zh: "夜魔侠", en: ["matt murdock", "daredevil"] }
-  ];
-  for (const item of nameAliases) {
-    const hit = item.en.some(k => lower.includes(k));
-    if (hit) {
-      const c = allContactsForRef.find(x => x.name === item.zh);
-      if (c && c.refImage) return c.refImage;
-    }
-  }
-  return null;
-})();
-
-let imgUrl = "";
-try {
-  imgUrl = await generateImage(imgPrompt, matchedRef);
-} catch (e) {
-  imgUrl = "ERROR";
-  toast("生图失败：" + e.message);
-}
+        // ★ 不自动生图，占位，发出后在列表里点图片再生成
+let imgUrl = "PENDING";
         
         // ★ 修复：保留历史，追加到最前面，并保存 imgPrompt 供重绘用
         const all = store.getPosts();
@@ -15408,7 +15439,8 @@ ${avatarPersona}
           avengersIGHint += `\n【已牺牲成员 · 绝对禁止发帖】${deceasedNamesIG.join("、")} 在本时间点已经去世，不要作为发帖人出现。网友可以在评论里悼念。\n`;
         }
 
-        const sysPrompt = buildSystem(`${dateHint}请随机生成 5 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
+        const igCount = parseInt(localStorage.getItem("sv_ig_refresh_count") || "5") || 5;
+const sysPrompt = buildSystem(`${dateHint}请随机生成 ${igCount} 条 Instagram 帖子（不同发帖人，包含发帖人、文案、生图Prompt、网友评论）。
 ${avengersIGHint}
 ${isSpellActiveNow() ? `
 【🕸️ 遗忘魔咒 · 当前世界状态】
@@ -15442,17 +15474,17 @@ ${promptHint}
 【格式要求 · 严格】
 每条帖子一行，用 ||| 分隔，评论用 ;; 分隔：
 发帖人 ||| 账号 ||| 文案 ||| 英文生图Prompt ||| 评论1网名(语言) ||| 评论1原文 ||| 评论1中文翻译 ;; 评论2网名(语言) ||| 评论2原文 ||| 评论2中文翻译
-最少生成 5 行，不要任何解释性文字。`, "instagram");
+最少生成 ${igCount} 行，不要任何解释性文字。`, "instagram");
         const res = await callAI([{role:"user",content:"生成 5 条帖子"}], sysPrompt);
         // ★ 代码级兜底过滤
         const safeRes = sanitizeByBlacklist(res);
 // 🕸️ 遗忘魔咒：代码级兜底，过滤掉"彼得"的所有变体
 const spellSafeRes = sanitizeBySpell(safeRes);
 
-        const lines = spellSafeRes.split('\n').filter(l => l.includes('|||'));
-        const newPosts = [];
+       const lines = spellSafeRes.split('\n').filter(l => l.includes('|||'));
+const newPosts = [];
 
-        for (const line of lines.slice(0, 5)) {
+for (const line of lines.slice(0, igCount)) {
           const parts = line.split('|||').map(s => s.trim());
           if (parts.length < 5) continue;
           const name = parts[0];
@@ -15474,56 +15506,16 @@ const spellSafeRes = sanitizeBySpell(safeRes);
 
         if (newPosts.length === 0) throw new Error("AI 未按格式返回帖子，请重试");
 
-        const finalPosts = [];
-const allContactsForRef2 = store.getContacts();
-const findRefByPrompt = (prompt) => {
-  const lower = String(prompt || "").toLowerCase();
-  const nameAliases = [
-    { zh: "彼得·帕克", en: ["peter parker", "peter", "spider-man", "spiderman"] },
-    { zh: "内德·利兹", en: ["ned leeds", "ned"] },
-    { zh: "米歇尔·琼斯", en: ["michelle jones", "mj"] },
-    { zh: "梅婶", en: ["aunt may", "may parker", "may"] },
-    { zh: "托尼·斯塔克", en: ["tony stark", "iron man"] },
-    { zh: "美国队长", en: ["steve rogers", "captain america", "cap"] },
-    { zh: "娜塔莎·罗曼诺夫", en: ["natasha romanoff", "black widow"] },
-    { zh: "雷神", en: ["thor"] },
-    { zh: "绿巨人", en: ["bruce banner", "hulk"] },
-    { zh: "鹰眼", en: ["clint barton", "hawkeye"] },
-    { zh: "绯红女巫", en: ["wanda maximoff", "scarlet witch"] },
-    { zh: "冬兵", en: ["bucky barnes", "winter soldier"] },
-    { zh: "猎鹰", en: ["sam wilson", "falcon"] },
-    { zh: "蚁人", en: ["scott lang", "ant-man", "antman"] },
-    { zh: "黑豹", en: ["t'challa", "tchalla", "black panther"] },
-    { zh: "战争机器", en: ["james rhodes", "war machine", "rhodey"] },
-    { zh: "奇异博士", en: ["stephen strange", "doctor strange"] },
-    { zh: "夜魔侠", en: ["matt murdock", "daredevil"] }
-  ];
-  for (const item of nameAliases) {
-    if (item.en.some(k => lower.includes(k))) {
-      const c = allContactsForRef2.find(x => x.name === item.zh);
-      if (c && c.refImage) return c.refImage;
-    }
-  }
-  return null;
-};
-
-for (let i = 0; i < newPosts.length; i++) {
-  body.innerHTML = `<div class="loader"><div class="spin"></div>正在绘制第 ${i+1}/${newPosts.length} 张配图...</div>`;
-  let imgUrl = "ERROR";
-  try {
-    const ref = findRefByPrompt(newPosts[i].imgPrompt);
-    imgUrl = await generateImage(newPosts[i].imgPrompt, ref);
-  } catch(e) {}
-          finalPosts.push({
-            name: newPosts[i].name,
-            handle: newPosts[i].handle,
-            text: newPosts[i].text,
-            img: imgUrl,
-            imgPrompt: newPosts[i].imgPrompt, // ★ 保存提示词
-            likes: Math.floor(Math.random()*500)+50,
-            comments: newPosts[i].comments
-          });
-        }
+        // ★ 刷新不再自动生图，图片占位为 PENDING，点击后再单独生成
+const finalPosts = newPosts.map(np => ({
+  name: np.name,
+  handle: np.handle,
+  text: np.text,
+  img: "PENDING",
+  imgPrompt: np.imgPrompt,
+  likes: Math.floor(Math.random() * 500) + 50,
+  comments: np.comments
+}));
 
         const all = store.getPosts();
         all.instagram = [...finalPosts, ...(all.instagram || [])];
@@ -15643,6 +15635,42 @@ for (let i = 0; i < newPosts.length; i++) {
           if (closed) return;
           document.addEventListener("touchstart", onTouchStart, { passive: true });
         }, 350);
+      };
+    });
+
+    // ★ 条数输入保存
+    const igCountInput = body.querySelector("#igCount");
+    if (igCountInput) {
+      igCountInput.onchange = () => {
+        let v = parseInt(igCountInput.value) || 5;
+        v = Math.max(1, Math.min(10, v));
+        igCountInput.value = v;
+        localStorage.setItem("sv_ig_refresh_count", String(v));
+        toast("已设置：每次刷新生成 " + v + " 条");
+      };
+    }
+
+    // ★ 点击占位图 → 单独生成这一张
+    body.querySelectorAll(".ig-gen-placeholder").forEach(el => {
+      el.onclick = async () => {
+        const idx = parseInt(el.dataset.idx);
+        const all = store.getPosts();
+        const post = (all.instagram || [])[idx];
+        if (!post) return;
+        if (!post.imgPrompt) return toast("这条帖子没有生图提示词");
+        el.innerHTML = `<div style="font-size:13px;color:var(--muted);">⏳ 生成中...</div>`;
+        try {
+          const ref = apps.instagram.findRefByPrompt(post.imgPrompt);
+          const url = await generateImage(post.imgPrompt, ref);
+          const latest = store.getPosts();
+          if (latest.instagram[idx]) { latest.instagram[idx].img = url; store.setPosts(latest); }
+          apps.instagram.render(body);
+        } catch (e) {
+          const latest = store.getPosts();
+          if (latest.instagram[idx]) { latest.instagram[idx].img = "ERROR"; store.setPosts(latest); }
+          toast("生成失败：" + e.message);
+          apps.instagram.render(body);
+        }
       };
     });
   }
@@ -16395,20 +16423,37 @@ ${viewRule}
       const sqListEl = body.querySelector("#sqList");
       const sqCountEl = body.querySelector("#sqCount");
 
-      const renderMap = async () => {
-        area.innerHTML = `<div class="loader"><div class="spin"></div>生成地图中...</div>`;
-        try {
-          const sNow = store.getState();
-          const ctx = sNow.currentStory ? sNow.currentStory.slice(0, 300) : "彼得与玩家的日常起点";
-          const cfgA = store.get("sv_appearance", {});
-          const mapPrompt = (cfgA.prompts && cfgA.prompts.map) ? cfgA.prompts.map : "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels.";
-          const prompt = `${mapPrompt}\nScene: ${ctx}. Year: ${sNow.gameYear}.`;
-          const url = await generateImage(prompt);
-          const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
-          area.innerHTML = `<img src="${src}" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
-        } catch (e) { area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`; }
-      };
-      body.querySelector("#genMapBtn").onclick = renderMap;
+      // 显示已保存的地图，没有则显示占位（不自动生图）
+const showSavedOrPlaceholder = () => {
+  const savedMap = store.get("sv_spider_map", "");
+  if (savedMap) {
+    area.innerHTML = `< img src="${savedMap}" onerror="this.parentNode.innerHTML='<div style=&quot;padding:20px;text-align:center;color:var(--muted);font-size:12px;&quot;>旧地图已失效，点上方「重新生成地图」</div>'" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
+  } else {
+    area.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;background:var(--panel-2);border-radius:16px;margin-bottom:12px;">🗺️ 还没有地图<br><span style="font-size:11px;opacity:.7;">点上方「生成地图」按钮绘制</span></div>`;
+  }
+  // 按钮文案随状态变化
+  const btn = body.querySelector("#genMapBtn");
+  if (btn) btn.textContent = savedMap ? "🔄 重新生成地图" : "🖼️ 生成地图";
+};
+
+const renderMap = async () => {
+  area.innerHTML = `<div class="loader"><div class="spin"></div>生成地图中...</div>`;
+  try {
+    const sNow = store.getState();
+    const ctx = sNow.currentStory ? sNow.currentStory.slice(0, 300) : "彼得与玩家的日常起点";
+    const cfgA = store.get("sv_appearance", {});
+    const mapPrompt = (cfgA.prompts && cfgA.prompts.map) ? cfgA.prompts.map : "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels.";
+    const prompt = `${mapPrompt}\nScene: ${ctx}. Year: ${sNow.gameYear}.`;
+    const url = await generateImage(prompt);
+    const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
+    store.set("sv_spider_map", src);   // ★ 保存，下次进来直接显示
+    showSavedOrPlaceholder();
+  } catch (e) {
+    area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`;
+    setTimeout(showSavedOrPlaceholder, 1500);
+  }
+};
+body.querySelector("#genMapBtn").onclick = renderMap;
 
       const renderSideQuests = () => {
         const list = WORLD.getSideQuests();
@@ -16480,9 +16525,9 @@ ${viewRule}
         }
       };
 
-      renderMap();
-      renderSideQuests();
-    },
+     showSavedOrPlaceholder();
+  renderSideQuests();
+},
 
     // ============================================================
     // 🕷️ 渲染巡逻事件（含彼得一激灵）
@@ -22855,15 +22900,21 @@ const resumeBanner = body.querySelector("#dtResumeBanner");
     }).join("");
 
     body.innerHTML = `
-      <div class="dt-wrap">
-        <div class="dt-topbar">
-          <div class="dt-mini-avs">${miniAvs}</div>
-          <div class="dt-topbar-loc">
-            <div class="dt-topbar-city">${session.city.emoji} ${esc(session.city.name)}</div>
-            <div class="dt-topbar-spot">${session.spot.emoji} ${esc(session.spot.name)} · 第 ${session.turn} 回合</div>
-          </div>
-        </div>
-        <div class="dt-story">${formatDialogue(session.story)}</div>
+  <div class="dt-wrap">
+    <div class="dt-topbar">
+      <div class="dt-mini-avs">${miniAvs}</div>
+      <div class="dt-topbar-loc">
+        <div class="dt-topbar-city">${session.city.emoji} ${esc(session.city.name)}</div>
+        <div class="dt-topbar-spot">${session.spot.emoji} ${esc(session.spot.name)} · 第 ${session.turn} 回合</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <button class="th-btn ghost small" id="dtReset" style="flex:1;font-size:12px;">🔄 重置本回合</button>
+      <button class="th-btn ghost small" id="dtSave" style="flex:1;font-size:12px;">💾 存档</button>
+      <button class="th-btn ghost small" id="dtLoad" style="flex:1;font-size:12px;">📂 读档</button>
+      <button class="th-btn ghost small" id="dtMem" style="flex:1;font-size:12px;">📜 回忆</button>
+    </div>
+    <div class="dt-story">${formatDialogue(session.story)}</div>
         <div id="dtOpts"></div>
         <div class="dt-custom">
           <input id="dtCustom" placeholder="自定义行动... 用（括号）可下达干预指令">
@@ -22902,9 +22953,32 @@ if (opts.length) {
     input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); send(); } });
 
     body.querySelector("#dtFinish").onclick = () => {
-      window.resolveDateOption("（我觉得差不多了，自然地提议结束这次约会）");
-    };
-  },
+    window.resolveDateOption("（我觉得差不多了，自然地提议结束这次约会）");
+  };
+
+  const resetBtn = body.querySelector("#dtReset");
+if (resetBtn) resetBtn.onclick = () => {
+  const se = store.get("sv_date_session", null);
+  if (!se) return;
+  // 开场回合（还没做过任何选择）无法重置
+  if (!se.history || !se.history.length) {
+    return toast("开场回合无法重置，可直接做出选择");
+  }
+  if (!confirm("用同一个选择，重新生成当前这一回合的剧情？\n（回合数和选项不变，只换一段新剧情）")) return;
+  // 取"进入本回合时用的那个选择"重跑：它就是 history 最后一条的 choice
+  const lastChoice = se.history[se.history.length - 1].choice;
+  if (!lastChoice) return toast("找不到本回合对应的选择");
+  // 调用重跑（不 push 新 history、不加回合）
+  window.rerollDateTurn(lastChoice);
+};
+
+  const saveBtn = body.querySelector("#dtSave");
+  if (saveBtn) saveBtn.onclick = () => this.openDateSlots("save");
+  const loadBtn = body.querySelector("#dtLoad");
+  if (loadBtn) loadBtn.onclick = () => this.openDateSlots("load");
+  const memBtn = body.querySelector("#dtMem");
+  if (memBtn) memBtn.onclick = () => this.showDateMemory(session);
+},
 
   renderResult(body, session) {
     const self = this;
@@ -22988,6 +23062,69 @@ if (opts.length) {
   div.querySelector("#dtHistClose").onclick = () => div.remove();
   div.querySelector("#dtHistClose2").onclick = () => div.remove();
   div.onclick = (e) => { if (e.target === div) div.remove(); };
+},
+
+async openDateSlots(mode) {
+  await archive.init();
+  const KEY = "sv_date_slots";
+  let slots = await archive.getJSON(KEY, null);
+  if (!Array.isArray(slots) || slots.length !== 10) { slots = Array(10).fill(null); await archive.setJSON(KEY, slots); }
+  const self = this;
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+  div.innerHTML = `<h2 style="margin-top:0;font-size:17px;">${mode==="save"?"💾 约饭存档（10格）":"📂 约饭读档（10格）"}</h2><div id="dtSlotList"></div><button class="btn ghost" style="margin-top:12px" id="dtSlotClose">关闭</button>`;
+  const list = div.querySelector("#dtSlotList");
+  slots.forEach((snap, i) => {
+    const filled = !!snap;
+    const label = filled ? `${esc(snap.label)}<br><span style="color:var(--muted);font-size:11px;">${new Date(snap.timestamp).toLocaleString()}</span>` : "（空白档）";
+    const row = document.createElement("div");
+    row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+    row.innerHTML = `<div style="flex:1;color:${filled?'var(--text)':'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i+1}</div>${label}</div><button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;${(!filled&&mode==='load')?'opacity:.4;pointer-events:none;':''}">${filled?(mode==='save'?'覆盖':'读取'):(mode==='save'?'保存':'不可用')}</button>`;
+    list.appendChild(row);
+  });
+  div.querySelector("#dtSlotClose").onclick = () => div.remove();
+  list.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-idx]"); if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    if (mode === "save") {
+      if (slots[idx] && !confirm(`档位 ${idx+1} 已有内容，覆盖？`)) return;
+      const se = store.get("sv_date_session", null);
+      if (!se) return toast("当前没有进行中的约会");
+      slots[idx] = { timestamp: Date.now(), label: `${se.city.name}·${se.spot.name}·第${se.turn}回合`, data: JSON.parse(JSON.stringify(se)) };
+      await archive.setJSON(KEY, slots);
+      toast("已存档到位置 " + (idx+1)); div.remove();
+    } else {
+      if (!slots[idx]) return toast("该档位为空");
+      if (!confirm("读档会把约会回退到存档时刻，确认？")) return;
+      store.set("sv_date_session", slots[idx].data);
+      toast("已读取档位 " + (idx+1)); div.remove();
+      self._view = "date";
+      self.renderDate(document.getElementById("appBody"), slots[idx].data);
+    }
+  });
+  document.querySelector(".device").appendChild(div);
+},
+
+showDateMemory(session) {
+  const history = session.history || [];
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h2 style="margin:0;font-size:17px;">📜 ${esc(session.city.name)} · ${esc(session.spot.name)}</h2><button class="btn ghost" id="dtMemClose" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button></div>`;
+  history.forEach((seg, i) => {
+    html += `<div style="background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent-2);border-radius:12px;padding:12px;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">— 第 ${i+1} 回合 —</div>
+      <div class="dt-story" style="margin-bottom:8px;">${formatDialogue(seg.story)}</div>
+      ${seg.choice ? `<div style="font-size:12px;color:var(--accent-2);padding:8px 12px;background:var(--panel-2);border-radius:10px;">➤ ${esc(seg.choice)}</div>` : ""}
+    </div>`;
+  });
+  html += `<div style="background:var(--panel);border:1px solid var(--accent-2);border-radius:12px;padding:12px;margin-bottom:10px;">
+    <div style="font-size:11px;color:var(--accent-2);margin-bottom:6px;">▶ 当前</div>
+    <div class="dt-story">${formatDialogue(session.story)}</div></div>`;
+  if (!history.length && !session.story) html = `<div style="color:var(--muted);text-align:center;padding:30px;">暂无剧情</div>` + html;
+  div.innerHTML = `<div style="max-width:520px;margin:0 auto;">${html}<button class="btn" id="dtMemClose2" style="width:100%;margin-top:8px;">关闭</button></div>`;
+  document.querySelector(".device").appendChild(div);
+  div.querySelector("#dtMemClose").onclick = () => div.remove();
+  div.querySelector("#dtMemClose2").onclick = () => div.remove();
 },
 
   _split(res) {
@@ -23112,6 +23249,43 @@ ${ctx.choice}
    【约会结束】
    并输出整体氛围一行：【约会氛围: 愉快】或【约会氛围: 平淡】或【约会氛围: 不愉快】
 6. 一般约会 3~5 回合收尾，不要拖沓。`, "Dating");
+  }
+};
+
+// ============================================================
+// 🍜 约饭 · 重跑当前回合（同一选择换一段剧情，不加回合、不动选项之外的进度）
+// ============================================================
+window.rerollDateTurn = async (choice) => {
+  const session = store.get("sv_date_session", null);
+  if (!session || session.closed) return;
+  if (!session.history || !session.history.length) return;
+
+  const body = document.getElementById("appBody");
+  body.innerHTML = `<div class="loader"><div class="spin"></div>换一段相处...</div>`;
+
+  try {
+    // 本回合的"上文"= 倒数第二段剧情（也就是进入本回合前看到的那段）
+    const prevStory = session.history[session.history.length - 1].story;
+
+    const sys = apps.Dating._buildPrompt("continue", {
+      city: session.city, spot: session.spot, people: session.people,
+      lastStory: prevStory, choice, turn: session.turn
+    });
+    const res = await callAI([{ role: "user", content: "重新续写这一回合" }], sys);
+
+    // ★ 重跑不处理好感度变动、不处理结束标记：只刷新本回合的剧情与选项
+    const { story, options } = apps.Dating._split(res);
+    session.story = story;
+    session.options = options;
+    // turn 不变、history 不动、summary 不动
+    store.set("sv_date_session", session);
+
+    apps.Dating.renderDate(body, session);
+    toast("已重新生成本回合");
+  } catch (e) {
+    // 失败回退到原来的渲染，避免卡在 loader
+    apps.Dating.renderDate(body, store.get("sv_date_session", session));
+    toast("重置失败：" + e.message);
   }
 };
 
@@ -24195,40 +24369,199 @@ showMsgBanner(data.sender, data.messages[0] || "");
     } catch (e) {}
   };
 })();
+// 免打扰开关读写
+window.isDndOn = () => localStorage.getItem("sv_dnd") === "1";
+window.setDnd = (on) => localStorage.setItem("sv_dnd", on ? "1" : "0");
+
+// 💭 心声记录
+window.recordHeart = (name, text) => {
+  if (!name || !text) return;
+  try {
+    const log = JSON.parse(localStorage.getItem("sv_heart_log") || "[]");
+    log.push({ name, text, ts: Date.now() });
+    if (log.length > 200) log.splice(0, log.length - 200);
+    localStorage.setItem("sv_heart_log", JSON.stringify(log));
+  } catch (e) {}
+};
+
+// 💭 为联系人名字生成稳定颜色（同名永远同色）
+window._heartColorOf = (name) => {
+  const palette = [
+    "#e62429", "#2d6bff", "#8a2be2", "#e06b9a", "#c8a15a",
+    "#00bcd4", "#4caf50", "#ff7043", "#5b8dff", "#d64a6a",
+    "#3faa6b", "#9a6fb0", "#c89a3a", "#2bb3b3"
+  ];
+  let h = 0;
+  const s = String(name || "");
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return palette[h % palette.length];
+};
+
+window.showHeartLog = (filterName) => {
+  const render = (curFilter) => {
+    let all = [];
+    try { all = JSON.parse(localStorage.getItem("sv_heart_log") || "[]"); } catch (e) {}
+
+    // 所有出现过的联系人（按首次出现顺序）
+    const names = [];
+    all.forEach(h => { if (h.name && !names.includes(h.name)) names.push(h.name); });
+
+    let log = curFilter ? all.filter(x => x.name === curFilter) : all.slice();
+    log = log.reverse(); // 最新在上
+
+    document.querySelectorAll(".__heart_log_panel").forEach(el => el.remove());
+    const div = document.createElement("div");
+    div.className = "__heart_log_panel";
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:0;overflow-y:auto;color:var(--text);";
+
+    // ===== 顶部标题栏 =====
+    const headerColor = curFilter ? window._heartColorOf(curFilter) : "#e62429";
+    let html = `
+      <div style="position:sticky;top:0;z-index:5;background:linear-gradient(135deg, ${headerColor}22, var(--bg));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:18px 18px 12px;border-bottom:1px solid var(--line);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:10px;letter-spacing:3px;color:${headerColor};font-weight:700;">INNER VOICE</div>
+            <div style="font-size:19px;font-weight:800;color:var(--text);margin-top:2px;">💭 心声记录</div>
+          </div>
+          <button class="btn ghost" id="hlClose" style="width:auto;padding:5px 14px;font-size:12px;">关闭</button>
+        </div>
+
+        <!-- 联系人筛选栏 -->
+        <div style="display:flex;gap:6px;overflow-x:auto;padding:12px 0 2px;margin-top:4px;-webkit-overflow-scrolling:touch;">
+          <button class="hl-filter" data-name="" style="${_hlChip(!curFilter, '#e62429')}">全部 ${all.length}</button>
+          ${names.map(n => {
+            const cnt = all.filter(x => x.name === n).length;
+            return `<button class="hl-filter" data-name="${esc(n)}" style="${_hlChip(curFilter === n, window._heartColorOf(n))}">${esc(n)} ${cnt}</button>`;
+          }).join("")}
+        </div>
+      </div>
+      <div style="max-width:560px;margin:0 auto;padding:14px 16px 24px;">`;
+
+    // ===== 列表 =====
+    if (!log.length) {
+      html += `<div style="color:var(--muted);text-align:center;padding:48px 20px;font-size:13px;line-height:1.8;">
+        ${curFilter ? `「${esc(curFilter)}」还没有心声记录` : "还没有任何心声记录"}<br>
+        <span style="font-size:11px;opacity:.6;">和角色聊天触发心声后会自动记在这里</span>
+      </div>`;
+    } else {
+      html += log.map(h => {
+        const col = window._heartColorOf(h.name);
+        const first = esc((h.name || "?")[0].toUpperCase());
+        return `
+          <div style="background:var(--panel);border:1px solid var(--line);border-left:3px solid ${col};border-radius:14px;padding:14px;margin-bottom:11px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+              <div style="width:26px;height:26px;border-radius:50%;background:${col};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${first}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:700;color:${col};">${esc(h.name)}</div>
+                <div style="font-size:10.5px;color:var(--muted);">${new Date(h.ts).toLocaleString()}</div>
+              </div>
+            </div>
+            <div style="font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;word-break:break-word;padding-left:2px;">${esc(h.text)}</div>
+          </div>`;
+      }).join("");
+
+      // 清空按钮：有筛选时只清该联系人，否则清全部
+      html += `<button class="btn ghost" id="hlClear" style="width:100%;margin-top:6px;color:#e62429;border-color:#e62429;font-size:12px;">
+        🗑️ ${curFilter ? `清空「${esc(curFilter)}」的心声` : "清空全部心声记录"}
+      </button>`;
+    }
+
+    html += `</div>`;
+    div.innerHTML = html;
+    document.querySelector(".device").appendChild(div);
+
+    // ===== 事件 =====
+    div.querySelector("#hlClose").onclick = () => div.remove();
+
+    div.querySelectorAll(".hl-filter").forEach(btn => {
+      btn.onclick = () => {
+        const n = btn.dataset.name || null;
+        render(n);  // 切换筛选，重渲染
+      };
+    });
+
+    const clearBtn = div.querySelector("#hlClear");
+    if (clearBtn) clearBtn.onclick = () => {
+      if (curFilter) {
+        if (!confirm(`确定清空「${curFilter}」的全部心声吗？`)) return;
+        const kept = all.filter(x => x.name !== curFilter);
+        localStorage.setItem("sv_heart_log", JSON.stringify(kept));
+        toast("已清空该联系人心声");
+        render(null);  // 清完回到全部
+      } else {
+        if (!confirm("确定清空全部心声记录吗？")) return;
+        localStorage.removeItem("sv_heart_log");
+        toast("已清空");
+        render(null);
+      }
+    };
+  };
+
+  render(filterName || null);
+};
+
+// 筛选 chip 样式
+function _hlChip(active, color) {
+  return `flex-shrink:0;padding:7px 14px;border-radius:18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;`
+    + `border:1.5px solid ${active ? color : 'var(--line)'};`
+    + `background:${active ? color + '22' : 'var(--panel)'};`
+    + `color:${active ? color : 'var(--muted)'};`;
+}
+
 window.showMsgBanner = (sender, preview) => {
+  // ★ 免打扰：不弹横幅，消息已经存进聊天记录，点进信息自然能看到未读
+  if (window.isDndOn && window.isDndOn()) return;
+
   const el = document.getElementById("msgBanner");
   if (!el) return;
-  
+
+  // ★ 关键修复：每次都先彻底清掉旧的点击句柄和定时器，避免复用元素导致误触
+  el.onclick = null;
+  if (window._bannerTimer) { clearTimeout(window._bannerTimer); window._bannerTimer = null; }
+
   el.innerHTML = `
     <div class="banner-icon">💬</div>
-    <div class="banner-body">
+    <div class="banner-body" id="bannerBody" style="cursor:pointer;">
       <div class="banner-title">${esc(sender)}</div>
       <div class="banner-text">${esc(preview || "发来了一条新消息")}</div>
     </div>
+    <button id="bannerClose" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0;line-height:1;">✕</button>
   `;
-  el.classList.add("show");
-  
-  if (window._bannerTimer) clearTimeout(window._bannerTimer);
-  window._bannerTimer = setTimeout(() => {
-    el.classList.remove("show");
-  }, 10000);
-  
-  el.onclick = () => {
+
+  // 先不加 show，下一帧再加，避免"元素刚插入就被当前这次点击事件命中"
   el.classList.remove("show");
-  clearTimeout(window._bannerTimer);
 
-  // 🔒 遗忘魔咒：如果发信人是彼得且未解锁，只提示不跳转
-  if (isContactBlockedBySpell(sender)) {
-    toast("🔒 你收到了一条来自未知号码的消息");
-    return;
-  }
+  requestAnimationFrame(() => {
+    el.classList.add("show");
 
-  const previousUser = apps.messages.currentUser;
-  const previousView = apps.messages.view;
-  apps.messages.currentUser = sender;
-  apps.messages.view = "chat";
-  openApp("messages");
-};
+    const closeBanner = () => {
+      el.classList.remove("show");
+      if (window._bannerTimer) { clearTimeout(window._bannerTimer); window._bannerTimer = null; }
+    };
+
+    // 自动消失
+    window._bannerTimer = setTimeout(closeBanner, 10000);
+
+    // ✕ 关闭按钮：只关，不跳转
+    const closeBtn = el.querySelector("#bannerClose");
+    if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); closeBanner(); };
+
+    // ★ 点击主体才跳转，且延迟 300ms 才允许，彻底规避"弹出瞬间被点"
+    const bodyEl = el.querySelector("#bannerBody");
+    let clickable = false;
+    setTimeout(() => { clickable = true; }, 300);
+    if (bodyEl) bodyEl.onclick = () => {
+      if (!clickable) return;
+      closeBanner();
+      if (typeof isContactBlockedBySpell === "function" && isContactBlockedBySpell(sender)) {
+        toast("🔒 你收到了一条来自未知号码的消息");
+        return;
+      }
+      apps.messages.currentUser = sender;
+      apps.messages.view = "chat";
+      openApp("messages");
+    };
+  });
 };
 window.contactProactiveCheck = async function() {
   const all = store.get("sv_contact_proactive", {});
