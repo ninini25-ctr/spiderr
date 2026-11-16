@@ -5122,9 +5122,9 @@ async function callAI(messages, systemPrompt) {
     temperature: 0.8
   });
 
-  // ★ 关键 1：60 秒超时（世界线长剧情需要）
+  // ★ 关键 1：40 秒超时（世界线长剧情需要）
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 40000);
 
   try {
     const res = await fetch(url, {
@@ -5753,10 +5753,11 @@ ${Object.entries(roster.memory).map(([yr, ev]) => `- ${yr}：${ev}`).join("\n")}
   const years = Object.keys(roster.memory).map(Number).filter(yr => yr <= y).sort((a,b)=>b-a);
   const curYear = years[0];
   const curMemory = curYear ? roster.memory[curYear] : "";
-  const pastMemory = Object.entries(roster.memory)
-    .filter(([yr]) => Number(yr) <= y)
-    .map(([yr, ev]) => `- ${yr}：${ev}`)
-    .join("\n");
+  let pastMemory = Object.entries(roster.memory)
+  .filter(([yr]) => Number(yr) <= y)
+  .map(([yr, ev]) => `- ${yr}：${ev}`)
+  .join("\n");
+if (pastMemory.length > 800) pastMemory = pastMemory.slice(0, 800);
 
   return `
 
@@ -12086,9 +12087,21 @@ const attitude = affinityLevelHint(contactAff);
 const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
 const genderPronoun = _gi.pronoun;
 
-      const recent = arr.slice(-store.getChatConfig().maxContext * 2)
-        .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
-        .filter(m => m.content && m.content.trim() !== "");
+      let recent = arr.slice(-store.getChatConfig().maxContext * 2)
+  .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
+  .filter(m => m.content && m.content.trim() !== "");
+// ★ 字符总量封顶：从最新往回累加，超过 4000 字就不再往前带
+{
+  const MAX_CTX_CHARS = 4000;
+  let _total = 0;
+  const _kept = [];
+  for (let _i = recent.length - 1; _i >= 0; _i--) {
+    _total += (recent[_i].content || "").length;
+    if (_total > MAX_CTX_CHARS && _kept.length >= 4) break; // 至少保 4 条
+    _kept.unshift(recent[_i]);
+  }
+  recent = _kept;
+}
 
       // ============================================================
       // 🌟 群聊逻辑（完全独立，直接 return）
