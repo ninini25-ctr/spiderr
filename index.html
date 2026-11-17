@@ -8211,6 +8211,12 @@ Appearance: {
 
     body.innerHTML = `<div style="padding:14px">
       <div class="card">
+        <h3>🎨 主题预设</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">一键切换整体配色（会覆盖下方「自定义 CSS」）。</p >
+        <div id="themePresetGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;"></div>
+        <button class="btn ghost" id="themeResetBtn" style="margin-top:10px;font-size:12px;">↩️ 恢复默认（清空主题 CSS）</button>
+      </div>
+      <div class="card">
   <h3>🖼️ 桌面壁纸</h3>
   <div class="field">
     <label>上传图片（覆盖默认红色背景）</label>
@@ -8526,6 +8532,99 @@ body.querySelectorAll(".c-ref-trigger").forEach(btn => {
     }
   });
 });
+// 🎨 主题预设
+   const THEME_PRESETS = [
+      {
+        name: "☀️ 暖阳米茶", tag: "暖褐",
+        c1: "#17110b", c2: "#e08a3c",
+        css: `:root{--bg:#17110b;--panel:#221811;--panel-2:#2e211a;--text:#f6efe6;--muted:#b3a08f;--line:#3e2e24;--accent:#e08a3c;--accent-2:#c9a15a;--header-title-color:#fdf6ee;--card-title-color:#fdf6ee;--sidebar-title-color:#e08a3c;--dialogue-color:#e8c79a;--refresh-color:#c9a15a;--bubble-me-bg:#a55a1f;--bubble-them-bg:#2e211a;--bubble-them-text:#f6efe6;--app-header-bg:rgba(34,24,17,.92);--sidebar-text-color:#f0e6da;--input-comment-bg:#2e211a;--input-comment-text:#f6efe6;}
+body.theme-light{--bg:#f7f1e6;--panel:#fffdf8;--panel-2:#efe5d4;--text:#2a2018;--muted:#7a6a58;--line:#ddd0bb;--accent:#b5651d;--accent-2:#8a6d3b;--header-title-color:#2a2018;--card-title-color:#2a2018;--sidebar-title-color:#b5651d;--dialogue-color:#8a5a20;--refresh-color:#8a6d3b;--bubble-me-bg:#b5651d;--bubble-them-bg:#efe5d4;--bubble-them-text:#2a2018;--app-header-bg:rgba(255,253,248,.95);--sidebar-text-color:#3a2e22;--input-comment-bg:#efe5d4;--input-comment-text:#2a2018;}
+.story-content,.tw-text,.diary-detail-content,.mjn-clue-text,.th-quest-story,.bubble.them,.card,.field label,.field input,.field select,.field textarea,.btn.ghost,#customAct,.tw-comment-line,.th-option-btn{color:var(--text)!important;}
+.card h3,.app-header h1{color:var(--header-title-color)!important;}
+.story-content{color:var(--sidebar-text-color)!important;}
+.dialogue-text{color:var(--dialogue-color)!important;}
+.field input,.field select,.field textarea,#customAct,.composer input,.th-form-input,.th-form-textarea,.tw-comment-input{background:var(--panel-2)!important;color:var(--text)!important;border-color:var(--line)!important;}
+.daily-paper{background:#f3e9d2!important;border-color:#c9b48b!important;}
+.daily-paper,.daily-paper *{color:#2a2010!important;}`
+      },
+      {
+        name: "🌊 深海夜航", tag: "蓝黑 / 晴空蓝",
+        c1: "#0a111c", c2: "#4a9eff",
+        css: `:root{--bg:#0a111c;--panel:#111b2b;--panel-2:#172538;--text:#e8f0fa;--muted:#8a9bb3;--line:#223347;--accent:#4a9eff;--accent-2:#2bd4c0;--header-title-color:#f0f6ff;--card-title-color:#f0f6ff;--sidebar-title-color:#4a9eff;--dialogue-color:#8fd4ff;--refresh-color:#2bd4c0;--bubble-me-bg:#1f5fb0;--bubble-them-bg:#172538;--bubble-them-text:#e8f0fa;--app-header-bg:rgba(17,27,43,.92);--sidebar-text-color:#dce7f5;--input-comment-bg:#172538;--input-comment-text:#e8f0fa;}
+body.theme-light{--bg:#eef4fb;--panel:#ffffff;--panel-2:#e2ecf7;--text:#15293f;--muted:#5f7891;--line:#cadbed;--accent:#1f7ae0;--accent-2:#0fa89a;--header-title-color:#15293f;--card-title-color:#15293f;--sidebar-title-color:#1f7ae0;--dialogue-color:#1f6aa8;--refresh-color:#0fa89a;--bubble-me-bg:#1f7ae0;--bubble-them-bg:#e2ecf7;--bubble-them-text:#15293f;--app-header-bg:rgba(255,255,255,.95);--sidebar-text-color:#24384f;--input-comment-bg:#e2ecf7;--input-comment-text:#15293f;}
+.story-content,.tw-text,.diary-detail-content,.mjn-clue-text,.th-quest-story,.bubble.them,.card,.field label,.field input,.field select,.field textarea,.btn.ghost,#customAct,.tw-comment-line,.th-option-btn{color:var(--text)!important;}
+.card h3,.app-header h1{color:var(--header-title-color)!important;}
+.story-content{color:var(--sidebar-text-color)!important;}
+.dialogue-text{color:var(--dialogue-color)!important;}
+.field input,.field select,.field textarea,#customAct,.composer input,.th-form-input,.th-form-textarea,.tw-comment-input{background:var(--panel-2)!important;color:var(--text)!important;border-color:var(--line)!important;}`
+      },
+      {
+        name: "🌸 樱雪绯红", tag: "粉黑 / 樱花粉",
+        c1: "#1a0e14", c2: "#ff6b9d",
+        css: `:root{--bg:#1a0e14;--panel:#26151f;--panel-2:#331b28;--text:#fbeef3;--muted:#c0a0ae;--line:#43283a;--accent:#ff6b9d;--accent-2:#ffa8c5;--header-title-color:#fff0f6;--card-title-color:#fff0f6;--sidebar-title-color:#ff6b9d;--dialogue-color:#ffb3cf;--refresh-color:#ffa8c5;--bubble-me-bg:#c94576;--bubble-them-bg:#331b28;--bubble-them-text:#fbeef3;--app-header-bg:rgba(38,21,31,.92);--sidebar-text-color:#f5e0ea;--input-comment-bg:#331b28;--input-comment-text:#fbeef3;}
+body.theme-light{--bg:#fdf0f5;--panel:#ffffff;--panel-2:#fbe2ec;--text:#3a1a28;--muted:#9a6a7e;--line:#f0c9db;--accent:#e0457c;--accent-2:#e87aa8;--header-title-color:#3a1a28;--card-title-color:#3a1a28;--sidebar-title-color:#e0457c;--dialogue-color:#c04070;--refresh-color:#e87aa8;--bubble-me-bg:#e0457c;--bubble-them-bg:#fbe2ec;--bubble-them-text:#3a1a28;--app-header-bg:rgba(255,255,255,.95);--sidebar-text-color:#4a2434;--input-comment-bg:#fbe2ec;--input-comment-text:#3a1a28;}
+.story-content,.tw-text,.diary-detail-content,.mjn-clue-text,.th-quest-story,.bubble.them,.card,.field label,.field input,.field select,.field textarea,.btn.ghost,#customAct,.tw-comment-line,.th-option-btn{color:var(--text)!important;}
+.card h3,.app-header h1{color:var(--header-title-color)!important;}
+.story-content{color:var(--sidebar-text-color)!important;}
+.dialogue-text{color:var(--dialogue-color)!important;}
+.field input,.field select,.field textarea,#customAct,.composer input,.th-form-input,.th-form-textarea,.tw-comment-input{background:var(--panel-2)!important;color:var(--text)!important;border-color:var(--line)!important;}`
+      },
+      {
+        name: "🎋 墨竹青山", tag: "墨绿 / 新竹青",
+        c1: "#0d150f", c2: "#5ab87a",
+        css: `:root{--bg:#0d150f;--panel:#141f17;--panel-2:#1c2b20;--text:#e9f2ea;--muted:#92a897;--line:#273a2c;--accent:#5ab87a;--accent-2:#a8c96e;--header-title-color:#f0f8f1;--card-title-color:#f0f8f1;--sidebar-title-color:#5ab87a;--dialogue-color:#a8d9b5;--refresh-color:#a8c96e;--bubble-me-bg:#3a7d52;--bubble-them-bg:#1c2b20;--bubble-them-text:#e9f2ea;--app-header-bg:rgba(20,31,23,.92);--sidebar-text-color:#dcebdf;--input-comment-bg:#1c2b20;--input-comment-text:#e9f2ea;}
+body.theme-light{--bg:#eef6ef;--panel:#ffffff;--panel-2:#dfeee2;--text:#1a2e1f;--muted:#5f7a66;--line:#c6dccb;--accent:#2f8f54;--accent-2:#6a9a2e;--header-title-color:#1a2e1f;--card-title-color:#1a2e1f;--sidebar-title-color:#2f8f54;--dialogue-color:#2a7046;--refresh-color:#6a9a2e;--bubble-me-bg:#2f8f54;--bubble-them-bg:#dfeee2;--bubble-them-text:#1a2e1f;--app-header-bg:rgba(255,255,255,.95);--sidebar-text-color:#24402c;--input-comment-bg:#dfeee2;--input-comment-text:#1a2e1f;}
+.story-content,.tw-text,.diary-detail-content,.mjn-clue-text,.th-quest-story,.bubble.them,.card,.field label,.field input,.field select,.field textarea,.btn.ghost,#customAct,.tw-comment-line,.th-option-btn{color:var(--text)!important;}
+.card h3,.app-header h1{color:var(--header-title-color)!important;}
+.story-content{color:var(--sidebar-text-color)!important;}
+.dialogue-text{color:var(--dialogue-color)!important;}
+.field input,.field select,.field textarea,#customAct,.composer input,.th-form-input,.th-form-textarea,.tw-comment-input{background:var(--panel-2)!important;color:var(--text)!important;border-color:var(--line)!important;}`
+      },
+      {
+        name: "🔮 暗夜紫晶", tag: "紫黑 / 薰衣草",
+        c1: "#120d1c", c2: "#a06bff",
+        css: `:root{--bg:#120d1c;--panel:#1c1430;--panel-2:#261a40;--text:#efeafa;--muted:#a394c0;--line:#352748;--accent:#a06bff;--accent-2:#ff8ad4;--header-title-color:#f5f0ff;--card-title-color:#f5f0ff;--sidebar-title-color:#a06bff;--dialogue-color:#c9a8ff;--refresh-color:#ff8ad4;--bubble-me-bg:#6e3fb0;--bubble-them-bg:#261a40;--bubble-them-text:#efeafa;--app-header-bg:rgba(28,20,48,.92);--sidebar-text-color:#e5dcf5;--input-comment-bg:#261a40;--input-comment-text:#efeafa;}
+body.theme-light{--bg:#f4f0fb;--panel:#ffffff;--panel-2:#e9e1f7;--text:#281a3a;--muted:#7a6a96;--line:#d6c9ec;--accent:#7a46d0;--accent-2:#d04fa0;--header-title-color:#281a3a;--card-title-color:#281a3a;--sidebar-title-color:#7a46d0;--dialogue-color:#6a3fb0;--refresh-color:#d04fa0;--bubble-me-bg:#7a46d0;--bubble-them-bg:#e9e1f7;--bubble-them-text:#281a3a;--app-header-bg:rgba(255,255,255,.95);--sidebar-text-color:#352448;--input-comment-bg:#e9e1f7;--input-comment-text:#281a3a;}
+.story-content,.tw-text,.diary-detail-content,.mjn-clue-text,.th-quest-story,.bubble.them,.card,.field label,.field input,.field select,.field textarea,.btn.ghost,#customAct,.tw-comment-line,.th-option-btn{color:var(--text)!important;}
+.card h3,.app-header h1{color:var(--header-title-color)!important;}
+.story-content{color:var(--sidebar-text-color)!important;}
+.dialogue-text{color:var(--dialogue-color)!important;}
+.field input,.field select,.field textarea,#customAct,.composer input,.th-form-input,.th-form-textarea,.tw-comment-input{background:var(--panel-2)!important;color:var(--text)!important;border-color:var(--line)!important;}`
+      }
+    ];
+    const presetGrid = body.querySelector("#themePresetGrid");
+    if (presetGrid) {
+      presetGrid.innerHTML = THEME_PRESETS.map((p, i) => `
+        <button class="theme-preset" data-idx="${i}" style="padding:12px 10px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel-2);cursor:pointer;text-align:left;overflow:hidden;position:relative;">
+          <div style="display:flex;gap:4px;margin-bottom:8px;">
+            <span style="width:22px;height:22px;border-radius:6px;background:${p.c1};border:1px solid rgba(255,255,255,.2);"></span>
+            <span style="width:22px;height:22px;border-radius:6px;background:${p.c2};"></span>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);">${esc(p.name)}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">${esc(p.tag)}</div>
+        </button>`).join("");
+      presetGrid.querySelectorAll(".theme-preset").forEach(el => {
+        el.onclick = () => {
+          const p = THEME_PRESETS[parseInt(el.dataset.idx)];
+          cfg.customCss = p.css;
+          store.set("sv_appearance", cfg);
+          applyAppearance();
+          const ta = body.querySelector("#ap_css");
+          if (ta) ta.value = p.css;
+          toast("已应用：" + p.name);
+        };
+      });
+    }
+    const themeResetBtn = body.querySelector("#themeResetBtn");
+    if (themeResetBtn) themeResetBtn.onclick = () => {
+      cfg.customCss = "";
+      store.set("sv_appearance", cfg);
+      applyAppearance();
+      const ta = body.querySelector("#ap_css");
+      if (ta) ta.value = "";
+      toast("已恢复默认配色");
+    };
+
     // 自定义 CSS
     body.querySelector("#save_css").onclick = () => {
       cfg.customCss = body.querySelector("#ap_css").value;
@@ -11100,7 +11199,7 @@ const descHtml = isLockedPeter
         </div>`;
       }).join("");
 
-      body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn" style="margin-bottom:8px;">➕ 添加联系人</button><button class="btn ghost" id="heartLogBtn">💭 心声记录</button></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contactsWithNote}</div></div>`;
+     body.innerHTML = `<div style="padding:14px"><div class="card"><button class="btn" id="addContactBtn" style="margin-bottom:8px;">➕ 添加联系人</button><div class="row" style="gap:8px;"><button class="btn ghost" id="heartLogBtn" style="flex:1;">💭 心声记录</button><button class="btn ghost" id="favBtn" style="flex:1;">⭐ 重要瞬间</button></div></div><div class="card"><h3>联系人 (${contacts.length})</h3>${contactsWithNote}</div></div>`;
 
       body.querySelectorAll(".chat-row").forEach(el => {
         el.onclick = () => {
@@ -11111,7 +11210,9 @@ const descHtml = isLockedPeter
       });
 
       const heartLogBtn = body.querySelector("#heartLogBtn");
-if (heartLogBtn) heartLogBtn.onclick = () => window.showHeartLog();
+      if (heartLogBtn) heartLogBtn.onclick = () => window.showHeartLog();
+      const favBtn = body.querySelector("#favBtn");
+      if (favBtn) favBtn.onclick = () => window.showFavMessages();
 
 body.querySelector("#addContactBtn").onclick = async () => {
         const ans = prompt("添加联系人：\n\n可选：1 彼得·帕克  2 内德·利兹  3 米歇尔·琼斯  4 梅婶\n或直接输入自定义名字，或输入「随机」让AI生成");
@@ -11320,6 +11421,8 @@ chatHtml += `<div style="flex-shrink:0;padding:8px 14px;background:var(--panel);
   <button id="backToListBtn" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;">‹</button>
   ${titleAvatar}
   <div style="font-size:13px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${isGroupTop ? "" : "当前对话："}${titleNameHtml}</div>
+ ${(store.getChatConfig().lang === "en") ? `<button id="transAllBtn" title="全屏翻译当前对话" style="background:none;border:none;color:var(--accent-2);font-size:16px;cursor:pointer;padding:4px 8px;line-height:1;">🌐</button>` : ""}
+  ${isGroupTop ? "" : `<button id="slimChatBtn" title="精简：把旧消息总结进记忆再清理，好感度保留" style="background:none;border:none;color:var(--accent-2);font-size:16px;cursor:pointer;padding:4px 8px;line-height:1;">🧹</button>`}
   <button id="clearChatBtn" title="清空聊天记录" style="background:none;border:none;color:var(--accent);font-size:16px;cursor:pointer;padding:4px 8px;line-height:1;">🗑️</button>
 </div>`;
 
@@ -11539,6 +11642,16 @@ if (clearBtn) {
     self.render(body);
   };
 }
+
+const slimBtn = body.querySelector("#slimChatBtn");
+if (slimBtn) {
+  slimBtn.onclick = () => window.slimChatNow(self.currentUser);
+}
+
+const transAllBtn = body.querySelector("#transAllBtn");
+if (transAllBtn) {
+  transAllBtn.onclick = () => window.translateAllNow(self.currentUser, body);
+}
 // ===== 群名点击改名 =====
 const gLabel = body.querySelector("#groupNameLabel");
 if (gLabel) {
@@ -11670,7 +11783,17 @@ if (gLabel) {
     }
   };
 
+  // ⭐ 收藏
+  const favItem = document.createElement("div");
+  favItem.style.cssText = "padding:8px;cursor:pointer;border-bottom:1px solid #444;color:#e08a3c;";
+  favItem.textContent = "⭐ 收藏为重要瞬间";
+  favItem.onclick = () => {
+    window.favMessage(self.currentUser, msg);
+    menu.remove();
+  };
+
   menu.appendChild(copyItem);
+menu.appendChild(favItem);
 menu.appendChild(quoteItem);
 menu.appendChild(delItem);
 document.body.appendChild(menu);
@@ -13727,7 +13850,7 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
 // ============================================================
 // ★ 修复版：混合生成评论（排除发帖人自己、账号隔离、MJ纯旁观定位、楼主楼中楼回复）
 // ============================================================
-async generateMixedComments(postText, postName) {
+async generateMixedComments(postText, postName, maxContacts) {
   const sNow = store.getState();
   const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有评论必须符合这个时间点。\n\n`;
   const profile = store.getProfile();
@@ -13775,6 +13898,12 @@ if (_isAvenger(postName) || isPeterPost) {
   contactsList = filtered.length >= 1
     ? filtered
     : contactsList.filter(c => _isAvenger(c) && c !== postName);
+}
+
+// ★ 为你推荐：只让随机 2~5 个联系人评论（maxContacts 传入时生效）
+if (typeof maxContacts === "number" && maxContacts > 0 && contactsList.length > maxContacts) {
+  const shuffled = contactsList.slice().sort(() => Math.random() - 0.5);
+  contactsList = shuffled.slice(0, maxContacts);
 }
 
   // ★ 核心修复 2：若发帖人是彼得，禁止“蜘蛛侠/Spider-Man”以独立账号形式在评论区现身；
@@ -13827,9 +13956,12 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
 1. 绝对不要生成发帖人「${postName}」自己的主评论！发帖人不会在自己的评论区开新楼评论自己。
 2. ${isPeterPost ? "绝对不要出现任何名为「蜘蛛侠」或「Spider-Man」的评论者！" : ""}
 3. 严格符合每个角色的人设与性格，评论短小真实（15-50字），有社交平台鲜活感。
+4. 【姓名列】只写角色的中文名本身（如"彼得·帕克""托尼·斯塔克"），**绝对不要**写成英文 handle（如 peterparker）、不要加 @、不要加括号账号。
+5. 【评论内容】里**绝对不要**出现任何 @某人 的 handle（如 @friendlyneighborhood、@tonystark）。如果要回应别人，直接说名字即可，不要带 @ 和英文账号。
 
 【格式 · 严格每行一条】
-姓名 ||| 评论内容`, "twitter");
+姓名 ||| 评论内容
+注意：姓名严格从允许名单里原样复制，一字不差；评论内容里不准出现任何 @handle。`, "twitter");
 
     try {
       const res = await callAI([{ role: "user", content: "生成联系人评论" }], contactPrompt);
@@ -13839,12 +13971,19 @@ ${contactsList.map(n => `- ${n}`).join("\n")}
         if (m && isChinese(m[1]) && isChinese(m[2])) return m[1].trim();
         return s;
       };
-     res.split('\n').filter(l => l.includes('|||')).forEach(line => {
-  const [u, t] = line.split('|||').map(x => x.trim());
+    const stripHandles = (s) => String(s || "")
+  .replace(/@[a-zA-Z0-9_]+/g, "")          // 去掉 @englishhandle
+  .replace(/@[\u4e00-\u9fa5·]+/g, "")       // 去掉 @中文名
+  .replace(/\s{2,}/g, " ")
+  .trim();
+res.split('\n').filter(l => l.includes('|||')).forEach(line => {
+  let [u, t] = line.split('|||').map(x => x.trim());
   if (!u || !t) return;
+  // 姓名列去掉可能混进来的 @ 和 handle
+  u = u.replace(/@[a-zA-Z0-9_]+/g, "").replace(/^@/, "").trim();
   // 代码硬核拦截：彻底排除发帖人和蜘蛛侠
   if (u === postName || (isPeterPost && (u === "彼得·帕克" || u.includes("蜘蛛侠") || /spider/i.test(u)))) return;
-  contactComments.push({ user: u, text: clean(t), replies: [], _isContact: true });
+  contactComments.push({ user: u, text: stripHandles(t), replies: [], _isContact: true });
 });
     } catch (e) {
     console.warn("联系人评论生成失败:", e);
@@ -13940,10 +14079,10 @@ ${buildBlacklistBanText([...banNames, ...contactsList])}
 },
 
 // 带一次重试 + 超时保护的评论生成
-async generateMixedCommentsSafe(postText, postName) {
+async generateMixedCommentsSafe(postText, postName, maxContacts) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const mixed = await this.generateMixedComments(postText, postName);
+      const mixed = await this.generateMixedComments(postText, postName, maxContacts);
       if (Array.isArray(mixed) && mixed.length) return mixed;
     } catch (e) {
       console.warn(`[评论生成] 第 ${attempt + 1} 次失败:`, e.message);
@@ -14153,31 +14292,39 @@ const cleanName = (raw) => {
   if (!handle.startsWith("@")) handle = "@" + handle;
 
   all.twitter.unshift({
-    id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-    name,
-    handle,
-    text,
-    likes: parseInt(likes) || 0,
-    retweetCount: Math.floor(Math.random() * 500) + 10,  // ★ 随机转帖数
-    feed: isFollowing ? "following" : "foryou",
-    comments: this.parseComments(`x ||| ${commentsStr || ""}`)
+  id: "tw_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+  name,
+  handle,
+  text,
+  likes: parseInt(likes) || 0,
+  retweetCount: Math.floor(Math.random() * 500) + 10,
+  feed: isFollowing ? "following" : "foryou",
+  comments: this.parseComments(commentsStr || "")
   });
 });
 
 store.setPosts(all);
 this.render(body);
 
-// ★ 后处理：只给前 4 条帖补"联系人全出"，串行 + 节流，避免限流/超时
-// （第 5 条及之后保留第一步 parseComments 产出的陌生人评论，不再额外调 AI）
-const newPosts = all.twitter.filter(p => p.feed === (isFollowing ? "following" : "foryou")).slice(0, 4);
+// ★ 顶部进度条（帖子已渲染，这里单独放一个浮层报后处理进度）
+let _progBar = document.createElement("div");
+_progBar.className = "__tw_progress";
+_progBar.style.cssText = "position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(45,107,255,.95);color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.3);display:flex;align-items:center;gap:8px;";
+_progBar.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;"></span><span id="twProgText">正在补充评论...</span>`;
+document.body.appendChild(_progBar);
+
+// ★ 后处理：只给前 5 条帖补"联系人全出"，串行 + 节流，避免限流/超时
+const newPosts = all.twitter.filter(p => p.feed === (isFollowing ? "following" : "foryou")).slice(0, 5);
 for (let _i = 0; _i < newPosts.length; _i++) {
   const p = newPosts[_i];
+  // ★ 进度提示
+ const _pt = document.getElementById("twProgText");
+if (_pt) _pt.textContent = `正在生成评论 ${_i + 1}/${newPosts.length}...`;
   try {
-    // 节流：从第 2 条开始，每条之间隔 1500ms
-    if (_i > 0) await new Promise(r => setTimeout(r, 1500));
-
-    const mixed = await this.generateMixedCommentsSafe(p.text, p.name);
-    // 两次都失败 → 跳过这条，保留它第一步的陌生人评论
+    if (_i > 0) await new Promise(r => setTimeout(r, 900));
+    // 为你推荐：每帖随机 2~5 个联系人；正在关注：全员
+const _maxC = isFollowing ? undefined : (2 + Math.floor(Math.random() * 4)); // 2~5
+const mixed = await this.generateMixedCommentsSafe(p.text, p.name, _maxC);
     if (!mixed.length) continue;
 
     // ★ 合并去重：优先保留 AI 原本生成的（如果有），补足联系人
@@ -14224,8 +14371,10 @@ if (idx !== -1) {
   } catch (_) {}
 }
 
+if (_progBar && _progBar.parentNode) _progBar.remove();
 this.render(body);
       } catch (e) {
+        if (typeof _progBar !== "undefined" && _progBar && _progBar.parentNode) _progBar.remove();
         toast(e.message);
       }
     },
@@ -14240,13 +14389,15 @@ this.render(body);
   };
 
   let list = str.split(';;').map(c => {
-    const idx = c.search(/[:：]/);
-    if (idx === -1) return null;
-    const user = c.slice(0, idx).trim();
-    const text = c.slice(idx + 1).trim();
-    if (!user || !text) return null;
-    return { user, text: clean(text), replies: [] };
-  }).filter(Boolean);
+  const idx = c.search(/[:：]/);
+  if (idx === -1) return null;
+  let user = c.slice(0, idx).trim();
+  // ★ 清掉残留的 "x |||" / "||" / 前导 @ 等脏前缀
+  user = user.replace(/^x\s*\|{2,}\s*/i, "").replace(/^\|{2,}\s*/, "").replace(/^@+/, "").trim();
+  const text = c.slice(idx + 1).trim();
+  if (!user || !text) return null;
+  return { user, text: clean(text), replies: [] };
+}).filter(Boolean);
 
   // ★ 兜底：少于 5 条时本地补足
   if (list.length < 5) {
@@ -15394,7 +15545,8 @@ try { window.triggerPostReactionSMS(text, "instagram"); } catch(e){}
 
     // 刷新（AI 随机生成 IG 帖）
     body.querySelector("#igRefreshBtn").onclick = async () => {
-      body.innerHTML = `<div class="loader"><div class="spin"></div>生成 5 条新帖子中（含配图，请稍候）...</div>`;
+  const _n = parseInt(localStorage.getItem("sv_ig_refresh_count") || "5") || 5;
+  body.innerHTML = `<div class="loader"><div class="spin"></div>正在生成 ${_n} 条帖子（图片稍后点击再生成）...</div>`;
       try {
         const sNow = store.getState();
         const dateHint = `【当前游戏内日期】${sNow.gameYear}年${sNow.gameMonth}月${sNow.gameDay}日。所有 IG 帖子必须符合这个时间点。\n\n`;
@@ -24508,6 +24660,273 @@ function _hlChip(active, color) {
     + `color:${active ? color : 'var(--muted)'};`;
 }
 
+// 🧹 精简进度浮层
+window._slimProgress = (text, type) => {
+  let el = document.getElementById("__slim_overlay");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "__slim_overlay";
+    el.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;";
+    el.innerHTML = `<div id="__slim_box" style="background:var(--panel,#14141c);border:1px solid var(--line,#2a2a38);border-radius:18px;padding:26px 28px;min-width:220px;max-width:80vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+      <div id="__slim_icon" style="font-size:38px;margin-bottom:14px;">🧹</div>
+      <div id="__slim_spin" style="width:26px;height:26px;border:3px solid var(--line,#333);border-top-color:var(--accent-2,#2d6bff);border-radius:50%;animation:sp .9s linear infinite;margin:0 auto 14px;"></div>
+      <div id="__slim_text" style="font-size:13px;color:var(--text,#f2f3f7);line-height:1.6;"></div>
+    </div>`;
+    document.body.appendChild(el);
+  }
+  const txt = el.querySelector("#__slim_text");
+  const icon = el.querySelector("#__slim_icon");
+  const spin = el.querySelector("#__slim_spin");
+  if (txt) txt.textContent = text;
+  if (type === "done") { if (icon) icon.textContent = "✅"; if (spin) spin.style.display = "none"; }
+  else if (type === "error") { if (icon) icon.textContent = "⚠️"; if (spin) spin.style.display = "none"; }
+  else { if (icon) icon.textContent = "🧹"; if (spin) spin.style.display = "block"; }
+};
+window._slimClose = () => {
+  const el = document.getElementById("__slim_overlay");
+  if (el) el.remove();
+};
+
+window.slimChatNow = async (name) => {
+  if (!name) return toast("没有选中联系人");
+
+  const chats = store.getChats();
+  const arr = chats[name] || [];
+  const KEEP = 6;
+
+  if (arr.length <= KEEP) {
+    return toast(`当前对话只有 ${arr.length} 条，无需精简`);
+  }
+
+  const toCount = arr.length - KEEP;
+  if (!confirm(
+    `精简与「${name}」的对话：\n\n` +
+    `· 把较早的 ${toCount} 条总结进「记忆」App\n` +
+    `· 只保留最近 ${KEEP} 条\n` +
+    `· 好感度、记忆完整保留\n\n确认继续？`
+  )) return;
+
+  const headPart = arr.slice(0, toCount);
+  const tailPart = arr.slice(toCount);
+
+  window._slimProgress(`精简中… 正在总结 ${toCount} 条旧消息`, "loading");
+
+  try {
+    // 1. 临时把聊天截断成只含旧消息，供 doSummarize 总结
+    const tmp = store.getChats();
+    tmp[name] = headPart;
+    store.setChats(tmp);
+
+    window._slimProgress(`精简中… AI 正在归档到记忆（可能需要几秒）`, "loading");
+
+    const cfg = store.getMemoryCfg();
+    await apps.Memory.doSummarize({
+      tags: [name],
+      sourceName: name,
+      scope: "all",
+      wordMin: cfg.wordMin || 100,
+      wordMax: cfg.wordMax || 150,
+      requirement: cfg.requirement || "",
+      split: cfg.splitByEvent !== false
+    });
+
+    window._slimProgress(`精简中… 正在清理原始聊天`, "loading");
+
+    // 2. 成功 → 聊天只留最近 KEEP 条
+    const finalChats = store.getChats();
+    finalChats[name] = tailPart;
+    store.setChats(finalChats);
+
+    // 3. 同步总结游标
+    try {
+      const mc = store.getMemoryCfg();
+      mc.lastSummarizedIndex = mc.lastSummarizedIndex || {};
+      mc.lastSummarizedIndex[name] = tailPart.length;
+      store.setMemoryCfg(mc);
+    } catch (e) {}
+
+    window._slimProgress(`✅ 完成！\n${toCount} 条已归档，保留最近 ${KEEP} 条`, "done");
+    setTimeout(() => {
+      window._slimClose();
+      if (currentApp === "messages" && apps.messages.currentUser === name) {
+        apps.messages.render(document.getElementById("appBody"));
+      }
+    }, 1400);
+
+  } catch (e) {
+    // 失败回滚：还原完整聊天，绝不丢消息
+    try {
+      const restore = store.getChats();
+      restore[name] = arr;
+      store.setChats(restore);
+    } catch (_) {}
+    window._slimProgress(`⚠️ 精简失败，已还原对话\n${e.message}`, "error");
+    setTimeout(() => window._slimClose(), 2600);
+  }
+};
+
+// 🌐 一键翻译整屏（翻译当前对话里所有未翻译的对方英文消息）
+window.translateAllNow = async (name, body) => {
+  if (!name) return;
+  const chats = store.getChats();
+  const arr = chats[name] || [];
+  // 找出对方发的、含英文、还没翻译的
+  const targets = [];
+  arr.forEach((m, i) => {
+    if (m.role !== "them") return;
+    if (m.translation) return;
+    const c = m.content || "";
+    if (/[a-zA-Z]{3,}/.test(c) && !c.startsWith("[语音]")) targets.push(i);
+  });
+  if (!targets.length) return toast("没有需要翻译的英文消息");
+
+  toast(`正在翻译 ${targets.length} 条...`);
+  try {
+    // 组装编号列表，一次性翻译
+    const listText = targets.map((idx, k) => `${k + 1}. ${arr[idx].content}`).join("\n");
+    const sys = `你是翻译助手。把下面每一条英文句子翻译成自然的中文，保持编号一一对应。
+只输出翻译结果，格式严格为"编号. 中文"，每行一条，不要原文、不要解释。
+
+${listText}`;
+    const res = await callAI([{ role: "user", content: "翻译" }], sys);
+
+    // 解析"1. 中文"
+    const map = {};
+    String(res || "").split("\n").forEach(line => {
+      const m = line.match(/^\s*(\d+)[\.\、\:：]\s*(.+)$/);
+      if (m) map[parseInt(m[1])] = m[2].trim();
+    });
+
+    const chatsNow = store.getChats();
+    const arrNow = chatsNow[name] || [];
+    let done = 0;
+    targets.forEach((idx, k) => {
+      const t = map[k + 1];
+      if (t && arrNow[idx]) { arrNow[idx].translation = t; done++; }
+    });
+    chatsNow[name] = arrNow;
+    store.setChats(chatsNow);
+
+    if (apps.messages.currentUser === name && apps.messages.view === "chat") {
+      apps.messages.render(body || document.getElementById("appBody"));
+    }
+    toast(`✅ 已翻译 ${done} 条`);
+  } catch (e) {
+    toast("翻译失败：" + e.message);
+  }
+};
+
+// ⭐ 重要对话收藏
+window.favMessage = (name, msg) => {
+  if (!name || !msg) return;
+  try {
+    const list = JSON.parse(localStorage.getItem("sv_fav_messages") || "[]");
+    list.push({
+      id: "fav_" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
+      name,
+      role: msg.role,
+      content: msg.content || "",
+      quote: msg.quote || "",
+      ts: Date.now()
+    });
+    localStorage.setItem("sv_fav_messages", JSON.stringify(list));
+    toast("⭐ 已收藏为重要瞬间");
+  } catch (e) { toast("收藏失败"); }
+};
+
+window.showFavMessages = (filterName) => {
+  const render = (curFilter) => {
+    let all = [];
+    try { all = JSON.parse(localStorage.getItem("sv_fav_messages") || "[]"); } catch (e) {}
+    const names = [];
+    all.forEach(f => { if (f.name && !names.includes(f.name)) names.push(f.name); });
+    let list = curFilter ? all.filter(x => x.name === curFilter) : all.slice();
+    list = list.reverse();
+
+    document.querySelectorAll(".__fav_panel").forEach(el => el.remove());
+    const div = document.createElement("div");
+    div.className = "__fav_panel";
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;overflow-y:auto;color:var(--text);";
+
+    const colorOf = (n) => (window._heartColorOf ? window._heartColorOf(n) : "#e08a3c");
+
+    let html = `
+      <div style="position:sticky;top:0;z-index:5;background:linear-gradient(135deg,#e08a3c22,var(--bg));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:18px 18px 12px;border-bottom:1px solid var(--line);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:10px;letter-spacing:3px;color:#e08a3c;font-weight:700;">MOMENTS</div>
+            <div style="font-size:19px;font-weight:800;color:var(--text);margin-top:2px;">⭐ 重要瞬间</div>
+          </div>
+          <button class="btn ghost" id="favClose" style="width:auto;padding:5px 14px;font-size:12px;">关闭</button>
+        </div>
+        <div style="display:flex;gap:6px;overflow-x:auto;padding:12px 0 2px;margin-top:4px;-webkit-overflow-scrolling:touch;">
+          <button class="fav-filter" data-name="" style="${_favChip(!curFilter,'#e08a3c')}">全部 ${all.length}</button>
+          ${names.map(n => {
+            const cnt = all.filter(x => x.name === n).length;
+            return `<button class="fav-filter" data-name="${esc(n)}" style="${_favChip(curFilter===n, colorOf(n))}">${esc(n)} ${cnt}</button>`;
+          }).join("")}
+        </div>
+      </div>
+      <div style="max-width:560px;margin:0 auto;padding:14px 16px 24px;">`;
+
+    if (!list.length) {
+      html += `<div style="color:var(--muted);text-align:center;padding:48px 20px;font-size:13px;line-height:1.8;">
+        ${curFilter ? `「${esc(curFilter)}」还没有收藏` : "还没有收藏任何对话"}<br>
+        <span style="font-size:11px;opacity:.6;">在聊天里双击/长按消息 → 收藏</span></div>`;
+    } else {
+      html += list.map(f => {
+        const col = colorOf(f.name);
+        const who = f.role === "me" ? "我" : f.name;
+        return `
+          <div style="background:var(--panel);border:1px solid var(--line);border-left:3px solid ${col};border-radius:14px;padding:14px;margin-bottom:11px;box-shadow:0 2px 8px rgba(0,0,0,.06);position:relative;">
+            <button class="fav-del" data-id="${f.id}" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;">✕</button>
+            <div style="font-size:11px;color:${col};font-weight:700;margin-bottom:8px;">${esc(f.name)} · ${new Date(f.ts).toLocaleString()}</div>
+            ${f.quote ? `<div style="font-size:11px;color:var(--muted);border-left:2px solid var(--line);padding-left:6px;margin-bottom:6px;">引用: ${esc(f.quote)}</div>` : ""}
+            <div style="font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;word-break:break-word;"><b style="color:${col};">${esc(who)}：</b>${esc(f.content)}</div>
+          </div>`;
+      }).join("");
+      html += `<button class="btn ghost" id="favClear" style="width:100%;margin-top:6px;color:#e62429;border-color:#e62429;font-size:12px;">🗑️ ${curFilter ? `清空「${esc(curFilter)}」` : "清空全部收藏"}</button>`;
+    }
+    html += `</div>`;
+    div.innerHTML = html;
+    document.querySelector(".device").appendChild(div);
+
+    div.querySelector("#favClose").onclick = () => div.remove();
+    div.querySelectorAll(".fav-filter").forEach(b => { b.onclick = () => render(b.dataset.name || null); });
+    div.querySelectorAll(".fav-del").forEach(b => {
+      b.onclick = () => {
+        const id = b.dataset.id;
+        const kept = (JSON.parse(localStorage.getItem("sv_fav_messages") || "[]")).filter(x => x.id !== id);
+        localStorage.setItem("sv_fav_messages", JSON.stringify(kept));
+        toast("已移除");
+        render(curFilter);
+      };
+    });
+    const cb = div.querySelector("#favClear");
+    if (cb) cb.onclick = () => {
+      if (curFilter) {
+        if (!confirm(`清空「${curFilter}」的收藏？`)) return;
+        const kept = (JSON.parse(localStorage.getItem("sv_fav_messages") || "[]")).filter(x => x.name !== curFilter);
+        localStorage.setItem("sv_fav_messages", JSON.stringify(kept));
+        render(null);
+      } else {
+        if (!confirm("清空全部收藏？")) return;
+        localStorage.removeItem("sv_fav_messages");
+        render(null);
+      }
+      toast("已清空");
+    };
+  };
+  render(filterName || null);
+};
+
+function _favChip(active, color) {
+  return `flex-shrink:0;padding:7px 14px;border-radius:18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;`
+    + `border:1.5px solid ${active ? color : 'var(--line)'};`
+    + `background:${active ? color + '22' : 'var(--panel)'};`
+    + `color:${active ? color : 'var(--muted)'};`;
+}
+
 window.showMsgBanner = (sender, preview) => {
   // ★ 免打扰：不弹横幅，消息已经存进聊天记录，点进信息自然能看到未读
   if (window.isDndOn && window.isDndOn()) return;
@@ -24602,10 +25021,12 @@ window.contactProactiveCheck = async function() {
       const gi = getGenderInfo(profile);
       const aff = getAffinityOf(name);
       const chats = store.getChats();
-      const arr = (chats[name] || []).slice(-6).map(m => ({
-        role: m.role === "me" ? "user" : "assistant",
-        content: (m.content || "").replace(/HEART\s*[:：][\s\S]*/i, "").trim()
-      })).filter(m => m.content);
+let rawArr = (chats[name] || []).slice();
+while (rawArr.length && rawArr[rawArr.length - 1].role === "them") rawArr.pop();
+const arr = rawArr.slice(-6).map(m => ({
+  role: m.role === "me" ? "user" : "assistant",
+  content: (m.content || "").replace(/HEART\s*[:：][\s\S]*/i, "").trim()
+})).filter(m => m.content);
 
       const idleReason = byMin ? `${playerName}已经 ${idleMin} 分钟没回你` : `已经 ${idleTurns} 回合没联系`;
 
@@ -24618,7 +25039,7 @@ ${buildMemoryPromptFor(name)}
 ${buildAffinityBehaviorBlock(name, aff)}
 
 【情境】${idleReason}，你突然想起 ta，主动发消息。
-【规则】手机短信，严禁动作/括号/星号。1~3 条，用 || 分隔。开头别用"嘿""在吗"。不要一上来质问"怎么不回我"，用别的话题切入。${store.getChatConfig().lang==="en"?"全用英文。":"纯中文，可夹少量英文口语。"}
+【规则】你是在**主动**发消息，不是回复。聊天记录里最后几条若是你自己发的，绝不要当成对方说的去回应或反问，要开新话头。手机短信，严禁动作/括号/星号。1~3 条，用 || 分隔。开头别用"嘿""在吗"。不要一上来质问"怎么不回我"，用别的话题切入。${store.getChatConfig().lang==="en"?"全用英文。":"纯中文，可夹少量英文口语。"}
 只输出短信本身，多条用 || 分隔，无前缀。`;
 
       const res = await callAI(arr.length ? arr : [{role:"user",content:"……"}], sys);
@@ -24693,11 +25114,13 @@ if (isPeterChatLocked()) return;
 
     // 取最近几条聊天上下文
     const chats = store.getChats();
-    const arr = chats["彼得·帕克"] || [];
-    const recent = arr.slice(-6).map(m => ({
-      role: m.role === "me" ? "user" : "assistant",
-      content: (m.content || "").replace(/HEART\s*[:：][\s\S]*/i, "").trim()
-    })).filter(m => m.content);
+let arr = (chats["彼得·帕克"] || []).slice();
+// ★ 去掉末尾连续的"彼得自己发的"消息，避免 AI 把自己上一句当成用户输入
+while (arr.length && arr[arr.length - 1].role === "them") arr.pop();
+const recent = arr.slice(-6).map(m => ({
+  role: m.role === "me" ? "user" : "assistant",
+  content: (m.content || "").replace(/HEART\s*[:：][\s\S]*/i, "").trim()
+})).filter(m => m.content);
 
     const affBehavior = buildAffinityBehaviorBlock("彼得·帕克", aff);
 // 💞 感情线双轨
@@ -24722,6 +25145,7 @@ ${peterPersonaRule}
 ${idleReason}。你此刻突然想起了${playerName}，于是主动发来一条消息。
 
 【发送规则 · 违反即失败】
+0. 你是在**主动**给${playerName}发消息，不是在回复 ta。上面聊天记录里最后几条如果是你自己发的，**绝对不要**把它们当成${playerName}说的话去回应或反问。你要开启一个新的话头。
 1. 这是**手机短信**。严禁动作描写、括号、星号。
 2. 生成 1 到 3 条消息。
 3. 用 || 分隔每条消息。
