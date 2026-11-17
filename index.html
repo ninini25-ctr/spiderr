@@ -13536,6 +13536,7 @@ if (needSave) {
 
 const displayPosts = posts.filter(p => p.feed === this.currentTab);
 
+      const twCount = parseInt(localStorage.getItem("sv_tw_refresh_count") || "6") || 6;
       body.innerHTML = `
         <div class="tw-wrap">
           <div class="tw-tabs">
@@ -13544,6 +13545,12 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
             <div class="tw-tab-spacer"></div>
             <button class="tw-btn-icon" id="twNewPostBtn" title="发帖">✍️</button>
             <button class="tw-btn-icon" id="twRefreshBtn" title="刷新">🔄</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);">
+            <span>每次刷新生成</span>
+            <input id="twCount" type="number" min="1" max="12" value="${twCount}" style="width:56px;text-align:center;padding:5px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);">
+            <span>条帖子</span>
+            <span style="font-size:10px;opacity:.7;">（越多越慢）</span>
           </div>
           ${displayPosts.length === 0 ? `
             <div class="tw-empty">
@@ -13562,8 +13569,18 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
         };
       });
 
-      body.querySelector("#twNewPostBtn").onclick = () => this.newPost();
+     body.querySelector("#twNewPostBtn").onclick = () => this.newPost();
       body.querySelector("#twRefreshBtn").onclick = () => this.refresh(body);
+      const twCountInput = body.querySelector("#twCount");
+      if (twCountInput) {
+        twCountInput.onchange = () => {
+          let v = parseInt(twCountInput.value) || 6;
+          v = Math.max(1, Math.min(12, v));
+          twCountInput.value = v;
+          localStorage.setItem("sv_tw_refresh_count", String(v));
+          toast("已设置：每次刷新生成 " + v + " 条");
+        };
+      }
 
       body.querySelectorAll(".tw-tweet").forEach(el => {
         this.bindTweetEvents(el, body);
@@ -14132,6 +14149,7 @@ try { window.triggerPostReactionSMS(newPost.text, "twitter"); } catch(e){}
 
    async refresh(body) {
       const isFollowing = this.currentTab === "following";
+      const twCount = parseInt(localStorage.getItem("sv_tw_refresh_count") || "6") || 6;
       try {
         const sNow = store.getState();
         const phase = WORLD.timeline[sNow.anchor] || WORLD.timeline[0];
@@ -14178,7 +14196,7 @@ try { window.triggerPostReactionSMS(newPost.text, "twitter"); } catch(e){}
 2. ${avengersHint}
 ${deceasedHint}
 ${worldEventsHint}
-3. 共生成 6-8 条，每个发帖人最多 2 条。
+3. 共生成 ${twCount} 条，每个发帖人最多 2 条。
 4. **绝对不要生成任何随机网友作为发帖人**！
 5. 发帖内容必须严格符合角色性格、人设和当前时间点。复联成员的语气要完全符合上面的人设设定（比如托尼的阴阳怪气、美队的老派）。
 6. 发帖人名字**必须保留原样**（复联成员用中文名），不要翻译成英文。
@@ -14210,7 +14228,7 @@ ${worldEventsHint}
 ${deceasedHint}
 ${eventMoodHint}
 ${worldEventsHint}
-5. 共生成 6 条，不要编号，直接从第 1 行开始写。
+5. 共生成 ${twCount} 条，不要编号，直接从第 1 行开始写。
 6. 如果本时间点发生了世界大事（比如响指、复联分裂、英雄牺牲），至少 2 条推文要**自然地**反映这个氛围——比如响指后的悼念帖、索科维亚协议后的站队争吵、复联内战后的分裂讨论。不要生硬，要像真实普通人的推文。
 `;
         }
@@ -14310,21 +14328,21 @@ this.render(body);
 let _progBar = document.createElement("div");
 _progBar.className = "__tw_progress";
 _progBar.style.cssText = "position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(45,107,255,.95);color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.3);display:flex;align-items:center;gap:8px;";
-_progBar.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;"></span><span id="twProgText">正在补充评论...</span>`;
+_progBar.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;"></span><span id="twProgText">正在补充全部帖子评论...</span>`;
 document.body.appendChild(_progBar);
 
-// ★ 后处理：只给前 5 条帖补"联系人全出"，串行 + 节流，避免限流/超时
-const newPosts = all.twitter.filter(p => p.feed === (isFollowing ? "following" : "foryou")).slice(0, 5);
+// ★ 后处理：给本次刷新的全部新帖补评论，串行 + 节流 + 重试，避免限流/超时
+const newPosts = all.twitter.filter(p => p.feed === (isFollowing ? "following" : "foryou")).slice(0, twCount);
 for (let _i = 0; _i < newPosts.length; _i++) {
   const p = newPosts[_i];
-  // ★ 进度提示
- const _pt = document.getElementById("twProgText");
-if (_pt) _pt.textContent = `正在生成评论 ${_i + 1}/${newPosts.length}...`;
+  const _pt = document.getElementById("twProgText");
+  if (_pt) _pt.textContent = `正在生成评论 ${_i + 1}/${newPosts.length}...`;
   try {
-    if (_i > 0) await new Promise(r => setTimeout(r, 900));
+    // 节流：从第 2 条起每条隔 800ms，防限流
+    if (_i > 0) await new Promise(r => setTimeout(r, 800));
     // 为你推荐：每帖随机 2~5 个联系人；正在关注：全员
-const _maxC = isFollowing ? undefined : (2 + Math.floor(Math.random() * 4)); // 2~5
-const mixed = await this.generateMixedCommentsSafe(p.text, p.name, _maxC);
+    const _maxC = isFollowing ? undefined : (2 + Math.floor(Math.random() * 4));
+    const mixed = await this.generateMixedCommentsSafe(p.text, p.name, _maxC);
     if (!mixed.length) continue;
 
     // ★ 合并去重：优先保留 AI 原本生成的（如果有），补足联系人
