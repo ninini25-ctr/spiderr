@@ -6159,9 +6159,9 @@ const pacingStr = phase.pacing
   ? `\n【节奏控制 · 铁律 · 违反即失败】\n${phase.pacing}\n⚠️ 大事件之间必须用小事件/日常/人物关系铺垫过渡，禁止一回合从一个大事件直接跳到下一个大事件。若玩家上一回合刚经历完大事件，本回合必须写"善后/过渡/日常"，不得提前开启下一个大事件。\n`
   : "";
 
-// ★ 新增：全局语言强制
+// ★ 全局语言强制：只对「聊天」生效，不影响推特/INS/世界线等内容生成
   const globalLang = store.getChatConfig().lang || "zh";
-  const globalLangRule = globalLang === "en"
+  const globalLangRule = (globalLang === "en" && scope === "messages")
     ? `\n\n【GLOBAL LANGUAGE RULE · OVERRIDES EVERYTHING】
 ALL dialogue, ALL replies, ALL messages MUST be in ENGLISH.
 Even if examples below are in Chinese, you MUST translate them and reply in English.
@@ -13601,19 +13601,21 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
         ${isRetweeted ? `<div class="tw-retweet-hint">🔁 ${esc(p.retweetedBy)} 转帖</div>` : ""}
         <div class="tw-tweet-inner">
           <div class="tw-avatar">${esc(avatarChar)}</div>
-          <div class="tw-content">
-            <div class="tw-head">
-              <span class="tw-name">${esc(p.name)}</span>
-              <span class="tw-handle">${esc(p.handle || "@user")}</span>
-            </div>
+          <div class="tw-content" style="position:relative;">
+  <button class="tw-post-del" data-id="${pid}" title="删除此帖" style="position:absolute;top:-2px;right:0;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;line-height:1;">⋯</button>
+  <div class="tw-head">
+    <span class="tw-name">${esc(p.name)}</span>
+    <span class="tw-handle">${esc(p.handle || "@user")}</span>
+  </div>
             <div class="tw-text">${esc(p.text)}</div>
             ${previewComments.length ? `
-              <div class="tw-comments-preview">
-                ${previewComments.map((c, ci) => `
-                  <div class="tw-comment-line" data-ci="${ci}">
-                    <b>@${esc(c.user)}</b> ${esc(c.text)}
-                  </div>
-                `).join("")}
+  <div class="tw-comments-preview">
+    ${previewComments.map((c, ci) => `
+      <div class="tw-comment-line" data-ci="${ci}" style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+        <span style="flex:1;min-width:0;"><b>@${esc(c.user)}</b> ${esc(c.text)}</span>
+        <button class="tw-cmt-del" data-id="${pid}" data-ci="${ci}" title="删除评论" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
+      </div>
+    `).join("")}
                 ${moreCount > 0 ? `<div class="tw-more-comments" data-more="1">查看全部 ${comments.length} 条评论 ›</div>` : ""}
               </div>
             ` : ""}
@@ -13624,18 +13626,19 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
               <button class="tw-act tw-act-dm" data-act="dm" title="私信发送">✉️</button>
             </div>
             <div class="tw-comments-full" style="display:none;">
-              ${comments.map((c, ci) => `
-                <div class="tw-comment-item" data-ci="${ci}">
-                  <div class="tw-comment-reply-trigger">
-                    <b>${esc(c.user)}:</b> ${esc(c.text)}
-                  </div>
-                  ${c.replies && c.replies.length ? `
-                    <div class="tw-replies">
-                      ${c.replies.map(r => `<div class="tw-reply-line"><b>${esc(r.user)}:</b> ${esc(r.text)}</div>`).join("")}
-                    </div>
-                  ` : ""}
-                </div>
-              `).join("")}
+  ${comments.map((c, ci) => `
+    <div class="tw-comment-item" data-ci="${ci}">
+      <div class="tw-comment-reply-trigger" style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+        <span style="flex:1;min-width:0;"><b>${esc(c.user)}:</b> ${esc(c.text)}</span>
+        <button class="tw-cmt-del" data-id="${pid}" data-ci="${ci}" title="删除评论" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
+      </div>
+      ${c.replies && c.replies.length ? `
+        <div class="tw-replies">
+          ${c.replies.map((r, ri) => `<div class="tw-reply-line" style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;"><span style="flex:1;min-width:0;"><b>${esc(r.user)}:</b> ${esc(r.text)}</span><button class="tw-reply-del" data-id="${pid}" data-ci="${ci}" data-ri="${ri}" title="删除回复" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button></div>`).join("")}
+        </div>
+      ` : ""}
+    </div>
+  `).join("")}
               <div class="tw-comment-input-row">
                 <input id="twc_${pid}" class="tw-comment-input" placeholder="发布你的回复">
                 <button class="tw-comment-send" data-send="${pid}">回复</button>
@@ -13647,10 +13650,55 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
     },
 
     bindTweetEvents(el, body) {
-      const pid = el.dataset.id;
-      const all = store.getPosts();
-      const post = (all.twitter || []).find(p => p.id === pid);
-      if (!post) return;
+  const pid = el.dataset.id;
+  const all = store.getPosts();
+  const post = (all.twitter || []).find(p => p.id === pid);
+  if (!post) return;
+
+  // 删除整条帖子
+  const postDelBtn = el.querySelector(".tw-post-del");
+  if (postDelBtn) postDelBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (!confirm("确定删除这条推文吗？")) return;
+    const a = store.getPosts();
+    a.twitter = (a.twitter || []).filter(p => p.id !== pid);
+    store.setPosts(a);
+    toast("已删除推文");
+    this.render(body);
+  };
+
+  // 删除主评论
+  el.querySelectorAll(".tw-cmt-del").forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const ci = parseInt(btn.dataset.ci);
+      if (!confirm("删除这条评论？")) return;
+      const a = store.getPosts();
+      const p = (a.twitter || []).find(x => x.id === pid);
+      if (p && Array.isArray(p.comments) && p.comments[ci]) {
+        p.comments.splice(ci, 1);
+        store.setPosts(a);
+        this.render(body);
+      }
+    };
+  });
+
+  // 删除楼中楼回复
+  el.querySelectorAll(".tw-reply-del").forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const ci = parseInt(btn.dataset.ci);
+      const ri = parseInt(btn.dataset.ri);
+      if (!confirm("删除这条回复？")) return;
+      const a = store.getPosts();
+      const p = (a.twitter || []).find(x => x.id === pid);
+      if (p && p.comments[ci] && Array.isArray(p.comments[ci].replies) && p.comments[ci].replies[ri]) {
+        p.comments[ci].replies.splice(ri, 1);
+        store.setPosts(a);
+        this.render(body);
+      }
+    };
+  });
 
       const more = el.querySelector(".tw-more-comments");
       if (more) {
@@ -15482,17 +15530,20 @@ body.innerHTML = `<div style="padding:14px">
         <div class="foot"><span>♡ ${p.likes||0}</span></div>
         
         <div style="padding:6px 0">
-          ${(p.comments||[]).map((c, ci)=>`
-            <div class="comment" style="margin-bottom:6px">
-              <div onclick="apps.instagram.replyToComment(${i}, ${ci})" style="cursor:pointer">
-                <b>${esc(c.user)}:</b> ${esc(c.text)}
-              </div>
-              ${c.replies && c.replies.length > 0 ? `<div style="padding-left:16px;border-left:1px solid #444;margin-top:4px">
-                 ${c.replies.map(r=>`<div style="font-size:12px;margin-top:2px"><b>${esc(r.user)}:</b> ${esc(r.text)}</div>`).join("")}
-              </div>` : ""}
-            </div>
-          `).join("")}
-        </div>
+  ${(p.comments||[]).map((c, ci)=>`
+    <div class="comment" style="margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+        <span onclick="apps.instagram.replyToComment(${i}, ${ci})" style="cursor:pointer;flex:1;min-width:0;">
+          <b>${esc(c.user)}:</b> ${esc(c.text)}
+        </span>
+        <button class="ig-cmt-del" data-i="${i}" data-ci="${ci}" title="删除评论" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
+      </div>
+      ${c.replies && c.replies.length > 0 ? `<div style="padding-left:16px;border-left:1px solid #444;margin-top:4px">
+         ${c.replies.map((r, ri)=>`<div style="font-size:12px;margin-top:2px;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;"><span style="flex:1;min-width:0;"><b>${esc(r.user)}:</b> ${esc(r.text)}</span><button class="ig-reply-del" data-i="${i}" data-ci="${ci}" data-ri="${ri}" title="删除回复" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button></div>`).join("")}
+      </div>` : ""}
+    </div>
+  `).join("")}
+</div>
 
         <div class="row" style="margin-top:8px">
          <input id="igc_${i}" placeholder="写评论..." style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-comment-bg);color:var(--input-comment-text);font-size:13px">
@@ -15773,12 +15824,29 @@ const finalPosts = newPosts.map(np => ({
         };
         menu.appendChild(saveItem);
 
-        // 取消
-        const cancelItem = document.createElement("div");
-        cancelItem.style.cssText = "padding:12px 18px;cursor:pointer;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid #333;margin-top:4px;";
-        cancelItem.textContent = "取消";
-        cancelItem.onclick = () => closeMenu();
-        menu.appendChild(cancelItem);
+// 删除帖子
+const delPostItem = document.createElement("div");
+delPostItem.style.cssText = "padding:14px 18px;cursor:pointer;color:#e62429;font-size:14px;border-radius:10px;transition:background .15s;";
+delPostItem.textContent = "🗑️ 删除此帖";
+delPostItem.onmouseenter = () => delPostItem.style.background = "rgba(230,36,41,.12)";
+delPostItem.onmouseleave = () => delPostItem.style.background = "transparent";
+delPostItem.onclick = () => {
+  closeMenu();
+  if (!confirm("确定删除这条 Instagram 帖子吗？")) return;
+  const a = store.getPosts();
+  a.instagram = (a.instagram || []).filter((_, k) => k !== idx);
+  store.setPosts(a);
+  toast("已删除帖子");
+  apps.instagram.render(body);
+};
+menu.appendChild(delPostItem);
+
+// 取消
+const cancelItem = document.createElement("div");
+cancelItem.style.cssText = "padding:12px 18px;cursor:pointer;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid #333;margin-top:4px;";
+cancelItem.textContent = "取消";
+cancelItem.onclick = () => closeMenu();
+menu.appendChild(cancelItem);
 
         // ==== 遮罩 ====
         const mask = document.createElement("div");
@@ -15801,12 +15869,47 @@ const finalPosts = newPosts.map(np => ({
         };
         mask.onclick = closeMenu;
         // 延迟绑定全局 touchstart，避免刚打开的点击事件立刻关闭菜单
-        setTimeout(() => {
-          if (closed) return;
-          document.addEventListener("touchstart", onTouchStart, { passive: true });
-        }, 350);
-      };
-    });
+    setTimeout(() => {
+      if (closed) return;
+      document.addEventListener("touchstart", onTouchStart, { passive: true });
+    }, 350);
+  };
+});
+
+// 删除 INS 评论
+body.querySelectorAll(".ig-cmt-del").forEach(btn => {
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const i = parseInt(btn.dataset.i);
+    const ci = parseInt(btn.dataset.ci);
+    if (!confirm("删除这条评论？")) return;
+    const a = store.getPosts();
+    const p = (a.instagram || [])[i];
+    if (p && Array.isArray(p.comments) && p.comments[ci]) {
+      p.comments.splice(ci, 1);
+      store.setPosts(a);
+      apps.instagram.render(body);
+    }
+  };
+});
+
+// 删除 INS 楼中楼回复
+body.querySelectorAll(".ig-reply-del").forEach(btn => {
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const i = parseInt(btn.dataset.i);
+    const ci = parseInt(btn.dataset.ci);
+    const ri = parseInt(btn.dataset.ri);
+    if (!confirm("删除这条回复？")) return;
+    const a = store.getPosts();
+    const p = (a.instagram || [])[i];
+    if (p && p.comments[ci] && Array.isArray(p.comments[ci].replies) && p.comments[ci].replies[ri]) {
+      p.comments[ci].replies.splice(ri, 1);
+      store.setPosts(a);
+      apps.instagram.render(body);
+    }
+  };
+});
 
     // ★ 条数输入保存
     const igCountInput = body.querySelector("#igCount");
