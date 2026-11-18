@@ -12362,10 +12362,6 @@ const playerPronoun = _giT.pronoun;
   const contact = store.getContacts().find(c => c.name === contactName);
   const contactDesc = contact ? (contact.desc || "") : "";
   const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
-const _blkC = store.getContacts().find(x => x.name === self.currentUser) || {};
-const everBlockedRule = _blkC.everBlocked
-  ? `\n【关系背景】你和 ${playerName} 之间曾经有过"拉黑/被拉黑"的经历，现在和好了。偶尔可以隐约提起那段别扭（"上次那事""之前我们闹得有点僵"），但不要反复纠缠，语气符合当前好感度。`
-  : "";
 
   // 彼得特殊处理（蜘蛛侠秘密身份 + 话痨风格）
   const isPeter = (contactName === "彼得·帕克");
@@ -12700,6 +12696,12 @@ const playerPronoun = _gi.pronoun;
 const contactAff = getAffinityOf(self.currentUser);
 const attitude = affinityLevelHint(contactAff);
 const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
+
+// ★ 确保声明在这里，保证 sysPrompt 能够正常访问
+const _blkC = store.getContacts().find(x => x.name === self.currentUser) || {};
+const everBlockedRule = _blkC.everBlocked
+  ? `\n【关系背景】你和 ${playerName} 之间曾经有过"拉黑/被拉黑"的经历，现在和好了。偶尔可以隐约提起那段别扭（"上次那事""之前我们闹得有点僵"），但不要反复纠缠，语气符合当前好感度。`
+  : "";
 const genderPronoun = _gi.pronoun;
 
      let recent = arr.slice(-store.getChatConfig().maxContext * 2)
