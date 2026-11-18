@@ -2224,6 +2224,7 @@ body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); 
       <button class="app-icon" data-app="MJNotebook"><span>🕵️</span><label>MJ 笔记本</label></button>
      <button class="app-icon" data-app="School"><span>🏫</span><label>中城高中</label></button>
       <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
+      <button class="app-icon" data-app="Calendar"><span>📅</span><label>日历</label></button>
       <button class="app-icon" data-app="Dating"><span>🍜</span><label>约饭</label></button>
       <button class="app-icon" data-app="contacts"><span>👥</span><label>社交圈</label></button>
      <button class="app-icon" data-app="Memory"><span>🧠</span><label>记忆</label></button>
@@ -2232,6 +2233,7 @@ body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); 
       <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
     </div>
 <div class="desktop-watermark">@nini</div>
+<button id="desktopEditBtn" title="编辑桌面" style="position:absolute;top:50px;right:16px;z-index:5;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:50%;width:34px;height:34px;font-size:15px;cursor:pointer;backdrop-filter:blur(4px);">✏️</button>
   </div>
   <div id="appView" class="screen">
     <header class="app-header">
@@ -4821,6 +4823,36 @@ const dbHelper = {
 
 dbHelper.init(); // 初始化数据库
 
+// 🖼️ 把任意图片地址转存进 IndexedDB，返回 "idb:key"；失败则降级返回原地址
+async function persistImageToIdb(url) {
+  if (!url) return url;
+  if (url === "ERROR" || url === "PENDING") return url;
+  if (url.startsWith("idb:")) return url;
+  try {
+    let dataUrl;
+    if (url.startsWith("data:")) {
+      dataUrl = url;
+    } else {
+      const resp = await fetch(url, { mode: "cors" });
+      if (!resp.ok) throw new Error("fetch " + resp.status);
+      const blob = await resp.blob();
+      dataUrl = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsDataURL(blob);
+      });
+    }
+    const key = "img_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+    await dbHelper.saveImage(key, dataUrl);
+    await resolveImageUrlCached("idb:" + key); // 顺手进缓存，渲染立即可用
+    return "idb:" + key;
+  } catch (e) {
+    console.warn("[persistImageToIdb] 转存失败，保留原链接:", e.message);
+    return url; // 降级：跨域等失败时，回退到现状，不会更糟
+  }
+}
+
 // ============================================================
 // 📦 存档层：把大体积存档搬到 IndexedDB，并自动迁移 localStorage 旧档
 //   - sv_slots            世界线存档
@@ -7128,6 +7160,82 @@ window.advanceToNextBeat = () => {
   openApp("worldline");
 };
 
+window.goBackTurn = () => {
+  const s = store.getState();
+  if (s.mainStoryEnded) return toast("主线已完结，无法回退");
+  if (!s.history || !s.history.length) return toast("没有可回退的回合");
+  if (!confirm("回到上一回合？\n（恢复上一回合的剧情和选项，好感度/阶段一并回退）")) return;
+
+  const last = s.history.pop();
+  s.currentStory = last.story || "";
+  s.currentOptions = last.options || "";   // ★ 上一回合的选项原样恢复
+  if (typeof last._anchor === "number") s.anchor = last._anchor;
+  if (typeof last._affinity === "number") {
+    s.affinity = last._affinity;
+    // 同步彼得好感度
+    const list = store.getContacts();
+    const peter = list.find(x => x.name === "彼得·帕克");
+    if (peter) { peter.affinity = s.affinity; store.setContacts(list); }
+  }
+  s.turn = Math.max(1, s.turn - 1);
+  store.setState(s);
+  toast("已回到上一回合");
+  openApp("worldline");
+};
+
+window.inspireAction = async (body) => {
+  const s = store.getState();
+  if (!s.currentStory) return toast("当前没有剧情");
+  const btn = body.querySelector("#wlInspireBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "💭 构思中..."; }
+  try {
+    const pov = s.pov || "second";
+    const you = pov === "first" ? "我" : pov === "third" ? (store.getProfile().name || "玩家") : "你";
+    const sys = `你是剧情助手。根据下面这段剧情，为玩家（${you}）想 3 个**不同方向**的下一步行动建议，供玩家参考。
+
+【当前剧情】
+${s.currentStory.slice(0, 1200)}
+
+【要求】
+1. 每条是一个简短的行动描述（10-25字），以玩家视角写。
+2. 三条方向要有差异（一条主动/一条谨慎/一条情感向）。
+3. 贴合当前情境，不要剧透未来、不要替玩家做出结果。
+
+【输出格式 · 严格，每行一条，不要编号前缀以外的任何东西】
+1. 行动一
+2. 行动二
+3. 行动三`;
+    const res = await callAI([{ role: "user", content: "给建议" }], sys);
+    const opts = String(res || "").split("\n")
+      .map(l => l.replace(/^\s*\d+[\.\、\:：\)]\s*/, "").trim())
+      .filter(Boolean).slice(0, 3);
+    if (!opts.length) { toast("没想出来，再试一次"); return; }
+
+    // 弹出选择
+    const div = document.createElement("div");
+    div.style.cssText = "position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px;";
+    div.innerHTML = `<div style="max-width:380px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;color:var(--text);">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px;">🎲 选一个填入输入框</div>
+      ${opts.map((o, i) => `<button class="insp-opt" data-i="${i}" style="display:block;width:100%;text-align:left;margin-bottom:8px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;line-height:1.5;cursor:pointer;">${esc(o)}</button>`).join("")}
+      <button id="inspCancel" class="btn ghost" style="width:100%;margin-top:4px;">取消</button>
+    </div>`;
+    document.querySelector(".device").appendChild(div);
+    div.querySelectorAll(".insp-opt").forEach(el => {
+      el.onclick = () => {
+        const ci = body.querySelector("#customAct");
+        if (ci) { ci.value = opts[parseInt(el.dataset.i)]; ci.focus(); }
+        div.remove();
+      };
+    });
+    div.querySelector("#inspCancel").onclick = () => div.remove();
+    div.onclick = (e) => { if (e.target === div) div.remove(); };
+  } catch (e) {
+    toast("建议生成失败：" + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🎲 给我个建议"; }
+  }
+};
+
 window.selectOption = (optText) => {
   if (!optText || !optText.trim()) return toast("请输入内容");
   const s = store.getState();
@@ -7153,7 +7261,13 @@ if (/让时间流走/.test(optText)) {
   const isJumpEvent = /推进至下一个大事件|推进至大事件|快进|跳过日常|直接去柏林/.test(optText);
 
   s.history = s.history || [];
-  s.history.push({ story: s.currentStory, choice: optText });
+  s.history.push({
+    story: s.currentStory,
+    choice: optText,
+    options: s.currentOptions,      // ★ 回退要用
+    _anchor: s.anchor,              // 回退还原阶段
+    _affinity: s.affinity           // 回退还原好感度
+  });
   s.currentStory = ""; s.currentOptions = ""; s.turn += 1;
 
 if (isJumpEvent) {
@@ -7862,6 +7976,133 @@ async function getProfileSlots() {
 async function setProfileSlots(slots){
   await archive.setJSON(PROFILE_SLOTS_KEY, slots);
 }
+// 🖥️ 桌面布局
+function getDesktopCfg() {
+  try {
+    const v = JSON.parse(localStorage.getItem("sv_desktop_cfg") || "null");
+    if (v && typeof v === "object") return { order: v.order || [], hidden: v.hidden || [] };
+  } catch (e) {}
+  return { order: [], hidden: [] };
+}
+function setDesktopCfg(c) { localStorage.setItem("sv_desktop_cfg", JSON.stringify(c)); }
+
+function applyDesktopLayout() {
+  const grid = document.querySelector("#desktop .app-grid");
+  if (!grid) return;
+  const icons = Array.from(grid.querySelectorAll(".app-icon"));
+  const cfg = getDesktopCfg();
+
+  // 隐藏
+  icons.forEach(ic => {
+    ic.style.display = cfg.hidden.includes(ic.dataset.app) ? "none" : "";
+  });
+
+  // 排序：按 order 把图标重新 append，未在 order 里的保持原相对顺序排在后面
+  if (cfg.order.length) {
+    const byApp = {};
+    icons.forEach(ic => { byApp[ic.dataset.app] = ic; });
+    cfg.order.forEach(app => { if (byApp[app]) grid.appendChild(byApp[app]); });
+    icons.forEach(ic => { if (!cfg.order.includes(ic.dataset.app)) grid.appendChild(ic); });
+  }
+}
+
+// 页面加载后应用一次
+setTimeout(applyDesktopLayout, 150);
+
+// 桌面编辑入口：点按钮 + 长按桌面空白
+setTimeout(() => {
+  const editBtn = document.getElementById("desktopEditBtn");
+  if (editBtn) editBtn.onclick = (e) => { e.stopPropagation(); showDesktopEditor(); };
+
+  const grid = document.querySelector("#desktop .app-grid");
+  if (grid) {
+    let pressTimer = null;
+    const start = (e) => {
+      // 只在空白处长按（点到图标不触发）
+      if (e.target.closest(".app-icon")) return;
+      pressTimer = setTimeout(() => showDesktopEditor(), 650);
+    };
+    const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+    grid.addEventListener("touchstart", start, { passive: true });
+    grid.addEventListener("touchend", cancel);
+    grid.addEventListener("touchmove", cancel);
+    grid.addEventListener("mousedown", start);
+    grid.addEventListener("mouseup", cancel);
+    grid.addEventListener("mouseleave", cancel);
+  }
+}, 300);
+
+// 🖥️ 桌面编辑面板
+function showDesktopEditor() {
+  document.querySelectorAll(".__desktop_editor").forEach(el => el.remove());
+  const grid = document.querySelector("#desktop .app-grid");
+  if (!grid) return;
+
+  // 当前所有 app（按当前 DOM 顺序）
+  let apps_ = Array.from(grid.querySelectorAll(".app-icon")).map(ic => ({
+    app: ic.dataset.app,
+    label: (ic.querySelector("label") ? ic.querySelector("label").textContent : ic.dataset.app)
+  }));
+  const cfg = getDesktopCfg();
+  // 以当前 DOM 顺序为准初始化 order
+  let order = apps_.map(a => a.app);
+  let hidden = new Set(cfg.hidden);
+
+  const div = document.createElement("div");
+  div.className = "__desktop_editor";
+  div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:800;overflow-y:auto;color:var(--text);";
+
+  const renderList = () => {
+    div.innerHTML = `<div style="max-width:480px;margin:0 auto;padding:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <h2 style="margin:0;font-size:17px;">🖥️ 编辑桌面</h2>
+        <button class="btn ghost" id="deClose" style="width:auto;padding:4px 14px;font-size:12px;">完成</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.6;">用 ↑↓ 调整顺序，开关控制显示/隐藏。</p >
+      <div id="deList"></div>
+      <button class="btn ghost" id="deReset" style="width:100%;margin-top:10px;font-size:12px;">↩️ 恢复默认布局</button>
+    </div>`;
+
+    const list = div.querySelector("#deList");
+    list.innerHTML = order.map((app, i) => {
+      const meta = apps_.find(a => a.app === app) || { label: app };
+      const isHidden = hidden.has(app);
+      return `<div style="display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;${isHidden ? 'opacity:.5;' : ''}">
+        <span style="flex:1;font-size:14px;color:var(--text);">${esc(meta.label)}</span>
+        <button class="de-up" data-i="${i}" ${i === 0 ? 'disabled' : ''} style="background:var(--panel-2);border:1px solid var(--line);color:${i === 0 ? 'var(--line)' : 'var(--text)'};border-radius:8px;padding:4px 10px;font-size:14px;cursor:${i === 0 ? 'default' : 'pointer'};">↑</button>
+        <button class="de-down" data-i="${i}" ${i === order.length - 1 ? 'disabled' : ''} style="background:var(--panel-2);border:1px solid var(--line);color:${i === order.length - 1 ? 'var(--line)' : 'var(--text)'};border-radius:8px;padding:4px 10px;font-size:14px;cursor:${i === order.length - 1 ? 'default' : 'pointer'};">↓</button>
+        <label class="switch"><input type="checkbox" class="de-show" data-app="${esc(app)}" ${isHidden ? '' : 'checked'}><span class="slider"></span></label>
+      </div>`;
+    }).join("");
+
+    list.querySelectorAll(".de-up").forEach(b => b.onclick = () => {
+      const i = parseInt(b.dataset.i); if (i <= 0) return;
+      [order[i - 1], order[i]] = [order[i], order[i - 1]]; renderList();
+    });
+    list.querySelectorAll(".de-down").forEach(b => b.onclick = () => {
+      const i = parseInt(b.dataset.i); if (i >= order.length - 1) return;
+      [order[i + 1], order[i]] = [order[i], order[i + 1]]; renderList();
+    });
+    list.querySelectorAll(".de-show").forEach(cb => cb.onchange = () => {
+      const app = cb.dataset.app;
+      if (cb.checked) hidden.delete(app); else hidden.add(app);
+      renderList();
+    });
+
+    const save = () => {
+      setDesktopCfg({ order, hidden: [...hidden] });
+      applyDesktopLayout();
+    };
+    div.querySelector("#deClose").onclick = () => { save(); div.remove(); toast("桌面已更新"); };
+    div.querySelector("#deReset").onclick = () => {
+      if (!confirm("恢复默认桌面布局？")) return;
+      localStorage.removeItem("sv_desktop_cfg");
+      location.reload();
+    };
+  };
+  renderList();
+  document.querySelector(".device").appendChild(div);
+}
 // ============================================================
 // 🖼️ 文件选择通用工具：显式触发 + 每次清空（解决 iOS / WebView 点不动）
 // ============================================================
@@ -8155,6 +8396,81 @@ function showPatrolLogDetail(item) {
   panel.querySelector("#patrolDetailClose").onclick = close;
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
 }
+
+// ============================================================
+// 📅 日历 · 节日数据与工具
+// ============================================================
+const BUILTIN_FESTIVALS = [
+  // —— 通用 / 跨年 ——
+  { key: "newyear",   name: "元旦",         emoji: "🎆", month: 1,  day: 1 },
+  { key: "nye",       name: "跨年夜",       emoji: "🎇", month: 12, day: 31 },
+  // —— 中国节日（阳历近似，农历节日取常见公历日，可自行微调）——
+  { key: "cny",       name: "春节",         emoji: "🧧", month: 2,  day: 10 },
+  { key: "lantern",   name: "元宵节",       emoji: "🏮", month: 2,  day: 24 },
+  { key: "qingming",  name: "清明节",       emoji: "🌿", month: 4,  day: 4 },
+  { key: "labor_cn",  name: "劳动节",       emoji: "🛠️", month: 5,  day: 1 },
+  { key: "dragon",    name: "端午节",       emoji: "🐉", month: 6,  day: 10 },
+  { key: "qixi",      name: "七夕",         emoji: "🌌", month: 8,  day: 10 },
+  { key: "midautumn", name: "中秋节",       emoji: "🌕", month: 9,  day: 17 },
+  { key: "national",  name: "国庆节",       emoji: "🇨🇳", month: 10, day: 1 },
+  // —— 美国节日 ——
+  { key: "mlk",       name: "马丁·路德·金日", emoji: "✊", month: 1,  day: 15 },
+  { key: "valentine", name: "情人节",       emoji: "💝", month: 2,  day: 14 },
+  { key: "stpatrick", name: "圣帕特里克节", emoji: "🍀", month: 3,  day: 17 },
+  { key: "easter",    name: "复活节",       emoji: "🐰", month: 3,  day: 31 },
+  { key: "aprilfool", name: "愚人节",       emoji: "🃏", month: 4,  day: 1 },
+  { key: "mother",    name: "母亲节",       emoji: "🌷", month: 5,  day: 11 },
+  { key: "memorial",  name: "阵亡将士纪念日", emoji: "🎗️", month: 5,  day: 26 },
+  { key: "father",    name: "父亲节",       emoji: "👔", month: 6,  day: 15 },
+  { key: "independence", name: "美国独立日", emoji: "🎆", month: 7,  day: 4 },
+  { key: "labor_us",  name: "美国劳动节",   emoji: "🏭", month: 9,  day: 1 },
+  { key: "halloween", name: "万圣节",       emoji: "🎃", month: 10, day: 31 },
+  { key: "veterans",  name: "退伍军人节",   emoji: "🎖️", month: 11, day: 11 },
+  { key: "thanks",    name: "感恩节",       emoji: "🦃", month: 11, day: 27 },
+  { key: "christmas", name: "圣诞节",       emoji: "🎄", month: 12, day: 25 },
+  // —— 值得庆祝的小日子 ——
+  { key: "whiteday",  name: "白色情人节",   emoji: "🤍", month: 3,  day: 14 },
+  { key: "childrens", name: "儿童节",       emoji: "🎈", month: 6,  day: 1 },
+  { key: "singles",   name: "光棍节",       emoji: "🛍️", month: 11, day: 11 }
+];
+
+function getCustomAnniversaries() {
+  try { return JSON.parse(localStorage.getItem("sv_custom_anniv") || "[]"); }
+  catch (e) { return []; }
+}
+function setCustomAnniversaries(list) {
+  localStorage.setItem("sv_custom_anniv", JSON.stringify(list));
+}
+
+// 取某年某月某日落在的节日/纪念日（含内置+自定义）
+function getFestivalsOn(month, day) {
+  const builtin = BUILTIN_FESTIVALS
+    .filter(f => f.month === month && f.day === day)
+    .map(f => ({ ...f, type: "festival" }));           // 内置一律节日
+  const custom = getCustomAnniversaries()
+    .filter(a => a.month === month && a.day === day)
+    .map(a => ({ ...a, type: a.type || "anniversary" })); // 自定义默认纪念日，尊重用户选择
+  return [...builtin, ...custom];
+}
+
+// 节日垃圾短信记录（魔咒锁定期）
+function getSpamInbox() {
+  try { return JSON.parse(localStorage.getItem("sv_festival_spam") || "[]"); }
+  catch (e) { return []; }
+}
+function setSpamInbox(list) {
+  localStorage.setItem("sv_festival_spam", JSON.stringify(list));
+}
+
+// 伪装寄件人池（魔咒锁定期用）
+const SPAM_SENDERS = [
+  "你很久没光顾的快捷洗衣",
+  "皇后区街角便利店会员中心",
+  "第三大道小面馆外卖平台",
+  "你三年前办过卡的健身房",
+  "某快递柜智能提醒",
+  "社区旧书店会员通知"
+];
 
 const apps = {
 Appearance: {
@@ -10629,6 +10945,33 @@ ${isSpellActiveNow() && c.name !== "彼得·帕克" ? `
       ` : ""}
       <div class="field"><label>个人简介</label><textarea id="c_desc" rows="3">${esc(c.desc)}</textarea></div>
 <div class="field"><label>备注名（显示在聊天列表和对话中，留空则用本名）</label><input id="c_note" value="${esc(c.note || "")}" placeholder="例如：小虫"></div>
+<div class="field">
+  <label>对方气泡颜色（留空用主题默认）</label>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <input id="c_bubble" type="color" value="${esc(c.bubbleColor || "#1d1d28")}" style="width:48px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);cursor:pointer;">
+    <button type="button" id="c_bubble_clear" class="btn ghost" style="width:auto;padding:6px 12px;font-size:12px;">清除</button>
+    <span style="font-size:11px;color:var(--muted);">仅影响和 ta 的聊天气泡</span>
+  </div>
+</div>
+
+<div class="field" style="padding:12px 14px;background:var(--panel-2);border-radius:10px;">
+  <label style="font-size:13px;color:var(--text);margin-bottom:8px;display:block;">🚫 拉黑状态</label>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">当前：${
+    c.blockState === "byUser" ? "<b style='color:#e62429;'>你拉黑了 ta</b>" :
+    c.blockState === "byThem" ? "<b style='color:#e62429;'>ta 拉黑了你</b>" :
+    "正常"
+  }</div>
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    ${c.blockState === "byUser"
+      ? `<button type="button" class="btn ghost" id="c_unblock" style="color:#4caf50;border-color:#4caf50;">✅ 解除拉黑（恢复正常）</button>`
+      : c.blockState === "byThem"
+      ? `<button type="button" class="btn ghost" id="c_force_unblock" style="color:#4caf50;border-color:#4caf50;">🕊️ 强制和好（ta 原谅你）</button>`
+      : `<button type="button" class="btn ghost" id="c_block_them" style="color:#e62429;border-color:#e62429;">🚫 拉黑 ta</button>
+         <button type="button" class="btn ghost" id="c_block_me" style="color:#e62429;border-color:#e62429;">💢 让 ta 拉黑你（闹矛盾）</button>`
+    }
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">拉黑期间聊天记录和对话框都保留。ta 会记得被拉黑/拉黑过这件事。</div>
+</div>
 ${this.currentUser !== "彼得·帕克" ? `
       <div class="field" style="padding:10px 12px;background:var(--panel-2);border-radius:10px;">
         <div class="row" style="justify-content:space-between;align-items:center;">
@@ -10725,6 +11068,57 @@ affInput.addEventListener("blur", () => {
       syncAffHint();
     };
 
+const bubbleClearBtn = body.querySelector("#c_bubble_clear");
+if (bubbleClearBtn) bubbleClearBtn.onclick = () => {
+  const bi = body.querySelector("#c_bubble");
+  if (bi) bi.value = "#1d1d28";
+  const list = store.getContacts();
+  const t = list.find(x => x.name === self.currentUser);
+  if (t) t._bubbleCleared = true;
+  toast("保存后将清除气泡色");
+};
+
+// 🚫 拉黑相关
+const setBlock = (stateVal) => {
+  const list = store.getContacts();
+  const t = list.find(x => x.name === self.currentUser);
+  if (!t) return;
+  t.blockState = stateVal;
+  t.everBlocked = true; // 永久记忆：被拉黑/拉黑过
+  store.setContacts(list);
+};
+
+const blockThemBtn = body.querySelector("#c_block_them");
+if (blockThemBtn) blockThemBtn.onclick = () => {
+  if (!confirm(`拉黑「${self.currentUser}」？\n拉黑后你发消息要点"让对方回复"才会收到 ta 的反应，聊天记录保留。`)) return;
+  setBlock("byUser");
+  toast("已拉黑 " + self.currentUser);
+  openApp("messages");
+};
+
+const blockMeBtn = body.querySelector("#c_block_me");
+if (blockMeBtn) blockMeBtn.onclick = () => {
+  if (!confirm(`让「${self.currentUser}」拉黑你？\n之后 ta 会不理你，你发的消息能否让 ta 回心转意，由 ta 根据你说的话决定。`)) return;
+  setBlock("byThem");
+  toast(self.currentUser + " 拉黑了你");
+  openApp("messages");
+};
+
+const unblockBtn = body.querySelector("#c_unblock");
+if (unblockBtn) unblockBtn.onclick = () => {
+  setBlock("none");
+  toast("已解除拉黑");
+  openApp("messages");
+};
+
+const forceUnblockBtn = body.querySelector("#c_force_unblock");
+if (forceUnblockBtn) forceUnblockBtn.onclick = () => {
+  if (!confirm(`强制和好？\n${self.currentUser} 会原谅你，恢复正常对话。`)) return;
+  setBlock("none");
+  toast(self.currentUser + " 原谅了你");
+  openApp("messages");
+};
+
 const revealToggle = body.querySelector("#peterRevealToggle");
 if (revealToggle) {
   revealToggle.onchange = () => {
@@ -10747,6 +11141,9 @@ if (target) {
   target.desc = body.querySelector("#c_desc").value;
   target.note = (body.querySelector("#c_note").value || "").trim();
   target.affinity = newAff;
+  const bubbleInput = body.querySelector("#c_bubble");
+  if (bubbleInput) target.bubbleColor = target._bubbleCleared ? "" : bubbleInput.value;
+  delete target._bubbleCleared;
   store.setContacts(list);
         if (this.currentUser === "彼得·帕克") {
           const s = store.getState();
@@ -11048,12 +11445,34 @@ chatHtml += `<div id="chatThread">`;
   }).join("");
   chatHtml += `</div>`;
   
-  // 输入区
+  // --- 输入区（按拉黑状态分三态）---
+const _curC = store.getContacts().find(x => x.name === self.currentUser) || {};
+const _bs = _curC.blockState || "none";
+if (_bs === "byUser") {
+  // 用户拉黑了对方：输入框变"让对方回复"
+  chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));flex-direction:column;gap:8px;">
+    <div style="font-size:12px;color:var(--muted);text-align:center;width:100%;">🚫 你已拉黑 ${esc(self.currentUser)}</div>
+    <div style="display:flex;gap:8px;width:100%;">
+      <button id="letThemReplyBtn" style="flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:10px;font-weight:600;cursor:pointer;">👀 看看对方的反应</button>
+    </div>
+  </div>`;
+} else if (_bs === "byThem") {
+  // 对方拉黑了用户：可以发，但 ta 可能不回；有兜底和好
   chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
-  <button id="topicBtn" title="帮我起个话题" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:0 12px;font-size:16px;cursor:pointer;flex-shrink:0;">✨</button>
-  <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
-  <button id="sendBtn">发送</button>
-</div>`;
+    <input id="msgInput" placeholder="${esc(self.currentUser)} 把你拉黑了，试着说点什么...">
+    <button id="sendBtn">发送</button>
+  </div>
+  <div style="flex-shrink:0;padding:0 14px 10px;text-align:center;">
+    <button id="forceReconcileBtn" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;text-decoration:underline;">实在哄不好？点这里强制和好</button>
+  </div>`;
+} else {
+  // 正常
+  chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
+    <button id="topicBtn" title="帮我起个话题" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:0 12px;font-size:16px;cursor:pointer;flex-shrink:0;line-height:1;">✨</button>
+    <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
+    <button id="sendBtn">发送</button>
+  </div>`;
+}
   
   chatHtml += `</div>`;
   body.innerHTML = chatHtml;
@@ -11552,16 +11971,21 @@ chatHtml += msgs.map((m, idx) => {
 
   // ===== 单人聊天：对方消息带头像 =====
   if (!isGroupChat && m.role === "them") {
-    const c = curContactForRow;
-    const av = (c && c.avatar) ? realAv(c.avatar) : "";
-    const firstChar = esc((c ? c.name : "?")[0]);
-    return `<div class="msg-row them" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
-      <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
-        ${av ? `<img src="${av}" style="width:100%;height:100%;object-fit:cover;">` : firstChar}
-      </div>
-      <div class="bubble them" data-idx="${idx}" style="cursor:pointer;max-width:72%;">${quoteHtml}${esc(m.content)}${transHtml}</div>
-    </div>`;
-  }
+  const c = curContactForRow;
+  const av = (c && c.avatar) ? realAv(c.avatar) : "";
+  const firstChar = esc((c ? c.name : "?")[0]);
+  const blkStyle = m.blockedMsg ? "opacity:.6;border:1px dashed var(--muted);" : "";
+  const blkTag = m.blockedMsg ? `<div style="font-size:9px;color:var(--muted);margin-bottom:2px;">⚠️ 对方不在你的联系人中（拉黑中）</div>` : "";
+  return `<div class="msg-row them" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
+    <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
+      ${av ? `< img src="${av}" style="width:100%;height:100%;object-fit:cover;">` : firstChar}
+    </div>
+    <div style="max-width:72%;min-width:0;">
+      ${blkTag}
+      <div class="bubble them" data-idx="${idx}" style="cursor:pointer;${blkStyle}">${quoteHtml}${esc(m.content)}${transHtml}</div>
+    </div>
+  </div>`;
+}
 
  // ===== 玩家自己：右侧头像 =====
   if (m.role === "me") {
@@ -11595,6 +12019,18 @@ chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;paddin
 chatHtml += `</div>`;  // 关闭 #chatPage
 
 body.innerHTML = chatHtml;
+
+// 🎨 该联系人的气泡色（CSS 覆盖，后续逐条 append 的气泡也会命中）
+(function applyBubbleColor() {
+  const sid = "__chat_bubble_override";
+  let st = document.getElementById(sid);
+  if (!st) { st = document.createElement("style"); st.id = sid; document.head.appendChild(st); }
+  const curC2 = store.getContacts().find(x => x.name === self.currentUser);
+  const col = (curC2 && !curC2.isGroup && curC2.bubbleColor) ? curC2.bubbleColor : "";
+  st.textContent = col
+    ? `#chatThread .bubble.them{background:${col} !important;}`
+    : "";
+})();
     
 // ★ 强制重绑右上角设置按钮，指向最新的 renderSettings
 const sbG = $("#appSettingsBtn");
@@ -11869,13 +12305,31 @@ body.querySelector("#backToListBtn").onclick = () => {
     };
 
     body.querySelector("#cancelQuote").onclick = () => { body.querySelector("#quotePreview").style.display = "none"; self.quoteData = null; };
-    body.querySelector("#sendBtn").onclick = () => {
-      const text = body.querySelector("#msgInput").value.trim();
-      if(!text) return;
-      body.querySelector("#msgInput").value = "";
-      self.sendMessage(body, text, false);
-    };
-    body.querySelector("#msgInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();body.querySelector("#sendBtn").click();}});
+    const _sendBtnEl = body.querySelector("#sendBtn");
+const _msgInputEl = body.querySelector("#msgInput");
+if (_sendBtnEl && _msgInputEl) {
+  _sendBtnEl.onclick = () => {
+    const text = _msgInputEl.value.trim();
+    if(!text) return;
+    _msgInputEl.value = "";
+    self.sendMessage(body, text, false);
+  };
+  _msgInputEl.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();_sendBtnEl.click();}});
+}
+
+// 🚫 拉黑态按钮
+const letThemReplyBtn = body.querySelector("#letThemReplyBtn");
+if (letThemReplyBtn) letThemReplyBtn.onclick = () => window.letBlockedReply(self.currentUser, body);
+
+const forceReconcileBtn = body.querySelector("#forceReconcileBtn");
+if (forceReconcileBtn) forceReconcileBtn.onclick = () => {
+  if (!confirm(`强制和好？${self.currentUser} 会解除对你的拉黑，恢复正常对话。`)) return;
+  const list = store.getContacts();
+  const t = list.find(x => x.name === self.currentUser);
+  if (t) { t.blockState = "none"; store.setContacts(list); }
+  toast(self.currentUser + " 解除了拉黑");
+  self.render(body);
+};
 // ✨ 帮我起话题（单人聊天页绑定）
     const topicBtn = body.querySelector("#topicBtn");
     if (topicBtn) {
@@ -11907,7 +12361,11 @@ const playerPronoun = _giT.pronoun;
   // 联系人的人设
   const contact = store.getContacts().find(c => c.name === contactName);
   const contactDesc = contact ? (contact.desc || "") : "";
-  const affBehavior = buildAffinityBehaviorBlock(contactName, aff);
+  const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
+const _blkC = store.getContacts().find(x => x.name === self.currentUser) || {};
+const everBlockedRule = _blkC.everBlocked
+  ? `\n【关系背景】你和 ${playerName} 之间曾经有过"拉黑/被拉黑"的经历，现在和好了。偶尔可以隐约提起那段别扭（"上次那事""之前我们闹得有点僵"），但不要反复纠缠，语气符合当前好感度。`
+  : "";
 
   // 彼得特殊处理（蜘蛛侠秘密身份 + 话痨风格）
   const isPeter = (contactName === "彼得·帕克");
@@ -12125,10 +12583,14 @@ const realAv = (v) => {
     return v;
   };
   // 识别群聊，直接走独立发送逻辑
-  const c = store.getContacts().find(x => x.name === self.currentUser);
-  if (c && c.isGroup) {
-    return self.sendGroupMessage(body, text, isRetry);
-  }
+const c = store.getContacts().find(x => x.name === self.currentUser);
+if (c && c.isGroup) {
+  return self.sendGroupMessage(body, text, isRetry);
+}
+// 🚫 对方拉黑了用户：走和好判定分支
+if (c && c.blockState === "byThem") {
+  return window.handleBlockedByThem(self.currentUser, text, body);
+}
   const thread = body.querySelector("#chatThread");
   
   // ===== 校验聊天对象 =====
@@ -12240,7 +12702,8 @@ const attitude = affinityLevelHint(contactAff);
 const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
 const genderPronoun = _gi.pronoun;
 
-      let recent = arr.slice(-store.getChatConfig().maxContext * 2)
+     let recent = arr.slice(-store.getChatConfig().maxContext * 2)
+  .filter(m => !m.festival)   // ★ 节日信不进剧情上下文，防时空错乱
   .map(m => ({ role: m.role === "me" ? "user" : "assistant", content: m.content }))
   .filter(m => m.content && m.content.trim() !== "");
 // ★ 字符总量封顶：从最新往回累加，超过 4000 字就不再往前带
@@ -12563,6 +13026,7 @@ ${memoryRule}
 【当前关系】${attitude}
 【好感度】${contactAff}/200
 ${affBehavior}
+${everBlockedRule}
 ${peterInitiativeHint}
 ${characterVibe}
 ${avengerRule}
@@ -15309,16 +15773,22 @@ ${(() => {
     </div>
     <div style="font-size:24px">${s.affinity >= 151 ? '❤️' : s.affinity >= 101 ? '💖' : s.affinity >= 51 ? '💛' : '💙'}</div>
   </div>
-      <div class="row" style="gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5">
+      <div class="row" style="gap:8px;margin-bottom:8px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5">
         <button class="btn ghost" style="flex:1" onclick="window.openSlots('save')">💾 存档</button>
         <button class="btn ghost" style="flex:1" onclick="window.openSlots('load')">📂 读档</button>
         <button class="btn ghost" style="flex:1" onclick="window.showMemory()">📜 回忆</button>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <button class="btn ghost" style="flex:1" onclick="window.goBackTurn()" ${(store.getState().history && store.getState().history.length) ? "" : "disabled"}>↩ 回到上一回合</button>
       </div>
       <div class="story-content" style="word-break:break-word;">${formatDialogue(s.currentStory)}</div>
       ${opts.map(o=>`<button class="btn ghost" style="margin-bottom:8px;text-align:left;white-space:normal;word-break:break-word;" onclick="window.selectOption('${esc(o)}')">${esc(o)}</button>`).join('')}
       <div class="card">
   <input id="customAct" placeholder="自定义行动... 用（括号）可跳出剧情下达干预指令" style="width:100%;padding:10px;margin-bottom:8px">
-  <button class="btn" style="width:100%;" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
+  <div class="row" style="gap:8px;">
+    <button class="btn ghost" style="flex:1;" id="wlInspireBtn">🎲 给我个建议</button>
+    <button class="btn" style="flex:2;" onclick="window.selectOption(document.getElementById('customAct').value)">发送</button>
+  </div>
 </div>
     </div>`;
 // 👁️ 人称切换
@@ -15434,6 +15904,9 @@ body.querySelector("#twAnchorBtn").onclick = () => showEventAnchorPanel();
 
     const ci = body.querySelector("#customAct");
     ci.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); window.selectOption(ci.value); } });
+
+    const inspireBtn = body.querySelector("#wlInspireBtn");
+    if (inspireBtn) inspireBtn.onclick = () => window.inspireAction(body);
   },
  onBack() {
     const sb = $("#appSettingsBtn");
@@ -15487,6 +15960,12 @@ instagram: {
   },
   async render(body) {
     const posts = store.getPosts().instagram || [];
+    // ★ 预加载 idb 图片进缓存，供下面同步渲染
+    for (const p of posts) {
+      if (p && p.img && p.img.startsWith("idb:")) {
+        await resolveImageUrlCached(p.img);
+      }
+    }
     // 🕸️ 遗忘魔咒：过滤掉"彼得·帕克"作为发帖人的 IG 帖子
 let filteredPosts = posts;
 if (isSpellActiveNow()) {
@@ -15520,12 +15999,19 @@ body.innerHTML = `<div style="padding:14px">
           <div style="flex:1;min-width:0;"><div class="name" style="color:var(--text)">${esc(p.name)}</div><div class="handle">${esc(p.handle || '@user')}</div></div>
           ${p.img && p.img !== "ERROR" ? `<button class="ig-more-btn" data-idx="${i}" style="background:none;border:none;color:var(--muted);font-size:22px;font-weight:700;cursor:pointer;padding:0 8px;line-height:1;">…</button>` : ""}
         </div>
-       ${(p.img === "ERROR" || p.img === "PENDING" || !p.img)
-   ? `<div class="ig-gen-placeholder" data-idx="${i}" style="width:100%;aspect-ratio:1;background:var(--panel-2);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;margin-bottom:8px;color:var(--muted);cursor:pointer;gap:8px;">
-        <div style="font-size:34px;">🖼️</div>
-        <div style="font-size:13px;">${p.img === "ERROR" ? "生成失败 · 点击重试" : "点击生成配图"}</div>
-      </div>`
-   : `<img src="${p.img}" class="ig-image" data-idx="${i}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block; cursor:pointer;">`}
+      ${(() => {
+          const raw = p.img;
+          const isIdb = raw && raw.startsWith("idb:");
+          const resolved = isIdb ? (_imgCache[raw.slice(4)] || "") : raw;
+          const isPlaceholder = (!raw || raw === "ERROR" || raw === "PENDING" || (isIdb && !resolved));
+          if (isPlaceholder) {
+            return `<div class="ig-gen-placeholder" data-idx="${i}" style="width:100%;aspect-ratio:1;background:var(--panel-2);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;margin-bottom:8px;color:var(--muted);cursor:pointer;gap:8px;">
+               <div style="font-size:34px;">🖼️</div>
+               <div style="font-size:13px;">${raw === "ERROR" ? "生成失败 · 点击重试" : "点击生成配图"}</div>
+             </div>`;
+          }
+          return `< img src="${resolved}" class="ig-image" data-idx="${i}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block; cursor:pointer;">`;
+       })()}
         <div class="text" style="color:var(--text)">${esc(p.text)}</div>
         <div class="foot"><span>♡ ${p.likes||0}</span></div>
         
@@ -15775,8 +16261,9 @@ const finalPosts = newPosts.map(np => ({
             body.innerHTML = `<div class="loader"><div class="spin"></div>重新绘制中...</div>`;
             try {
               const newImgUrl = await generateImage(post.imgPrompt);
+              const stored = await persistImageToIdb(newImgUrl);   // ★ 转存
               const latestAll = store.getPosts();
-              latestAll.instagram[idx].img = newImgUrl;
+              latestAll.instagram[idx].img = stored;
               store.setPosts(latestAll);
               apps.instagram.render(body);
               toast("图片已更新");
@@ -15935,8 +16422,9 @@ body.querySelectorAll(".ig-reply-del").forEach(btn => {
         try {
           const ref = apps.instagram.findRefByPrompt(post.imgPrompt);
           const url = await generateImage(post.imgPrompt, ref);
+          const stored = await persistImageToIdb(url);   // ★ 转存
           const latest = store.getPosts();
-          if (latest.instagram[idx]) { latest.instagram[idx].img = url; store.setPosts(latest); }
+          if (latest.instagram[idx]) { latest.instagram[idx].img = stored; store.setPosts(latest); }
           apps.instagram.render(body);
         } catch (e) {
           const latest = store.getPosts();
@@ -16698,10 +17186,11 @@ ${viewRule}
 
       // 显示已保存的地图，没有则显示占位（不自动生图）
 const showSavedOrPlaceholder = () => {
-  const savedMap = store.get("sv_spider_map", "");
-  if (savedMap) {
-    area.innerHTML = `< img src="${savedMap}" onerror="this.parentNode.innerHTML='<div style=&quot;padding:20px;text-align:center;color:var(--muted);font-size:12px;&quot;>旧地图已失效，点上方「重新生成地图」</div>'" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
-  } else {
+        let savedMap = store.get("sv_spider_map", "");
+        if (savedMap && savedMap.startsWith("idb:")) savedMap = _imgCache[savedMap.slice(4)] || "";
+        if (savedMap) {
+          area.innerHTML = `<img src="${savedMap}" onerror="this.parentNode.innerHTML='<div style=&quot;padding:20px;text-align:center;color:var(--muted);font-size:12px;&quot;>旧地图已失效，点上方「重新生成地图」</div>'" style="width:100%;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;">`;
+        } else {
     area.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;background:var(--panel-2);border-radius:16px;margin-bottom:12px;">🗺️ 还没有地图<br><span style="font-size:11px;opacity:.7;">点上方「生成地图」按钮绘制</span></div>`;
   }
   // 按钮文案随状态变化
@@ -16718,9 +17207,11 @@ const renderMap = async () => {
     const mapPrompt = (cfgA.prompts && cfgA.prompts.map) ? cfgA.prompts.map : "Top-down illustrated map of Queens New York, MCU style, roads, apartment blocks, Midtown School, subway station. No text labels.";
     const prompt = `${mapPrompt}\nScene: ${ctx}. Year: ${sNow.gameYear}.`;
     const url = await generateImage(prompt);
-    const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
-    store.set("sv_spider_map", src);   // ★ 保存，下次进来直接显示
-    showSavedOrPlaceholder();
+          const src = url.startsWith("http") ? url : "data:image/png;base64," + url;
+          const stored = await persistImageToIdb(src);   // ★ 转存
+          store.set("sv_spider_map", stored);
+          await resolveImageUrlCached(stored);
+          showSavedOrPlaceholder();
   } catch (e) {
     area.innerHTML = `<div class="card">生成失败：${esc(e.message)}</div>`;
     setTimeout(showSavedOrPlaceholder, 1500);
@@ -16798,9 +17289,13 @@ body.querySelector("#genMapBtn").onclick = renderMap;
         }
       };
 
-     showSavedOrPlaceholder();
-  renderSideQuests();
-},
+     (async () => {
+        const sm = store.get("sv_spider_map", "");
+        if (sm && sm.startsWith("idb:")) await resolveImageUrlCached(sm);
+        showSavedOrPlaceholder();
+      })();
+      renderSideQuests();
+    },
 
     // ============================================================
     // 🕷️ 渲染巡逻事件（含彼得一激灵）
@@ -21594,6 +22089,330 @@ if (!existingAnchor) {
   }
 },
 
+Calendar: {
+  title: "日历",
+  viewYear: null,
+  viewMonth: null,
+
+  _injectCss() {
+    if (document.getElementById("cal-style")) return;
+    const st = document.createElement("style");
+    st.id = "cal-style";
+    st.textContent = `
+      .cal-wrap{padding:16px;}
+      .cal-hero{background:linear-gradient(135deg,#e08a3c18,#c9a15a10);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;}
+      .cal-hero::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#e08a3c,#c9a15a,#e08a3c);}
+      .cal-hero-label{font-size:10px;letter-spacing:3px;color:var(--accent);font-weight:700;}
+      .cal-hero-real{font-size:22px;font-weight:800;color:var(--text);margin-top:4px;}
+      .cal-hero-world{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.6;}
+      .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+      .cal-nav button{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;width:38px;height:38px;font-size:16px;cursor:pointer;}
+      .cal-nav-title{font-size:16px;font-weight:700;color:var(--text);}
+      .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+      .cal-wk{text-align:center;font-size:11px;color:var(--muted);padding:6px 0;font-weight:600;}
+      .cal-cell{aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:pointer;background:var(--panel);border:1px solid transparent;transition:all .12s;}
+      .cal-cell.other{opacity:.3;}
+      .cal-cell.today{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel));}
+      .cal-cell.has-fest{border-color:var(--accent-2);}
+      .cal-cell:hover{background:var(--panel-2);}
+      .cal-day-num{font-size:14px;color:var(--text);font-weight:600;}
+      .cal-cell.today .cal-day-num{color:var(--accent);}
+      .cal-fest-dot{position:absolute;bottom:6px;font-size:11px;}
+      .cal-sec{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.5px;margin:18px 0 10px;display:flex;align-items:center;gap:6px;}
+      .cal-sec::before{content:"";width:3px;height:13px;border-radius:2px;background:linear-gradient(to bottom,var(--accent),var(--accent-2));}
+      .cal-list-item{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent-2);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
+      .cal-list-emoji{font-size:22px;flex-shrink:0;}
+      .cal-list-info{flex:1;min-width:0;}
+      .cal-list-name{font-size:14px;font-weight:700;color:var(--text);}
+      .cal-list-date{font-size:11px;color:var(--muted);margin-top:2px;}
+      .cal-list-del{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;flex-shrink:0;}
+      .cal-spam{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:13px;margin-bottom:8px;cursor:pointer;}
+      .cal-spam-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+      .cal-spam-sender{font-size:12px;color:var(--muted);font-weight:600;}
+      .cal-spam-tag{font-size:10px;color:var(--accent-2);background:color-mix(in srgb,var(--accent-2) 15%,transparent);padding:2px 8px;border-radius:8px;}
+      .cal-spam-text{font-size:13px;line-height:1.7;color:var(--text);}
+      .cal-btn{width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:14px;font-weight:700;cursor:pointer;}
+    `;
+    document.head.appendChild(st);
+  },
+
+  render(body) {
+    this._injectCss();
+    $("#appSettingsBtn").style.display = "none";
+    const self = this;
+    const now = new Date();
+    if (this.viewYear == null) { this.viewYear = now.getFullYear(); this.viewMonth = now.getMonth() + 1; }
+
+    const s = store.getState();
+    const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
+    const worldStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日 · ${phase.name}`;
+    const realStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+
+    // 月份网格
+    const y = this.viewYear, mo = this.viewMonth;
+    const firstDay = new Date(y, mo - 1, 1).getDay(); // 0=周日
+    const daysInMonth = new Date(y, mo, 0).getDate();
+    const prevDays = new Date(y, mo - 1, 0).getDate();
+
+    let cells = [];
+    for (let i = 0; i < firstDay; i++) cells.push({ day: prevDays - firstDay + 1 + i, other: true });
+    for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, other: false });
+    while (cells.length % 7 !== 0) cells.push({ day: cells.length - (firstDay + daysInMonth) + 1, other: true });
+
+    const isToday = (d) => !d.other && y === now.getFullYear() && mo === now.getMonth() + 1 && d.day === now.getDate();
+
+    const gridHtml = cells.map(c => {
+      const fests = c.other ? [] : getFestivalsOn(mo, c.day);
+      const cls = ["cal-cell"];
+      if (c.other) cls.push("other");
+      if (isToday(c)) cls.push("today");
+      if (fests.length) cls.push("has-fest");
+      return `<div class="${cls.join(" ")}" ${c.other ? "" : `data-day="${c.day}"`}>
+        <span class="cal-day-num">${c.day}</span>
+        ${fests.length ? `<span class="cal-fest-dot">${fests[0].emoji || "•"}</span>` : ""}
+      </div>`;
+    }).join("");
+
+    // 本月节日/纪念日列表
+    const monthEvents = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      getFestivalsOn(mo, d).forEach(f => monthEvents.push({ ...f, day: d }));
+    }
+
+    const spam = getSpamInbox();
+
+    body.innerHTML = `
+      <div class="cal-wrap">
+        <div class="cal-hero">
+          <div class="cal-hero-label">CALENDAR</div>
+          <div class="cal-hero-real">📅 ${realStr}</div>
+          <div class="cal-hero-world">🕸️ 剧情进度：${esc(worldStr)}</div>
+        </div>
+
+        <div class="cal-nav">
+          <button id="calPrev">‹</button>
+          <div class="cal-nav-title">${y} 年 ${mo} 月</div>
+          <button id="calNext">›</button>
+        </div>
+
+        <div class="cal-grid">
+          ${["日","一","二","三","四","五","六"].map(w => `<div class="cal-wk">${w}</div>`).join("")}
+          ${gridHtml}
+        </div>
+
+        <div class="cal-sec">🎉 本月节日 / 纪念日</div>
+${monthEvents.length ? monthEvents.map(f => {
+  const isAnn = (f.type === "anniversary") || (f.id && f.type !== "festival");
+  const tag = isAnn
+    ? `<span style="font-size:9px;color:var(--accent-2);background:rgba(45,107,255,.14);padding:1px 7px;border-radius:7px;margin-left:6px;">纪念日</span>`
+    : `<span style="font-size:9px;color:var(--accent);background:rgba(230,36,41,.12);padding:1px 7px;border-radius:7px;margin-left:6px;">节日</span>`;
+  return `
+  <div class="cal-list-item">
+    <div class="cal-list-emoji">${f.emoji || "📌"}</div>
+    <div class="cal-list-info">
+      <div class="cal-list-name">${esc(f.name)}${tag}</div>
+      <div class="cal-list-date">${mo}月${f.day}日${f.note ? " · " + esc(f.note) : ""}${
+  (f.type === "anniversary" && f.startYear && (new Date().getFullYear() - f.startYear) >= 1)
+    ? ` · 第 ${new Date().getFullYear() - f.startYear} 周年`
+    : ""
+}</div>
+    </div>
+    ${f.id ? `<button class="cal-anniv-del" data-id="${f.id}" title="删除">✕</button>` : ""}
+  </div>`;
+}).join("") : `<div style="font-size:12px;color:var(--muted);text-align:center;padding:16px;">本月没有节日</div>`}
+
+        <button class="cal-btn" id="calAddBtn" style="margin-top:4px;">➕ 添加自定义纪念日</button>
+
+        <div class="cal-sec">📨 收件箱 ${spam.length ? `(${spam.length})` : ""}</div>
+        ${spam.length ? spam.slice(0, 20).map(sp => `
+          <div class="cal-spam" data-id="${sp.id}">
+            <div class="cal-spam-head">
+              <span class="cal-spam-sender">${esc(sp.sender)}</span>
+              <span class="cal-spam-tag">${sp.emoji || ""} ${esc(sp.festival)}</span>
+            </div>
+            <div class="cal-spam-text">${esc(sp.text)}</div>
+          </div>`).join("") : `<div style="font-size:12px;color:var(--muted);text-align:center;padding:16px;">暂无短信</div>`}
+      </div>`;
+
+    body.querySelector("#calPrev").onclick = () => {
+      self.viewMonth--; if (self.viewMonth < 1) { self.viewMonth = 12; self.viewYear--; }
+      self.render(body);
+    };
+    body.querySelector("#calNext").onclick = () => {
+      self.viewMonth++; if (self.viewMonth > 12) { self.viewMonth = 1; self.viewYear++; }
+      self.render(body);
+    };
+
+    body.querySelectorAll(".cal-cell[data-day]").forEach(el => {
+      el.onclick = () => {
+        const d = parseInt(el.dataset.day);
+        const fs = getFestivalsOn(mo, d);
+        if (!fs.length) { toast(`${mo}月${d}日 · 没有节日`); return; }
+        toast(`${mo}月${d}日 · ${fs.map(f => (f.emoji || "") + f.name).join("、")}`);
+      };
+    });
+
+    body.querySelector("#calAddBtn").onclick = () => self.addAnniversary(body);
+
+    body.querySelectorAll(".cal-anniv-del").forEach(el => {
+      el.onclick = () => {
+        const id = el.dataset.id;
+        if (!confirm("删除这个纪念日？")) return;
+        setCustomAnniversaries(getCustomAnniversaries().filter(a => a.id !== id));
+        self.render(body);
+      };
+    });
+
+    body.querySelectorAll(".cal-spam").forEach(el => {
+      el.onclick = () => self.showSpam(el.dataset.id);
+    });
+  },
+
+  addAnniversary(body) {
+    const self = this;
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:rgba(0,0,0,.65);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;";
+    const contacts = store.getContacts().filter(c => !c.isGroup && !/^群聊\s*·/.test(c.name || ""));
+div.innerHTML = `<div style="max-width:380px;width:100%;max-height:88vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;color:var(--text);">
+  <h3 style="margin:0 0 14px;font-size:16px;">➕ 添加纪念日</h3>
+  <div class="field"><label>名称</label><input id="an_name" placeholder="例如：我们认识的日子" maxlength="20"></div>
+  <div class="field"><label>图标（emoji，可留空）</label><input id="an_emoji" placeholder="💞" maxlength="4"></div>
+ <div class="row" style="gap:8px;">
+  <div class="field" style="flex:1.2;"><label>起始年（纪念日用，可留空）</label><input id="an_year" type="number" min="1900" max="2100" placeholder="2016"></div>
+  <div class="field" style="flex:0.8;"><label>月</label><input id="an_month" type="number" min="1" max="12" placeholder="12"></div>
+  <div class="field" style="flex:0.8;"><label>日</label><input id="an_day" type="number" min="1" max="31" placeholder="25"></div>
+</div>
+  <div class="field"><label>备注（可留空）</label><input id="an_note" placeholder="第一次一起看电影" maxlength="30"></div>
+<div class="field">
+  <label>类型</label>
+  <div style="display:flex;gap:8px;">
+    <button type="button" class="an-type" data-t="anniversary" style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--accent-2);background:rgba(45,107,255,.12);color:var(--text);font-size:13px;cursor:pointer;">💞 纪念日</button>
+    <button type="button" class="an-type" data-t="festival" style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);color:var(--text);font-size:13px;cursor:pointer;">🎉 节日</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;">纪念日=你俩之间的私人日子（对方会回忆、提起你们的事）<br>节日=公共节日（对方会像过节一样祝福）</div>
+</div>
+<div class="field">
+  <label>这天谁给你发消息？</label>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <button type="button" id="an_pick_all" class="btn ghost" style="flex:1;padding:6px;font-size:12px;">全部联系人</button>
+      <button type="button" id="an_pick_none" class="btn ghost" style="flex:1;padding:6px;font-size:12px;">清空</button>
+    </div>
+    <div id="an_people" style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">不选=默认全部联系人都发</div>
+  </div>
+  <div class="row" style="gap:8px;margin-top:6px;">
+    <button class="btn ghost" id="an_cancel" style="flex:1;">取消</button>
+    <button class="btn" id="an_ok" style="flex:1;">保存</button>
+  </div>
+</div>`;
+    document.querySelector(".device").appendChild(div);
+    // 联系人多选
+let selPeople = [];
+const peopleEl = div.querySelector("#an_people");
+const refreshPeople = () => {
+  peopleEl.innerHTML = contacts.map(c => {
+    const on = selPeople.includes(c.name);
+    return `<button type="button" class="an-p" data-n="${esc(c.name)}" style="padding:6px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1.5px solid ${on ? 'var(--accent-2)' : 'var(--line)'};background:${on ? 'rgba(45,107,255,.12)' : 'var(--panel-2)'};color:var(--text);">${on ? '✓ ' : ''}${esc(c.note || c.name)}</button>`;
+  }).join("");
+  peopleEl.querySelectorAll(".an-p").forEach(b => {
+    b.onclick = () => {
+      const n = b.dataset.n;
+      const i = selPeople.indexOf(n);
+      if (i === -1) selPeople.push(n); else selPeople.splice(i, 1);
+      refreshPeople();
+    };
+  });
+};
+refreshPeople();
+div.querySelector("#an_pick_all").onclick = () => { selPeople = contacts.map(c => c.name); refreshPeople(); };
+div.querySelector("#an_pick_none").onclick = () => { selPeople = []; refreshPeople(); };
+
+// 类型选择
+let annivType = "anniversary";
+const typeBtns = div.querySelectorAll(".an-type");
+typeBtns.forEach(b => {
+  b.onclick = () => {
+    annivType = b.dataset.t;
+    typeBtns.forEach(x => {
+      const on = x.dataset.t === annivType;
+      x.style.borderColor = on ? "var(--accent-2)" : "var(--line)";
+      x.style.background = on ? "rgba(45,107,255,.12)" : "var(--panel-2)";
+    });
+  };
+});
+
+div.querySelector("#an_cancel").onclick = () => div.remove();
+div.onclick = (e) => { if (e.target === div) div.remove(); };
+div.querySelector("#an_ok").onclick = () => {
+  const name = div.querySelector("#an_name").value.trim();
+  const month = parseInt(div.querySelector("#an_month").value);
+  const day = parseInt(div.querySelector("#an_day").value);
+  if (!name) return toast("请填名称");
+  if (!month || month < 1 || month > 12) return toast("月份不对");
+  if (!day || day < 1 || day > 31) return toast("日期不对");
+  const list = getCustomAnniversaries();
+  const startYearVal = parseInt(div.querySelector("#an_year").value);
+list.push({
+  id: "anniv_" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
+  name,
+  emoji: div.querySelector("#an_emoji").value.trim() || (annivType === "festival" ? "🎉" : "💞"),
+  month, day, note: div.querySelector("#an_note").value.trim(),
+  recipients: selPeople,
+  type: annivType,
+  startYear: (startYearVal && startYearVal > 1900 && startYearVal <= 2100) ? startYearVal : null  // ★ 起始年
+ });
+  }
+  },
+
+  // 查看垃圾短信（可回复，但回复不触发 AI）
+  showSpam(id) {
+    const self = this;
+    const inbox = getSpamInbox();
+    const sp = inbox.find(x => x.id === id);
+    if (!sp) return;
+
+    const div = document.createElement("div");
+    div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:800;display:flex;flex-direction:column;color:var(--text);";
+    const renderReplies = () => (sp.replies || []).map(r => `
+      <div style="align-self:flex-end;max-width:75%;background:var(--bubble-me-bg);color:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:14px;line-height:1.6;margin-bottom:8px;">${esc(r)}</div>
+      <div style="align-self:flex-start;font-size:11px;color:var(--muted);margin-bottom:12px;font-style:italic;">⚠️ 此号码无法送达 · 对方不会回复</div>
+    `).join("");
+
+    div.innerHTML = `
+      <div style="flex-shrink:0;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;">
+        <button id="spamBack" style="background:none;border:none;color:var(--accent-2);font-size:22px;cursor:pointer;">‹</button>
+        <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;color:var(--text);">${esc(sp.sender)}</div><div style="font-size:11px;color:var(--muted);">${sp.emoji || ""} ${esc(sp.festival)} · 营销短信</div></div>
+      </div>
+      <div id="spamThread" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;">
+        <div style="align-self:flex-start;max-width:80%;background:var(--bubble-them-bg);color:var(--bubble-them-text);border-radius:16px 16px 16px 4px;padding:12px 14px;font-size:14px;line-height:1.7;margin-bottom:16px;">${esc(sp.text)}</div>
+        ${renderReplies()}
+      </div>
+      <div style="flex-shrink:0;padding:10px 14px;padding-bottom:calc(14px + env(safe-area-inset-bottom,14px));background:var(--panel);border-top:1px solid var(--line);display:flex;gap:8px;">
+        <input id="spamInput" placeholder="回复..." style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:10px 14px;color:var(--text);outline:none;font-size:14px;">
+        <button id="spamSend" style="background:var(--accent-2);color:#fff;border:none;border-radius:20px;padding:0 16px;font-weight:600;cursor:pointer;">发送</button>
+      </div>`;
+    document.querySelector(".device").appendChild(div);
+
+    div.querySelector("#spamBack").onclick = () => div.remove();
+    const input = div.querySelector("#spamInput");
+    const doSend = () => {
+      const v = input.value.trim();
+      if (!v) return;
+      sp.replies = sp.replies || [];
+      sp.replies.push(v);
+      setSpamInbox(inbox);
+      input.value = "";
+      // 重渲染线程
+      const thread = div.querySelector("#spamThread");
+      thread.innerHTML = `<div style="align-self:flex-start;max-width:80%;background:var(--bubble-them-bg);color:var(--bubble-them-text);border-radius:16px 16px 16px 4px;padding:12px 14px;font-size:14px;line-height:1.7;margin-bottom:16px;">${esc(sp.text)}</div>` + renderReplies();
+      thread.scrollTop = thread.scrollHeight;
+      // ★ 不触发任何 AI：对方永远不回
+    };
+    div.querySelector("#spamSend").onclick = doSend;
+    input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); doSend(); } });
+  }
+},
+
 Memory: {
   title: "记忆",
   curTab: "all",      // all | common | 某联系人名
@@ -21998,7 +22817,7 @@ showSettings(body) {
   // ===== 执行总结 =====
   async doSummarize({ tags, sourceName, scope, wordMin, wordMax, requirement, split }) {
     const chats = store.getChats();
-    let arr = (chats[sourceName] || []).filter(m => m.content && !m.content.startsWith("[语音]"));
+    let arr = (chats[sourceName] || []).filter(m => m.content && !m.content.startsWith("[语音]") && !m.festival);
     if (!arr.length) throw new Error(`「${sourceName}」还没有聊天记录`);
     if (scope !== "all") arr = arr.slice(-parseInt(scope));
 
@@ -24044,7 +24863,8 @@ console.log("openApp 尝试:", id, "→ 存在:", !!(id && apps[id]));
 if (typeof window.peterProactiveCheck === "function") {
   setTimeout(() => {
     try { window.peterProactiveCheck(); } catch (e) { console.warn(e); }
-    try { window.contactProactiveCheck(); } catch (e) { console.warn(e); } 
+    try { window.contactProactiveCheck(); } catch (e) { console.warn(e); }
+    try { window.festivalCheck(); } catch (e) { console.warn(e); }
   }, 1500);
 }
   $("#desktop").classList.remove("active");
@@ -24827,8 +25647,11 @@ window.slimChatNow = async (name) => {
     `· 好感度、记忆完整保留\n\n确认继续？`
   )) return;
 
-  const headPart = arr.slice(0, toCount);
-  const tailPart = arr.slice(toCount);
+  const headPart = arr.slice(0, toCount).filter(m => !m.festival); // 节日信不参与总结
+const tailPart = arr.slice(toCount);
+// 把被跳过的节日信保留回 tail 开头，避免丢失
+const skippedFest = arr.slice(0, toCount).filter(m => m.festival);
+if (skippedFest.length) tailPart.unshift(...skippedFest);
 
   window._slimProgress(`精简中… 正在总结 ${toCount} 条旧消息`, "loading");
 
@@ -24934,6 +25757,142 @@ ${listText}`;
     toast(`✅ 已翻译 ${done} 条`);
   } catch (e) {
     toast("翻译失败：" + e.message);
+  }
+};
+
+// 🚫 对方拉黑了用户 → 用户发消息，AI 判定能否和好
+window.handleBlockedByThem = async (name, text, body) => {
+  if (!name) return;
+  // 先把用户消息存进去并渲染
+  const chats = store.getChats();
+  const arr = chats[name] || [];
+  arr.push({ role: "me", content: text });
+  chats[name] = arr;
+  store.setChats(chats);
+  apps.messages.lastUserText = text;
+  apps.messages.render(body);
+
+  const thread = body.querySelector("#chatThread");
+  if (thread) {
+    thread.innerHTML += `<div class="bubble them typing-indicator" id="blkLoading" style="color:var(--muted);font-style:italic;font-size:12px;">...</div>`;
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  try {
+    const profile = store.getProfile();
+    const playerName = profile.name || "你";
+    const gi = getGenderInfo(profile);
+    const aff = getAffinityOf(name);
+    const c = store.getContacts().find(x => x.name === name) || {};
+    const recent = arr.slice(-6).filter(m => m.content && !m.festival)
+      .map(m => (m.role === "me" ? playerName : name) + "：" + m.content).join("\n");
+
+    const sys = `你是「${name}」（${c.desc || ""}）。你**拉黑了**「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代），正在生气/闹矛盾中。ta 刚刚试图联系你。
+${buildBlacklistBanText([])}
+${buildAffinityBehaviorBlock(name, aff)}
+${name === "彼得·帕克" ? buildPeterBrandNewDayPersona() : ""}
+
+【近期对话】
+${recent}
+
+【ta 刚发的话】${text}
+
+【你的任务 · 铁律】
+1. 根据 ta 这句话判断：ta 是真心道歉/说到你心坎里了，还是敷衍/更气人？
+2. 严格结合你和 ta 的好感度：好感高容易被哄好，好感低很难。
+3. 决定是否原谅、解除拉黑。
+
+【输出格式 · 严格两行】
+REPLY: 你的回复（1~3 条，用 || 分隔，手机短信语气，纯中文，严禁动作括号星号）
+DECISION: 只写 FORGIVE（原谅并解除拉黑）或 KEEP（继续拉黑）
+
+只输出这两行。`;
+    const res = await callAI([{ role: "user", content: "被哄" }], sys);
+
+    // 解析
+    let replyText = "", decision = "KEEP";
+    const rm = res.match(/REPLY\s*[:：]\s*([\s\S]*?)(?=\bDECISION\s*[:：]|$)/i);
+    const dm = res.match(/DECISION\s*[:：]\s*(FORGIVE|KEEP)/i);
+    if (rm) replyText = rm[1].trim();
+    if (dm) decision = dm[1].toUpperCase();
+    let msgs = replyText.split(/\|\||\n/).map(x => x.trim()).filter(Boolean);
+    if (!msgs.length) msgs = ["……"];
+
+    const load = body.querySelector("#blkLoading");
+    if (load) load.remove();
+
+    const chatsNow = store.getChats();
+    const a2 = chatsNow[name] || [];
+    msgs.forEach(mm => a2.push({ role: "them", content: mm, blockedMsg: (decision !== "FORGIVE") }));
+    chatsNow[name] = a2;
+    store.setChats(chatsNow);
+
+    if (decision === "FORGIVE") {
+      const list = store.getContacts();
+      const t = list.find(x => x.name === name);
+      if (t) { t.blockState = "none"; store.setContacts(list); }
+      toast("💗 " + name + " 原谅你了");
+    }
+    apps.messages.render(body);
+  } catch (e) {
+    const load = body.querySelector("#blkLoading");
+    if (load) load.remove();
+    toast("失败：" + e.message);
+  }
+};
+
+// 🚫 用户拉黑了对方 → 看看对方被拉黑后的反应
+window.letBlockedReply = async (name, body) => {
+  if (!name) return;
+  const thread = body.querySelector("#chatThread");
+  if (thread) {
+    thread.innerHTML += `<div class="bubble them typing-indicator" id="blkLoading" style="color:var(--muted);font-style:italic;font-size:12px;">对方正在尝试联系你...</div>`;
+    thread.scrollTop = thread.scrollHeight;
+  }
+  try {
+    const profile = store.getProfile();
+    const playerName = profile.name || "你";
+    const gi = getGenderInfo(profile);
+    const aff = getAffinityOf(name);
+    const c = store.getContacts().find(x => x.name === name) || {};
+    const chats = store.getChats();
+    const recent = (chats[name] || []).slice(-5).filter(m => m.content && !m.festival)
+      .map(m => (m.role === "me" ? playerName : name) + "：" + m.content).join("\n");
+
+    const sys = `你是「${name}」（${c.desc || ""}）。「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代）**把你拉黑了**。
+${buildBlacklistBanText([])}
+${buildAffinityBehaviorBlock(name, aff)}
+${name === "彼得·帕克" ? buildPeterBrandNewDayPersona() : ""}
+
+【近期对话】
+${recent || "（无）"}
+
+【情境 · 铁律】
+1. 你发现自己被 ${playerName} 拉黑了——消息发不出去、ta 不回你。
+2. 写出你此刻"隔着拉黑墙"想对 ta 说却送不到的话，或你试图联系却失败的反应。
+3. 情绪严格符合你和 ta 的好感度：好感高=着急/反省/想和好；好感低=困惑/赌气/无所谓。
+4. 这是"发不出去的消息/内心独白"，带点无力感。
+
+【风格】手机短信语气，1~2 条，用 || 分隔，严禁动作/括号/星号，纯中文。
+只输出内容本身。`;
+    const res = await callAI([{ role: "user", content: "被拉黑后的反应" }], sys);
+    let msgs = String(res || "").split(/\|\|/).map(x => x.trim()).filter(Boolean);
+    if (!msgs.length) msgs = ["……（消息发送失败）"];
+
+    const chatsNow = store.getChats();
+    const arr = chatsNow[name] || [];
+    // 打标记：这是被拉黑态的消息，用灰色/特殊样式；不进主线记忆
+    msgs.forEach(mm => arr.push({ role: "them", content: mm, blockedMsg: true }));
+    chatsNow[name] = arr;
+    store.setChats(chatsNow);
+
+    const load = body.querySelector("#blkLoading");
+    if (load) load.remove();
+    apps.messages.render(body);
+  } catch (e) {
+    const load = body.querySelector("#blkLoading");
+    if (load) load.remove();
+    toast("失败：" + e.message);
   }
 };
 
@@ -25185,6 +26144,140 @@ ${buildAffinityBehaviorBlock(name, aff)}
     }
   }
 };
+
+// ============================================================
+// 📅 节日触发：现实日期命中节日 → 发信（锁定期=垃圾短信，解锁=真彼得）
+// ============================================================
+window.festivalCheck = async function() {
+  try {
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth() + 1, d = now.getDate();
+    const todayKey = `${y}-${m}-${d}`;
+
+    const fests = getFestivalsOn(m, d);
+    if (!fests.length) return;
+
+    // ★ 当天首次上线触发：按"节日+当天日期"记录，已发过当天不再发
+    let sent = [];
+    try { sent = JSON.parse(localStorage.getItem("sv_festival_sent") || "[]"); } catch (e) {}
+
+    const contacts = store.getContacts().filter(c =>
+      !c.isGroup &&
+      !/^群聊\s*·/.test(c.name || "") &&
+      !store.isBlacklisted(c.name)
+    );
+    if (!contacts.length) return;
+
+    for (const f of fests) {
+      const fid = f.key || f.id;
+      const stamp = `${todayKey}__${fid}`;
+      if (sent.includes(stamp)) continue; // 今天这个节日已经发过
+      sent.push(stamp);
+      localStorage.setItem("sv_festival_sent", JSON.stringify(sent));
+
+      // 决定收信联系人：自定义纪念日可指定 recipients，内置节日=全部
+      let targets = contacts;
+      if (f.id && Array.isArray(f.recipients) && f.recipients.length) {
+        targets = contacts.filter(c => f.recipients.includes(c.name));
+      }
+
+      for (const c of targets) {
+        if (c.name === "彼得·帕克" && isPeterChatLocked()) {
+          // 魔咒锁定期：彼得→伪装垃圾短信
+          await sendFestivalSpam(f);
+        } else {
+          await sendFestivalFromContact(c.name, f);
+        }
+        await new Promise(r => setTimeout(r, 600)); // 节流，避免瞬时打爆
+      }
+    }
+  } catch (e) { console.warn("[festivalCheck]", e); }
+};
+
+// 任意联系人发节日信（读各自好感度/人设）
+async function sendFestivalFromContact(name, fest) {
+  if (!name) return;
+  const profile = store.getProfile();
+  const playerName = profile.name || "你";
+  const gi = getGenderInfo(profile);
+  const aff = getAffinityOf(name);
+  const c = store.getContacts().find(x => x.name === name) || {};
+
+  // 彼得专属人设叠加
+  const peterPersona = (name === "彼得·帕克") ? buildPeterBrandNewDayPersona() : "";
+  // 复联成员时间线
+  const avengerRule = (WORLD.avengersRoster && WORLD.avengersRoster[name]) ? buildAvengerChatRule(name) : "";
+
+  const isAnniv = (fest.type === "anniversary");
+  // 计算第几周年
+  let anniversaryYears = null;
+  if (isAnniv && fest.startYear) {
+    const nowY = new Date().getFullYear();
+    const diff = nowY - fest.startYear;
+    if (diff >= 1) anniversaryYears = diff;
+  }
+  const yearsLine = anniversaryYears
+    ? `今年是这个日子的**第 ${anniversaryYears} 周年**（从 ${fest.startYear} 年算起）。你可以自然地提到"今年是第 ${anniversaryYears} 年了"。`
+    : "";
+
+  const occasionBlock = isAnniv
+    ? `今天是一个**你和「${playerName}」之间的私人纪念日**：「${fest.name}」${fest.note ? `（${fest.note}）` : ""}。
+这**不是公共节日**，是只属于你们两个人的日子。
+${yearsLine}
+
+【怎么写 · 铁律】
+1. 这是你们之间有特殊意义的日子，你记得它，所以主动发消息。
+2. 语气要带**回忆感、私人感、专属感**——提起这个日子对你们的意义（但严格按好感度把握分寸，好感低就只是"记得有这么个日子"，好感高才深情）。
+3. **绝对不要**把它当成公共节日来"祝节日快乐"。它不是节日，别说"XX节快乐"。
+4. 严禁编造你们没真正经历过的细节，模糊带过即可（"那天""我们第一次……"这种程度）。`
+    : `今天是**现实世界**的公共节日「${fest.name}」。你给「${playerName}」发一条节日问候。
+
+【怎么写 · 铁律】
+1. 这是公共节日，像正常人过节那样祝福即可。
+2. 分寸严格符合你和 ta 的好感度。`;
+
+  let msgs = [];
+  try {
+    const sys = `你是「${name}」（简介：${c.desc || "—"}）。${occasionBlock}
+玩家是「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代）。
+${buildBlacklistBanText([])}
+${buildAffinityBehaviorBlock(name, aff)}
+${peterPersona}
+${avengerRule}
+
+【共同隔离铁律 · 违反即失败】
+1. 这不是主线剧情的一部分，严禁推进剧情。
+2. 严禁引用你们还没一起经历过的具体剧情事件。
+3. 就当作"此刻的你，想给 ta 发个消息"。
+
+【短信风格】
+1. 手机短信，严禁动作/括号/星号。
+2. 1~3 条，用 || 分隔。
+3. 严格符合你的人设和对 ta 的好感度（好感低=客气简短，好感高=亲近）。
+4. 纯中文，可夹少量英文口语。
+
+只输出短信本身，多条用 || 分隔。`;
+    const res = await callAI([{ role: "user", content: isAnniv ? "发纪念日消息" : "发节日问候" }], sys);
+    msgs = String(res || "").split(/\|\|/).map(x => x.trim()).filter(Boolean);
+  } catch (e) {}
+  if (!msgs.length) {
+    msgs = isAnniv ? [`${fest.emoji || "💞"}今天是「${fest.name}」呢。`] : [`${fest.emoji || ""}${fest.name}快乐。`];
+  }
+
+  const chats = store.getChats();
+  const arr = chats[name] || [];
+  msgs.forEach(mm => arr.push({ role: "them", content: mm, festival: true, festivalName: fest.name }));
+  chats[name] = arr;
+  store.setChats(chats);
+
+  if (!(window.isDndOn && window.isDndOn())) {
+    if (typeof showMsgBanner === "function") showMsgBanner(name, (fest.emoji || "") + msgs[0]);
+  }
+  if (apps.messages.currentUser === name && apps.messages.view === "chat") {
+    apps.messages.render(document.getElementById("appBody"));
+  }
+}
+
 // ============================================================
 // ★ 彼得主动发信检查
 // ============================================================
@@ -25315,9 +26408,12 @@ ${idleReason}。你此刻突然想起了${playerName}，于是主动发来一条
 if (!window._peterProactiveTimer) {
   window._peterProactiveTimer = setInterval(() => {
   try { window.peterProactiveCheck(); } catch (e) { console.warn(e); }
-  try { window.contactProactiveCheck(); } catch (e) { console.warn(e); }   // ★ 新增
+  try { window.contactProactiveCheck(); } catch (e) { console.warn(e); }
+  try { window.festivalCheck(); } catch (e) { console.warn(e); }
 }, 60 * 1000);
 }
+// ★ 当天首次上线：加载后立即检查一次节日（已发过的当天不会重复）
+setTimeout(() => { try { window.festivalCheck(); } catch (e) { console.warn(e); } }, 2000);
 // ============================================================
 // 🎞️ 过场动画 · 遗忘咒生效（只讲施法瞬间，不描述四年）
 // ============================================================
