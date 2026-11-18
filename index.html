@@ -3350,7 +3350,7 @@ const store = {
     try { toast("⚠️ 本地空间紧张，请到 设置→数据管理 导出备份"); } catch (_) {}
   }
 },
-  getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3"});},
+  getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3",temperature:"0.8"});},
   setConfig(c){this.set("sv_config",c);},
 // ===== API 档位（可保存多套 URL / Key / 模型）=====
   getApiSlots() {
@@ -5148,11 +5148,18 @@ async function callAI(messages, systemPrompt) {
   if (!cfg.apiKey) throw new Error("请先填入 API Key");
   const url = (cfg.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions";
 
-  const body = JSON.stringify({
+  const _payload = {
     model: cfg.model,
-    messages: [{ role: "system", content: systemPrompt }, ...messages],
-    temperature: 0.8
-  });
+    messages: [{ role: "system", content: systemPrompt }, ...messages]
+  };
+  // 温度：留空 = 不发送该参数（兼容只接受默认温度的模型）
+  const _temp = (cfg.temperature === undefined || cfg.temperature === null)
+    ? "" : String(cfg.temperature).trim();
+  if (_temp !== "") {
+    const _tv = parseFloat(_temp);
+    if (!isNaN(_tv)) _payload.temperature = _tv;
+  }
+  const body = JSON.stringify(_payload);
 
   // ★ 关键 1：40 秒超时（世界线长剧情需要）
   const controller = new AbortController();
@@ -9137,6 +9144,13 @@ body.theme-light{--bg:#f4f0fb;--panel:#ffffff;--panel-2:#e9e1f7;--text:#281a3a;-
           </div>
           <div class="field"><label>Base URL</label><input id="c_url" value="${esc(cfg.baseUrl)}"></div>
           <div class="field"><label>模型</label>
+          <div class="field">
+  <label>温度 Temperature（留空 = 不发送，解决部分模型 400 报错）</label>
+  <input id="c_temp" type="text" value="${esc(cfg.temperature ?? "")}" placeholder="例如 0.8 / 1 / 留空">
+  <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;">
+    💡 若报 400 且提示 temperature 不支持，请把这里清空后保存。
+  </div>
+</div>
             <div class="row"><input id="c_model" value="${esc(cfg.model)}" style="flex:1"><button class="btn ghost" id="fetchModel" style="width:auto;padding:0 12px">拉取</button></div>
           </div>
          <button class="btn" id="saveC">保存配置</button>
@@ -10328,7 +10342,19 @@ renderBlacklist();
     };
   }
 })();
- body.querySelector("#saveC").onclick = () => { store.setConfig({...cfg,enabled:body.querySelector("#c_enabled").checked,provider:sel.value,apiKey:body.querySelector("#c_key").value,baseUrl:body.querySelector("#c_url").value,model:body.querySelector("#c_model").value}); toast("已保存"); };
+ body.querySelector("#saveC").onclick = () => {
+  const _tempEl = body.querySelector("#c_temp");
+  store.setConfig({
+    ...cfg,
+    enabled: body.querySelector("#c_enabled").checked,
+    provider: sel.value,
+    apiKey: body.querySelector("#c_key").value,
+    baseUrl: body.querySelector("#c_url").value,
+    model: body.querySelector("#c_model").value,
+    temperature: _tempEl ? _tempEl.value.trim() : (cfg.temperature ?? "")
+  });
+  toast("已保存");
+};
 // ===== 🔍 API 连通性自检 =====
 body.querySelector("#testApiBtn").onclick = async () => {
   const resultEl = body.querySelector("#testApiResult");
@@ -11079,19 +11105,39 @@ if (bubbleClearBtn) bubbleClearBtn.onclick = () => {
 };
 
 // 🚫 拉黑相关
-const setBlock = (stateVal) => {
+// 🚫 拉黑相关（带记忆）
+const setBlock = (stateVal, extra) => {
   const list = store.getContacts();
   const t = list.find(x => x.name === self.currentUser);
   if (!t) return;
   t.blockState = stateVal;
-  t.everBlocked = true; // 永久记忆：被拉黑/拉黑过
+
+  if (stateVal === "byUser" || stateVal === "byThem") {
+    // 进入拉黑：记录是谁拉黑的、原因、时间
+    t.everBlocked = true;
+    t.lastBlockInfo = {
+      by: stateVal === "byUser" ? "user" : "them",
+      at: Date.now(),
+      reason: (extra && extra.reason) ? extra.reason : ""
+    };
+    // 拉黑时清掉旧的"刚和好"标记
+    t.justReconciled = false;
+  } else if (stateVal === "none") {
+    // 和好：打上"刚和好"标记 + 记录和好时的消息条数（做余温衰减）
+    t.justReconciled = true;
+    t.reconciledAt = Date.now();
+    t.reconcileType = (extra && extra.reconcileType) ? extra.reconcileType : "unblock";
+    const arr = (store.getChats()[self.currentUser]) || [];
+    t.reconcileMsgMark = arr.length;
+  }
   store.setContacts(list);
 };
 
 const blockThemBtn = body.querySelector("#c_block_them");
 if (blockThemBtn) blockThemBtn.onclick = () => {
-  if (!confirm(`拉黑「${self.currentUser}」？\n拉黑后你发消息要点"让对方回复"才会收到 ta 的反应，聊天记录保留。`)) return;
-  setBlock("byUser");
+  if (!confirm(`拉黑「${self.currentUser}」？\n拉黑后你发消息要点"看看对方反应"才会收到 ta 的反应，聊天记录保留。`)) return;
+  const reason = prompt("为什么拉黑 ta？（可留空，填了之后 ta 和好时会记得这事）", "") || "";
+  setBlock("byUser", { reason });
   toast("已拉黑 " + self.currentUser);
   openApp("messages");
 };
@@ -11099,23 +11145,24 @@ if (blockThemBtn) blockThemBtn.onclick = () => {
 const blockMeBtn = body.querySelector("#c_block_me");
 if (blockMeBtn) blockMeBtn.onclick = () => {
   if (!confirm(`让「${self.currentUser}」拉黑你？\n之后 ta 会不理你，你发的消息能否让 ta 回心转意，由 ta 根据你说的话决定。`)) return;
-  setBlock("byThem");
+  const reason = prompt("你们因为什么闹翻的？（可留空，填了之后吵架会更有针对性）", "") || "";
+  setBlock("byThem", { reason });
   toast(self.currentUser + " 拉黑了你");
   openApp("messages");
 };
 
 const unblockBtn = body.querySelector("#c_unblock");
 if (unblockBtn) unblockBtn.onclick = () => {
-  setBlock("none");
+  setBlock("none", { reconcileType: "user_unblock" });
   toast("已解除拉黑");
   openApp("messages");
 };
 
 const forceUnblockBtn = body.querySelector("#c_force_unblock");
 if (forceUnblockBtn) forceUnblockBtn.onclick = () => {
-  if (!confirm(`强制和好？\n${self.currentUser} 会原谅你，恢复正常对话。`)) return;
-  setBlock("none");
-  toast(self.currentUser + " 原谅了你");
+  if (!confirm(`强制和好？\n${self.currentUser} 会勉强原谅你，恢复正常对话。`)) return;
+  setBlock("none", { reconcileType: "force" });
+  toast(self.currentUser + " 勉强原谅了你");
   openApp("messages");
 };
 
@@ -11978,7 +12025,7 @@ chatHtml += msgs.map((m, idx) => {
   const blkTag = m.blockedMsg ? `<div style="font-size:9px;color:var(--muted);margin-bottom:2px;">⚠️ 对方不在你的联系人中（拉黑中）</div>` : "";
   return `<div class="msg-row them" data-idx="${idx}" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
     <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">
-      ${av ? `< img src="${av}" style="width:100%;height:100%;object-fit:cover;">` : firstChar}
+      ${av ? `<img src="${av}" style="width:100%;height:100%;object-fit:cover;">` : firstChar}
     </div>
     <div style="max-width:72%;min-width:0;">
       ${blkTag}
@@ -12009,12 +12056,35 @@ chatHtml += `</div>`;  // 关闭 #chatThread
 // --- 引用预览 ---
 chatHtml += `<div id="quotePreview" style="display:none;padding:8px 14px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-shrink:0;"><div style="display:flex;justify-content:space-between;align-items:center;"><span id="quoteText"></span><span id="cancelQuote" style="cursor:pointer;color:var(--accent)">✕</span></div></div>`;
 
-// --- 输入区 ---
-chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
-  <button id="topicBtn" title="帮我起个话题" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:0 12px;font-size:16px;cursor:pointer;flex-shrink:0;line-height:1;">✨</button>
-  <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
-  <button id="sendBtn">发送</button>
-</div>`;
+// --- 输入区（根据单聊拉黑状态分支渲染）---
+const _singleContact = store.getContacts().find(x => x.name === self.currentUser) || {};
+const _singleBs = _singleContact.blockState || "none";
+
+if (_singleBs === "byUser") {
+  // 你拉黑了对方
+  chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));flex-direction:column;gap:8px;">
+    <div style="font-size:12px;color:var(--muted);text-align:center;width:100%;">🚫 你已拉黑 ${esc(self.currentUser)}，对方无法向你发送消息</div>
+    <div style="display:flex;gap:8px;width:100%;">
+      <button id="letThemReplyBtn" style="flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:10px;font-weight:600;cursor:pointer;">👀 看看对方被拉黑后的反应</button>
+    </div>
+  </div>`;
+} else if (_singleBs === "byThem") {
+  // 对方拉黑了你
+  chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
+    <input id="msgInput" placeholder="${esc(self.currentUser)} 把你拉黑了，试着说点什么看 ta 能否原谅...">
+    <button id="sendBtn">发送</button>
+  </div>
+  <div style="flex-shrink:0;padding:0 14px 10px;text-align:center;">
+    <button id="forceReconcileBtn" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;text-decoration:underline;">实在哄不好？点这里强制和好</button>
+  </div>`;
+} else {
+  // 正常聊天
+  chatHtml += `<div class="composer" style="position:relative;flex-shrink:0;padding:10px 14px;padding-bottom:calc(15px + env(safe-area-inset-bottom, 15px));">
+    <button id="topicBtn" title="帮我起个话题" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:20px;padding:0 12px;font-size:16px;cursor:pointer;flex-shrink:0;line-height:1;">✨</button>
+    <input id="msgInput" placeholder="发送给 ${esc(self.currentUser)}...">
+    <button id="sendBtn">发送</button>
+  </div>`;
+}
 
 chatHtml += `</div>`;  // 关闭 #chatPage
 
@@ -12587,6 +12657,11 @@ if (c && c.isGroup) {
 if (c && c.blockState === "byThem") {
   return window.handleBlockedByThem(self.currentUser, text, body);
 }
+// 🚫 用户拉黑了对方：禁止普通发送，提示点击看反应或先解封
+if (c && c.blockState === "byUser") {
+  toast(`你已拉黑「${self.currentUser}」，如需正常聊天请到右上角设置解除拉黑`);
+  return;
+}
   const thread = body.querySelector("#chatThread");
   
   // ===== 校验聊天对象 =====
@@ -12699,9 +12774,50 @@ const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
 
 // ★ 确保声明在这里，保证 sysPrompt 能够正常访问
 const _blkC = store.getContacts().find(x => x.name === self.currentUser) || {};
-const everBlockedRule = _blkC.everBlocked
-  ? `\n【关系背景】你和 ${playerName} 之间曾经有过"拉黑/被拉黑"的经历，现在和好了。偶尔可以隐约提起那段别扭（"上次那事""之前我们闹得有点僵"），但不要反复纠缠，语气符合当前好感度。`
-  : "";
+// ★ 拉黑/和好记忆：区分"刚和好"与"很久以前和好过"
+const _curChats = (store.getChats()[self.currentUser]) || [];
+let everBlockedRule = "";
+if (_blkC.everBlocked) {
+  const info = _blkC.lastBlockInfo || {};
+  const whoBlocked = info.by === "them"
+    ? `是你（${self.currentUser}）主动拉黑了 ${playerName}`
+    : `是 ${playerName} 拉黑了你`;
+  const reasonTxt = info.reason ? `当时闹翻的原因是：「${info.reason}」。` : "";
+
+  // 余温衰减：和好后 8 条消息内算"刚和好"
+  const sinceReconcile = _blkC.reconcileMsgMark != null
+    ? (_curChats.length - _blkC.reconcileMsgMark)
+    : 999;
+
+  if (_blkC.justReconciled && sinceReconcile < 8) {
+    // 余温还在 → 强烈规则
+    const forceTxt = _blkC.reconcileType === "force"
+      ? "注意：这次是被硬逼着和好的，你其实还没完全消气，心里憋着一股劲。"
+      : (_blkC.reconcileType === "them_forgive"
+          ? "注意：是你刚刚松口原谅了 ta，但气还没全消，心里还存着事。"
+          : "注意：ta 刚刚把你从黑名单里放出来，你还在消化这段别扭。");
+
+    everBlockedRule = `
+【🔥 刚刚和好 · 情绪余温 · 铁律 · 违反即失败】
+你和 ${playerName} 刚刚结束一段冷战/拉黑（${whoBlocked}）。${reasonTxt}${forceTxt}
+1. 你**绝对不能**表现得像什么都没发生、直接若无其事地聊新话题。
+2. 开口要带着刚和好的**生涩、别扭、试探、委屈或赌气**（严格按你的性格和好感度把握，不是演，是真情绪）。
+3. 可以：欲言又止、嘴硬、小心翼翼地试探、半开玩笑地提起刚才那场架、或者故意不提但语气明显不自然。
+4. 至少在接下来几句里，这段架的影子要一直在，不要秒速恢复成从前的热络。
+5. 如果 ${reasonTxt ? "当时有具体原因，可以含蓄提一句（别反复数落）。" : "没有明说原因，就表达一种说不清的别扭。"}
+6. 这不是推进剧情，只是把"刚和好"的真实情绪演出来。`;
+  } else {
+    // 和好很久了 → 淡化 + 自动清标记
+    if (_blkC.justReconciled && sinceReconcile >= 8) {
+      const _l = store.getContacts();
+      const _t = _l.find(x => x.name === self.currentUser);
+      if (_t) { _t.justReconciled = false; store.setContacts(_l); }
+    }
+    everBlockedRule = `
+【关系背景】你和 ${playerName} 之间曾经有过一次拉黑/冷战（${whoBlocked}）${info.reason ? `，起因是「${info.reason}」` : ""}，现在早就和好了。偶尔可以隐约提一句（"上次那事""之前闹得有点僵"），但不要反复纠缠，语气符合当前好感度。`;
+  }
+}
+ 
 const genderPronoun = _gi.pronoun;
 
      let recent = arr.slice(-store.getChatConfig().maxContext * 2)
@@ -16012,7 +16128,7 @@ body.innerHTML = `<div style="padding:14px">
                <div style="font-size:13px;">${raw === "ERROR" ? "生成失败 · 点击重试" : "点击生成配图"}</div>
              </div>`;
           }
-          return `< img src="${resolved}" class="ig-image" data-idx="${i}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block; cursor:pointer;">`;
+          return `<img src="${resolved}" class="ig-image" data-idx="${i}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block; cursor:pointer;">`;
        })()}
         <div class="text" style="color:var(--text)">${esc(p.text)}</div>
         <div class="foot"><span>♡ ${p.likes||0}</span></div>
@@ -25830,11 +25946,19 @@ DECISION: 只写 FORGIVE（原谅并解除拉黑）或 KEEP（继续拉黑）
     store.setChats(chatsNow);
 
     if (decision === "FORGIVE") {
-      const list = store.getContacts();
-      const t = list.find(x => x.name === name);
-      if (t) { t.blockState = "none"; store.setContacts(list); }
-      toast("💗 " + name + " 原谅你了");
-    }
+  const list = store.getContacts();
+  const t = list.find(x => x.name === name);
+  if (t) {
+    t.blockState = "none";
+    t.justReconciled = true;
+    t.reconciledAt = Date.now();
+    t.reconcileType = "them_forgive";
+    const arr2 = (store.getChats()[name]) || [];
+    t.reconcileMsgMark = arr2.length;
+    store.setContacts(list);
+  }
+  toast("💗 " + name + " 原谅你了");
+}
     apps.messages.render(body);
   } catch (e) {
     const load = body.querySelector("#blkLoading");
