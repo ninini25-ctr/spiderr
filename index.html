@@ -24,63 +24,79 @@ if ('serviceWorker' in navigator) {
 <!-- PWA 清单（Edge 安装为 App 时读这个） -->
 <link rel="manifest" href="manifest.json">
 <!-- 主题色，影响安装后标题栏/状态栏颜色 -->
-<meta name="theme-color" content="#0a0a0f">
+<meta name="theme-color" content="#0c0d11">
 <style>
 :root{
-  --bg:#0a0a0f; --panel:#14141c; --panel-2:#1d1d28; --text:#f2f3f7; --muted:#8a8a99; --line:#2a2a38;
-  --accent:#e62429; --accent-2:#2d6bff;
+  /* ========== 色彩 · 暗色基底「石墨夜」 ========== */
+  --bg:#0c0d11;
+  --panel:#15171e;
+  --panel-2:#1c1f28;
+  --text:#edeff3;
+  --muted:#8b909c;
+  --line:#282c35;
+  --accent:#e62429;
+  --accent-2:#2d6bff;
+
   --safe-bottom:env(safe-area-inset-bottom, 20px);
-  --font-size-base: 14px;
-  --font-size-small: 12px;
-  --font-main: "SimSun", "宋体", serif;
-  --font-dialogue: "FangSong", "仿宋", "STFangsong", serif;
+  --font-size-base:14px;
+  --font-size-small:12px;
+  --font-main:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --font-dialogue:"Songti SC","STSong","SimSun","宋体",Georgia,serif;
 
-  /* ===== 新增：组件级颜色变量（黑版默认） ===== */
-  --header-title-color:#ffffff;        /* 标题栏标题 */
-  --card-title-color:#ffffff;          /* 卡片标题 */
-  --sidebar-title-color:#e62429;       /* 支线标题 */
-  --dialogue-color:#c9d1e8;            /* 对话文字颜色 */
-  --refresh-color:#5b8dff;             /* 刷新按钮颜色 */
-  --bubble-me-bg:#2d6bff;              /* 我的气泡背景 */
-  --bubble-them-bg:#1d1d28;            /* 对方气泡背景 */
-  --bubble-them-text:#f2f3f7;
-  --app-header-bg:rgba(20,20,28,.9);
-  --sidebar-text-color:#e0e0e0;
---input-comment-bg:#222222;          /* 评论输入框背景 */
-  --input-comment-text:#f2f3f7;        /* 评论输入框文字 */
+  /* 组件级颜色（保留原变量名，供运行时主题预设覆盖） */
+  --header-title-color:#f3f5f9;
+  --card-title-color:#f3f5f9;
+  --sidebar-title-color:#e62429;
+  --dialogue-color:#c4cad7;
+  --refresh-color:#6f9bff;
+  --bubble-me-bg:#2d6bff;
+  --bubble-them-bg:#1c1f28;
+  --bubble-them-text:#edeff3;
+  --app-header-bg:rgba(15,17,22,.82);
+  --sidebar-text-color:#d6dae2;
+  --input-comment-bg:#1c1f28;
+  --input-comment-text:#edeff3;
+
+  /* ========== 结构令牌（主题无关，统一规范） ========== */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px;
+  --r-xs:8px; --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px; --r-pill:999px;
+  --sh-xs:0 1px 2px rgba(0,0,0,.22);
+  --sh-sm:0 2px 10px rgba(0,0,0,.24);
+  --sh-md:0 10px 28px rgba(0,0,0,.32);
+  --sh-lg:0 24px 56px rgba(0,0,0,.46);
+  --ease:cubic-bezier(.22,.8,.25,1);
+  --dur-1:.18s; --dur-2:.28s; --dur-3:.5s;
+  --z-sticky:10; --z-header:20; --z-overlay:100; --z-modal:500;
 }
 
-/* ===== 白版配色：重新设计 ===== */
+/* ========== 色彩 · 浅色「晨雾白」 ========== */
 body.theme-light {
-  --bg:#f5f5f7; --panel:#ffffff; --panel-2:#f0f0f5; --text:#1d1d1f; --muted:#6e6e73; --line:#d2d2d7;
-  --accent:#e62429; --accent-2:#007aff;
+  --bg:#f4f5f8;
+  --panel:#ffffff;
+  --panel-2:#eef0f4;
+  --text:#1b1e25;
+  --muted:#6d727e;
+  --line:#e1e4ea;
+  --accent:#e62429;
+  --accent-2:#2d6bff;
 
-  /* 组件级颜色：白版专属 */
-  --header-title-color:#1d1d1f;        /* 标题栏标题：黑色 */
-  --card-title-color:#1d1d1f;          /* 卡片标题：黑色 */
-  --sidebar-title-color:#e62429;       /* 支线标题：红色（醒目） */
-  --dialogue-color:#5e5e63;            /* 对话文字：深灰蓝，与正文区分 */
-  --refresh-color:#007aff;             /* 刷新按钮：蓝色 */
-  --bubble-me-bg:#007aff;              /* 我的气泡：蓝色 */
-  --bubble-them-bg:#e8e8ed;            /* 对方气泡：浅灰 */
-  --bubble-them-text:#1d1d1f;
-  --app-header-bg:rgba(255,255,255,.95);
-  --sidebar-text-color:#3a3a3f;
-  --input-comment-bg:#f0f0f5;          /* 评论输入框：浅灰，与卡片融合 */
-  --input-comment-text:#1d1d1f;        /* 评论输入框文字：黑色 */
-}
-/* ===== 白版推特间隔线 ===== */
-body.theme-light .tw-tweet {
-  border-bottom: 1px solid #d2d2d7;      /* 白版：灰色实线 */
-}
-body.theme-light .tw-comment-line + .tw-comment-line {
-  border-top: 1px dashed rgba(0,0,0,.08);
-}
-body.theme-light .tw-actions {
-  border-top: 1px dashed rgba(0,0,0,.1);
-}
-body.theme-light .tw-comments-preview {
-  background: #f0f0f5;
+  --header-title-color:#1b1e25;
+  --card-title-color:#1b1e25;
+  --sidebar-title-color:#d81f24;
+  --dialogue-color:#4c5361;
+  --refresh-color:#2d6bff;
+  --bubble-me-bg:#2d6bff;
+  --bubble-them-bg:#eef0f4;
+  --bubble-them-text:#1b1e25;
+  --app-header-bg:rgba(255,255,255,.82);
+  --sidebar-text-color:#3c414b;
+  --input-comment-bg:#eef0f4;
+  --input-comment-text:#1b1e25;
+
+  --sh-xs:0 1px 2px rgba(16,20,30,.05);
+  --sh-sm:0 2px 10px rgba(16,20,30,.06);
+  --sh-md:0 10px 28px rgba(16,20,30,.09);
+  --sh-lg:0 24px 56px rgba(16,20,30,.14);
 }
 body{
   display:flex; align-items:center; justify-content:center;
@@ -135,7 +151,7 @@ body{
 #desktop .app-grid{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:22px 14px;padding:70px 22px;align-content:start;}
 .app-icon{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;color:var(--text);font-size:11px;cursor:pointer;}
 .app-icon:active{transform:scale(.9);}
-.app-icon span{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(145deg,#2a2a38,#16161f);box-shadow:0 6px 14px rgba(0,0,0,.4);}
+.app-icon span{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(145deg,var(--line),#16161f);box-shadow:0 6px 14px rgba(0,0,0,.4);}
 /* 桌面底部水印 */
 .desktop-watermark{
   position:absolute;
@@ -492,7 +508,7 @@ body.theme-light .notch{ background:#1d1d1f; }
 
 /* ===== 号角日报入口卡片 ===== */
 .daily-card {
-  background: linear-gradient(135deg, #1a1a24 0%, #0f0f15 100%);
+  background: linear-gradient(135deg, var(--panel-2) 0%, var(--bg) 100%);
   border: 1px solid var(--line);
   border-radius: 16px; padding: 24px 20px;
   text-align: center; position: relative; overflow: hidden;
@@ -1475,7 +1491,7 @@ body.theme-light .bubble-trans {
   align-items: center;
   justify-content: space-between;
   padding: 18px 20px;
-  background: linear-gradient(135deg, #1a1a24 0%, #0f0f15 100%);
+  background: linear-gradient(135deg, var(--panel-2) 0%, var(--bg) 100%);
   border-radius: 16px;
   border: 1px solid var(--line);
   margin-bottom: 16px;
@@ -1525,7 +1541,7 @@ body.theme-light .mjn-cover {
   position: absolute;
   inset: 6px;
   border-radius: 50%;
-  background: #14141c;
+  background: var(--panel);
 }
 body.theme-light .mjn-suspicion-ring::before {
   background: #f5f3eb;
@@ -2071,7 +2087,7 @@ body.theme-light .mjn-suspicion-ring::before {
 #startMultiverseBtn {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a1a24 0%, #251a2e 100%);
+  background: linear-gradient(135deg, var(--panel-2) 0%, #251a2e 100%);
   border: 1px solid rgba(138, 43, 226, 0.4);
   transition: all 0.2s;
 }
@@ -2205,302 +2221,577 @@ body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); 
 .wb-scope-opt-label { font-size:12.5px; font-weight:600; color:var(--text); }
 .wb-scope-opt-desc { font-size:10px; color:var(--muted); line-height:1.3; }
 /* ============================================================
-   🕷️ 开屏预加载动画（米色纸张、复杂手绘线条、蛛丝物理回弹）
+   DESIGN SYSTEM · NOIR THREAD / 统一视觉规范层
+   8px 间距栅格 · 单一圆角尺度 · 克制强调色 · 现代无衬线
+   ============================================================ */
+
+/* 1 · 基础与排版 ------------------------------------------- */
+*, *::before, *::after { -webkit-tap-highlight-color: transparent; }
+html, body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body {
+  font-family: var(--font-main);
+  font-size: var(--font-size-base);
+  line-height: 1.55;
+  letter-spacing: .01em;
+  color: var(--text);
+  background: #08090c;
+}
+body.theme-light { background: #e9ebf0; }
+button, input, select, textarea { font-family: inherit; }
+button {
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+              color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease),
+              box-shadow var(--dur-1) var(--ease), filter var(--dur-1) var(--ease);
+}
+h1, h2, h3, h4 { font-weight: 650; letter-spacing: -.01em; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 38%, transparent); border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* 2 · 设备框架 / 状态栏 ------------------------------------- */
+.device { background: var(--bg); }
+@media (min-width: 500px) {
+  .device {
+    width: 390px; height: 844px; max-height: 94vh;
+    border-radius: 42px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent),
+                0 0 0 11px #0a0b0e, 0 32px 80px rgba(0,0,0,.55);
+  }
+  body.theme-light .device {
+    box-shadow: 0 0 0 1px #d7dae1, 0 0 0 11px #e7e9ee, 0 32px 80px rgba(20,26,40,.18);
+  }
+}
+.notch {
+  width: 112px; height: 26px; background: #08090c;
+  border-radius: 0 0 16px 16px;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.05);
+}
+body.theme-light .notch { background: #1b1e25; }
+.statusbar {
+  height: 44px; padding: 0 24px;
+  font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.screen { padding-top: 44px; }
+
+/* 3 · 桌面壁纸 --------------------------------------------- */
+#desktop .wallpaper {
+  background:
+    radial-gradient(110% 65% at 8% -8%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 58%),
+    radial-gradient(95% 70% at 108% 108%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 60%),
+    linear-gradient(168deg, color-mix(in srgb, var(--panel) 55%, var(--bg)) 0%, var(--bg) 70%, color-mix(in srgb, #000 20%, var(--bg)) 100%);
+  backdrop-filter: none;
+}
+#desktop .wallpaper::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 40px, color-mix(in srgb, var(--text) 3%, transparent) 40px 41px),
+    repeating-linear-gradient(-45deg, transparent 0 40px, color-mix(in srgb, var(--text) 3%, transparent) 40px 41px);
+  -webkit-mask-image: radial-gradient(circle at 50% 34%, #000 0%, transparent 76%);
+  mask-image: radial-gradient(circle at 50% 34%, #000 0%, transparent 76%);
+}
+#desktop .wallpaper::after {
+  background: radial-gradient(120% 100% at 50% 0%, transparent 42%, color-mix(in srgb, #000 22%, transparent) 100%);
+  backdrop-filter: none; -webkit-backdrop-filter: none; mix-blend-mode: normal;
+}
+
+/* 4 · 桌面应用图标 ----------------------------------------- */
+#desktop .app-grid {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px 8px; padding: 62px 18px 28px; align-content: start;
+}
+.app-icon { gap: 9px; font-size: 11px; font-weight: 500; color: var(--text); padding: 0; }
+.app-icon:hover { transform: translateY(-2px); }
+.app-icon:active { transform: scale(.92); }
+.app-icon > span {
+  width: 58px; height: 58px; border-radius: var(--r-md);
+  background: linear-gradient(158deg, color-mix(in srgb, var(--panel-2) 88%, #fff 12%), var(--panel));
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), var(--sh-sm);
+  color: var(--text); font-size: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.app-icon:hover > span {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 8px 22px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.app-icon > span svg.app-glyph {
+  width: 26px; height: 26px; stroke: currentColor; fill: none;
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+.app-icon > span svg.app-glyph-fill { fill: currentColor; stroke: none; }
+.app-icon label {
+  font-family: var(--font-main); font-weight: 500; font-size: 10.5px;
+  letter-spacing: .02em; color: var(--text); text-shadow: none; white-space: nowrap;
+}
+.desktop-watermark {
+  font-family: var(--font-main); font-size: 10px; font-weight: 500;
+  letter-spacing: .34em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--text) 42%, transparent); text-shadow: none;
+}
+#desktopEditBtn {
+  top: 52px !important; right: 14px !important;
+  width: 30px !important; height: 30px !important;
+  background: color-mix(in srgb, var(--panel) 72%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent) !important;
+  color: var(--text) !important; border-radius: 50% !important;
+  font-size: 13px !important; backdrop-filter: blur(12px) !important;
+  box-shadow: var(--sh-xs) !important;
+}
+
+/* 5 · 导航与标题栏 ----------------------------------------- */
+.app-header {
+  min-height: 52px; padding: 8px 14px; gap: 8px;
+  background: var(--app-header-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+}
+.app-header h1 { font-size: 15px; font-weight: 650; letter-spacing: .01em; color: var(--header-title-color); }
+.back-btn {
+  width: 30px; height: 30px; padding: 0; font-size: 26px; font-weight: 300; line-height: 1;
+  color: var(--muted); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.back-btn:hover { background: var(--panel-2); color: var(--text); }
+#appSettingsBtn { font-size: 13px !important; font-weight: 600; letter-spacing: .02em; }
+.app-body { scrollbar-width: thin; }
+
+/* 6 · 通用组件 --------------------------------------------- */
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: var(--sp-4); margin-bottom: var(--sp-3);
+  box-shadow: var(--sh-xs);
+}
+.card h3 { font-size: 13px; font-weight: 650; letter-spacing: .02em; margin: 0 0 var(--sp-3); color: var(--card-title-color); }
+.field { gap: 6px; margin-bottom: var(--sp-3); }
+.field label { font-size: 11.5px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+.field input, .field select, .field textarea {
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 10px 12px; color: var(--text); font-size: 13.5px;
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent-2) 60%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 13%, transparent);
+}
+.field input::placeholder, .field textarea::placeholder, .composer input::placeholder {
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+}
+.row { gap: var(--sp-2); }
+.btn {
+  background: var(--accent-2); border: 1px solid transparent; color: #fff;
+  border-radius: var(--r-sm); padding: 11px 16px; font-size: 13.5px;
+  font-weight: 600; letter-spacing: .02em; box-shadow: var(--sh-xs);
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); box-shadow: none; }
+.btn.ghost:hover { border-color: color-mix(in srgb, var(--accent-2) 45%, var(--line)); }
+.btn:disabled { opacity: .45; }
+.bubble { max-width: 78%; padding: 10px 14px; border-radius: var(--r-lg); font-size: 13.5px; line-height: 1.6; box-shadow: var(--sh-xs); }
+.bubble.me { border-bottom-right-radius: 5px; color: #fff; }
+.bubble.them { border-bottom-left-radius: 5px; }
+.bubble-trans { font-family: var(--font-dialogue); font-size: 12px; letter-spacing: .01em; }
+.composer {
+  gap: 8px; padding: 10px 14px; background: var(--app-header-bg);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--line);
+}
+.composer input { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 10px 14px; font-size: 13.5px; }
+.composer button { background: var(--accent-2); color: #fff; border-radius: var(--r-pill); padding: 0 18px; font-size: 13.5px; font-weight: 600; }
+.dialogue-text { font-style: normal; font-family: var(--font-dialogue); letter-spacing: .02em; }
+.story-content { line-height: 1.85; }
+
+/* 7 · 分段控件 / 标签 / 徽章 -------------------------------- */
+.tw-tabs {
+  padding: 8px 12px; gap: 2px;
+  background: var(--app-header-bg); backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid var(--line);
+}
+.tw-tab { padding: 7px 13px; font-size: 12.5px; font-weight: 600; border-radius: var(--r-pill); letter-spacing: .01em; }
+.tw-tab.active { background: color-mix(in srgb, var(--accent-2) 16%, transparent); color: var(--accent-2); }
+.tw-tab.active:hover { background: color-mix(in srgb, var(--accent-2) 22%, transparent); }
+.sc-tabs, .diary-tabs, .mjn-tabs, .sch-tabs {
+  gap: 3px; padding: 4px; border-radius: var(--r-md);
+  background: var(--panel-2); border: 1px solid var(--line);
+}
+.sc-tab, .diary-tab, .mjn-tab, .sch-tab {
+  border-radius: var(--r-sm); font-size: 12.5px; font-weight: 600;
+  letter-spacing: .01em; color: var(--muted);
+}
+.sc-tab.active, .diary-tab.active, .mjn-tab.active, .sch-tab.active {
+  background: var(--panel); color: var(--text); box-shadow: var(--sh-xs);
+}
+.sc-tab-count, .diary-tab .count, .mjn-tab-count, .diary-card-stage,
+.th-universe-tag, .mjn-clue-type, .wb-scope-chip, .diary-time-badge,
+.th-quest-universe, .topic-card-bg-label {
+  border-radius: var(--r-pill) !important; font-weight: 600; letter-spacing: .02em;
+}
+.sc-tab.active .sc-tab-count, .diary-tab.active .count, .mjn-tab.active .mjn-tab-count {
+  background: var(--accent-2); color: #fff;
+}
+
+/* 8 · 跨模块卡片统一 --------------------------------------- */
+.daily-saved-item, .diary-card, .th-universe-card, .th-history-item,
+.mjn-clue-card, .mjn-suspect-card, .mjn-profile-section, .mjn-locked,
+.sch-course-card, .sch-score-row, .sch-team-member, .sch-event-detail,
+.wb-card, .topic-card, .th-form, .diary-detail, .sc-row, .th-quest-closed,
+.sch-dance-card {
+  border-radius: var(--r-lg) !important;
+  box-shadow: var(--sh-xs) !important;
+}
+.daily-saved-item:hover, .diary-card:hover, .th-history-item:hover,
+.sc-row:hover, .mjn-suspect-card:hover, .wb-card:hover, .topic-card:hover {
+  border-color: color-mix(in srgb, var(--accent-2) 45%, var(--line)) !important;
+}
+.diary-card:hover, .th-universe-card:hover, .topic-card:hover, .sch-course-card:hover {
+  box-shadow: var(--sh-md) !important;
+}
+.th-btn, .diary-action-btn, .topic-modal-regen, .topic-modal-cancel,
+.wb-mini-btn, .wb-back, .tw-comment-send, .th-active-btn, .mjn-showdown-btn,
+.topic-retry-btn, .ending-btn {
+  border-radius: var(--r-sm) !important; font-weight: 600; letter-spacing: .02em;
+}
+.th-form-input, .th-form-textarea, .wb-input, .wb-textarea, .wb-scope-opt,
+.th-option-btn, .sch-event-opt, .tw-comment-input, #customAct {
+  border-radius: var(--r-sm) !important;
+}
+.th-form-input:focus, .th-form-textarea:focus, .wb-input:focus, .wb-textarea:focus {
+  border-color: color-mix(in srgb, var(--accent-2) 60%, var(--line)) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 12%, transparent);
+}
+.th-option-btn:hover, .sch-event-opt:hover {
+  border-color: color-mix(in srgb, var(--accent-2) 50%, var(--line)) !important;
+  background: color-mix(in srgb, var(--accent-2) 6%, var(--panel)) !important;
+}
+
+/* 9 · 模块封面 / 横幅：收敛为统一中性表面 -------------------- */
+.daily-card, .mjn-cover, .sch-header, .wb-hero, .th-active-banner,
+.mjn-showdown-banner, .sch-dance-card, #startMultiverseBtn {
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: var(--sh-xs) !important;
+  animation: none !important;
+}
+.daily-card::before, .sch-header::before, .wb-hero::before {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2)) !important;
+  opacity: .5 !important; height: 2px !important;
+}
+#startMultiverseBtn::before, #startMultiverseBtn::after { display: none !important; }
+.th-active-banner { border-color: color-mix(in srgb, var(--accent-2) 40%, var(--line)) !important; }
+.mjn-showdown-banner { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)) !important; }
+.daily-title, .mjn-cover-title, .sch-header-title, .wb-hero-title,
+.diary-title, .th-title, .diary-detail-title, .wb-editor-title, .topic-modal-title {
+  font-family: var(--font-main); font-weight: 700; letter-spacing: -.01em;
+}
+.daily-subtitle, .mjn-cover-label, .sch-header-label, .wb-hero-sub {
+  letter-spacing: .2em; font-size: 10px;
+}
+
+/* 10 · 推特 / 列表细部 -------------------------------------- */
+.tw-tweet { border-bottom: 1px solid var(--line) !important; padding: 16px 16px 18px; }
+body.theme-light .tw-tweet { border-bottom-color: var(--line) !important; }
+.tw-tweet:hover { background: color-mix(in srgb, var(--text) 2%, transparent); }
+.tw-avatar { background: var(--panel-2); color: var(--text); font-weight: 650; }
+.tw-name { font-weight: 650; }
+.tw-text { line-height: 1.7; }
+.tw-comments-preview { background: var(--panel-2); border: 1px solid var(--line); }
+.tw-comment-line + .tw-comment-line { border-top: 1px solid var(--line); }
+.tw-actions { border-top: 1px solid var(--line); }
+.tw-act { border-radius: var(--r-pill); }
+.tw-act.liked { color: var(--accent); }
+.tweet { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.comment { line-height: 1.6; }
+
+/* 11 · 弹窗 / 提示 / 加载 ---------------------------------- */
+.topic-modal-overlay { background: rgba(6,7,10,.72); backdrop-filter: blur(8px); }
+body.theme-light .topic-modal-overlay { background: rgba(28,32,42,.38); }
+.topic-modal-panel { border-radius: var(--r-xl) !important; box-shadow: var(--sh-lg) !important; border: 1px solid var(--line) !important; }
+.topic-modal-header { background: var(--panel) !important; border-bottom: 1px solid var(--line); }
+.topic-modal-footer, .topic-modal-sub { background: var(--panel) !important; }
+.topic-modal-close { border-radius: 50%; }
+.topic-modal-close:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.topic-card { border-radius: var(--r-md) !important; }
+.toast {
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  color: var(--text); border: 1px solid var(--line);
+  border-radius: var(--r-pill); box-shadow: var(--sh-md);
+  backdrop-filter: blur(16px); font-size: 12.5px;
+}
+body.theme-light .toast { background: rgba(255,255,255,.96); color: var(--text); border-color: var(--line); }
+.banner {
+  border-radius: var(--r-md); background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--line); box-shadow: var(--sh-md); backdrop-filter: blur(20px);
+}
+.banner .banner-icon { border-radius: var(--r-sm); background: var(--accent-2); }
+.loader { color: var(--muted); }
+.spin { border-color: var(--line); border-top-color: var(--accent-2); }
+.slider { background-color: var(--line); }
+input:checked + .slider { background-color: var(--accent-2); }
+
+/* 12 · 动效与无障碍 ---------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important; scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   🕸️ 开屏预加载 · 原版哥特手绘蜘蛛 × 「石墨夜」视觉规范
+   保留暗色框架 / 光晕 / 字标 / 进度与驱动逻辑，
+   蜘蛛本体恢复为原版精细线描，并恢复蛛丝物理回弹与落定收腿。
    ============================================================ */
 #splashScreen {
-  position: fixed;
-  inset: 0;
-  z-index: 999999;
-  background-color: #f7f3e8; /* 柔和复古米色 */
-  background-image: 
-    radial-gradient(circle at 50% 30%, rgba(120, 100, 80, 0.04) 0%, transparent 70%),
-    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  padding: 40px 24px calc(24px + env(safe-area-inset-bottom, 16px));
-  box-sizing: border-box;
-  opacity: 1;
-  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: auto;
-  user-select: none;
-  overflow: hidden;
+  position: fixed; inset: 0; z-index: 999999;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: clamp(44px, 10vh, 96px) 28px calc(30px + env(safe-area-inset-bottom, 16px));
+  box-sizing: border-box; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  opacity: 1; pointer-events: auto; user-select: none;
+  transition: opacity .6s var(--ease), filter .6s var(--ease), transform .6s var(--ease);
 }
-
-#splashScreen.fade-out {
-  opacity: 0;
-  pointer-events: none;
+#splashScreen.fade-out { opacity: 0; filter: blur(10px); transform: scale(1.03); pointer-events: none; }
+.splash-grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 55%),
+    repeating-linear-gradient(45deg, transparent 0 46px, color-mix(in srgb, var(--text) 3.5%, transparent) 46px 47px),
+    repeating-linear-gradient(-45deg, transparent 0 46px, color-mix(in srgb, var(--text) 3.5%, transparent) 46px 47px);
+  -webkit-mask-image: radial-gradient(circle at 50% 38%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(circle at 50% 38%, #000 0%, transparent 72%);
 }
-
-/* 顶部与主体容器 */
-.splash-stage {
-  position: relative;
-  width: 100%;
-  max-width: 380px;
-  height: 380px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+.splash-core {
+  position: relative; flex: 1; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-
-/* 顶部大水印：SPIDER */
-.splash-watermark-spider {
-  position: absolute;
-  top: 15px;
-  font-family: "Cinzel", "Didot", "Times New Roman", serif;
-  font-size: 46px;
-  font-weight: 800;
-  letter-spacing: 14px;
-  text-indent: 14px;
-  color: rgba(60, 55, 50, 0.08);
-  text-transform: uppercase;
-  pointer-events: none;
-  animation: splashFadeIn 1.2s ease forwards;
+.splash-halo {
+  position: absolute; top: 50%; left: 50%; width: 280px; height: 280px; margin: -140px 0 0 -140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 68%);
+  filter: blur(6px); animation: splashHalo 3.2s ease-in-out infinite;
 }
-
-/* 蛛丝悬挂物理下坠与回弹关键帧 */
+/* 悬挂组件：蛛丝 + 精细蜘蛛，物理下坠与回弹 */
 .splash-silk-assembly {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 220px;
-  height: 320px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
   transform-origin: top center;
-  animation: spiderDropSpring 2.2s cubic-bezier(0.28, 1.45, 0.38, 0.98) forwards;
+  animation: spiderDropSpring 1.8s cubic-bezier(.28, 1.45, .38, .98) both;
 }
-
 @keyframes spiderDropSpring {
-  0% {
-    transform: translateX(-50%) translateY(-260px) scaleY(0.4);
-    opacity: 0;
-  }
-  35% {
-    transform: translateX(-50%) translateY(32px) scaleY(1.18); /* 下冲拉伸 */
-    opacity: 1;
-  }
-  55% {
-    transform: translateX(-50%) translateY(-18px) scaleY(0.92); /* 向上回弹回缩 */
-  }
-  75% {
-    transform: translateX(-50%) translateY(8px) scaleY(1.05); /* 二次微弹 */
-  }
-  90% {
-    transform: translateX(-50%) translateY(-3px) scaleY(0.98);
-  }
-  100% {
-    transform: translateX(-50%) translateY(0px) scaleY(1);
-    opacity: 1;
-  }
+  0%   { transform: translateY(-320px) scaleY(.42); opacity: 0; }
+  35%  { transform: translateY(28px) scaleY(1.16); opacity: 1; }
+  55%  { transform: translateY(-15px) scaleY(.93); }
+  75%  { transform: translateY(7px) scaleY(1.04); }
+  90%  { transform: translateY(-3px) scaleY(.985); }
+  100% { transform: translateY(0) scaleY(1); opacity: 1; }
 }
-
-/* 蛛网与悬挂蛛丝线条 */
 .splash-silk-line {
-  width: 1px;
-  height: 90px;
-  background: linear-gradient(to bottom, rgba(70,65,60,0.1), rgba(70,65,60,0.55));
-  position: relative;
-  box-shadow: 0 0 1px rgba(0,0,0,0.1);
+  width: 1px; height: 76px; position: relative;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--text) 52%, transparent));
 }
-
-/* 悬垂的微型星芒节点 */
 .splash-silk-line::after {
-  content: "✦";
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 7px;
-  color: #55504a;
+  content: "✦"; position: absolute; bottom: -6px; left: 50%;
+  transform: translateX(-50%); font-size: 8px; color: var(--muted);
 }
-
-/* 复杂手绘感蜘蛛本体 SVG */
+/* 原版复杂手绘感蜘蛛本体 */
 .splash-spider-svg {
-  width: 150px;
-  height: 210px;
-  margin-top: -4px;
-  overflow: visible;
+  width: 152px; height: 182px; margin-top: -2px; overflow: visible;
+  color: var(--text);
+  filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--accent) 24%, transparent));
+  animation: spiderFloat 4.6s ease-in-out 2.3s infinite;
 }
-
+@keyframes spiderFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.splash-spider-svg .sp-deco {
+  stroke: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+.splash-spider-svg .sp-legs {
+  stroke: color-mix(in srgb, var(--text) 88%, transparent); fill: none;
+}
+.splash-spider-svg .sp-legs .sp-barb {
+  stroke: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.splash-spider-svg .sp-body {
+  fill: var(--panel); stroke: color-mix(in srgb, var(--text) 72%, transparent);
+}
+.splash-spider-svg .sp-bone {
+  stroke: var(--accent); fill: none;
+}
+.splash-spider-svg .sp-bone-fill {
+  fill: var(--accent); stroke: none;
+}
 /* 蛛腿落定后的自然微收动作 */
-.spider-leg-left {
-  transform-origin: 85px 105px;
-  animation: legSettleLeft 1.2s cubic-bezier(0.25, 1, 0.5, 1) 1.8s forwards;
-}
-.spider-leg-right {
-  transform-origin: 115px 105px;
-  animation: legSettleRight 1.2s cubic-bezier(0.25, 1, 0.5, 1) 1.8s forwards;
-}
-
+.spider-leg-left  { transform-origin: 85px 105px;  animation: legSettleLeft  1s cubic-bezier(.25,1,.5,1) 1.3s both; }
+.spider-leg-right { transform-origin: 115px 105px; animation: legSettleRight 1s cubic-bezier(.25,1,.5,1) 1.3s both; }
 @keyframes legSettleLeft {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  60% {
-    transform: rotate(3.5deg) scale(0.96, 0.94); /* 腿部向内微合收紧 */
-  }
-  100% {
-    transform: rotate(2.8deg) scale(0.97, 0.96);
-  }
+  0% { transform: rotate(0deg) scale(1); }
+  60% { transform: rotate(3.5deg) scale(.96,.94); }
+  100% { transform: rotate(2.8deg) scale(.97,.96); }
 }
-
 @keyframes legSettleRight {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  60% {
-    transform: rotate(-3.5deg) scale(0.96, 0.94);
-  }
-  100% {
-    transform: rotate(-2.8deg) scale(0.97, 0.96);
-  }
+  0% { transform: rotate(0deg) scale(1); }
+  60% { transform: rotate(-3.5deg) scale(.96,.94); }
+  100% { transform: rotate(-2.8deg) scale(.97,.96); }
 }
-
-/* 下半部分：进度条与底栏 */
+.splash-wordmark {
+  margin-top: 22px; font-family: var(--font-main);
+  font-size: 19px; font-weight: 700; letter-spacing: .42em; text-indent: .42em;
+  color: var(--text); animation: splashRise .8s var(--ease) .55s both;
+}
+.splash-dot { color: var(--accent); }
+.splash-tagline {
+  margin-top: 9px; font-size: 9.5px; font-weight: 600;
+  letter-spacing: .34em; text-indent: .34em;
+  color: color-mix(in srgb, var(--muted) 90%, transparent);
+  animation: splashRise .8s var(--ease) .7s both;
+}
 .splash-bottom-bar {
-  width: 100%;
-  max-width: 280px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  width: 100%; max-width: 260px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  animation: splashRise .8s var(--ease) .35s both;
 }
-
 .splash-progress-track {
-  width: 100%;
-  height: 2px;
-  background: rgba(90, 80, 70, 0.12);
-  border-radius: 2px;
-  position: relative;
-  overflow: hidden;
+  width: 100%; height: 2px; position: relative; overflow: hidden;
+  background: color-mix(in srgb, var(--muted) 24%, transparent); border-radius: 99px;
 }
-
 .splash-progress-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0%;
-  background: linear-gradient(90deg, #8c8275, #3c3732);
-  border-radius: 2px;
-  transition: width 0.15s ease-out;
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+  transition: width .12s linear;
 }
-
+.splash-progress-fill::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+  transform: translateX(-100%); animation: splashShimmer 1.6s linear infinite;
+}
+.splash-meta { width: 100%; display: flex; justify-content: space-between; align-items: center; }
 .splash-status-text {
-  font-family: "FangSong", "仿宋", "STFangsong", serif;
-  font-size: 11.5px;
-  color: #7d756d;
-  letter-spacing: 2.5px;
+  font-family: var(--font-main); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
 }
-
-/* 底部居中优雅水印：@nini */
+.splash-status-text.tick { animation: splashStatus .45s var(--ease); }
+.splash-percent {
+  font-size: 9.5px; font-weight: 600; letter-spacing: .08em;
+  font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--text) 55%, transparent);
+}
 .splash-watermark-nini {
-  font-family: "Cinzel", "Times New Roman", "Baskerville", serif;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 3.5px;
-  color: rgba(70, 65, 60, 0.42);
-  text-align: center;
-  text-transform: lowercase;
-  margin-top: 6px;
+  font-family: var(--font-main); font-size: 9.5px; letter-spacing: .3em;
+  color: color-mix(in srgb, var(--muted) 60%, transparent); margin-top: 2px;
+}
+@keyframes splashRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes splashHalo { 0%, 100% { opacity: .55; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes splashShimmer { to { transform: translateX(100%); } }
+@keyframes splashStatus { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  #splashScreen *, #splashScreen *::before, #splashScreen *::after {
+    animation-duration: .001s !important; animation-iteration-count: 1 !important;
+  }
 }
 
-@keyframes splashFadeIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+
+/* ============================================================
+   剧情强调 / 已故鬼魂对话 · 统一补充规范
+   ============================================================ */
+/* 剧情里原本依赖 *…* / **…** 标记强调的文本：加粗 + 淡色高亮，且不含星号 */
+.story-em {
+  font-weight: 700;
+  color: var(--text);
+  padding: 0 2px;
+  border-radius: 3px;
+  background: linear-gradient(transparent 60%, color-mix(in srgb, var(--accent-2) 20%, transparent) 60%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
+/* 剧情对白（引号部分）：仿宋体区分，弱化处理但不改动原意 */
+.dialogue-text {
+  font-family: var(--font-dialogue, "Songti SC", "STSong", "SimSun", serif);
+  color: var(--text);
+  opacity: .94;
+}
+/* 👻 已故角色 · 鬼魂灰框对话 */
+.bubble.them.ghost-reply {
+  background: color-mix(in srgb, var(--muted) 13%, var(--panel)) !important;
+  border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent) !important;
+  color: var(--muted) !important;
+  box-shadow: none !important;
+  opacity: .92;
+}
+.bubble.them.ghost-reply .ghost-tag {
+  display: block;
+  font-size: 10px; font-weight: 600; letter-spacing: .08em;
+  color: var(--muted); opacity: .92;
+  margin-bottom: 6px; padding-bottom: 6px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
 </style>
 </head>
 <body>
-<!-- 开屏预加载动画容器 -->
-<div id="splashScreen">
-  <div class="splash-stage">
-    <!-- 顶部艺术水印 -->
-    <div class="splash-watermark-spider">SPIDER</div>
-
-    <!-- 悬垂组件：包含物理回弹蛛丝与荆棘刺纹蜘蛛 -->
+<!-- 开屏预加载动画 · 原版精细手绘蜘蛛 × 「石墨夜」视觉规范 -->
+<div id="splashScreen" role="status" aria-live="polite">
+  <div class="splash-grid" aria-hidden="true"></div>
+  <div class="splash-core">
+    <div class="splash-halo" aria-hidden="true"></div>
+    <!-- 悬垂组件：物理回弹蛛丝 + 原版复杂哥特手绘线描蜘蛛 -->
     <div class="splash-silk-assembly">
       <div class="splash-silk-line"></div>
-      
-      <!-- 复杂哥特手绘线描蜘蛛 SVG -->
-      <svg class="splash-spider-svg" viewBox="0 0 200 240" fill="none" stroke="#2b2723" stroke-linecap="round" stroke-linejoin="round">
-        
+      <svg class="splash-spider-svg" viewBox="0 0 200 240" fill="none" aria-hidden="true">
         <!-- 背景垂落的附带碎网、悬垂晶珠与星芒 -->
-        <g stroke="#6e665d" stroke-width="0.8" opacity="0.6">
+        <g class="sp-deco" stroke-width="0.8" opacity="0.7">
           <path d="M 60,10 Q 75,35 70,70 Q 65,95 80,120" stroke-dasharray="2,3"/>
           <path d="M 140,15 Q 125,45 132,80 Q 138,105 120,135" stroke-dasharray="2,3"/>
           <path d="M 75,45 C 90,60 110,60 125,45" />
           <path d="M 68,75 C 88,95 112,95 132,75" />
-          <!-- 装饰十字星芒 -->
           <path d="M 60,35 L 60,43 M 56,39 L 64,39" stroke-width="1"/>
           <path d="M 140,40 L 140,48 M 136,44 L 144,44" stroke-width="1"/>
           <path d="M 78,130 L 78,136 M 75,133 L 81,133" stroke-width="0.9"/>
           <path d="M 122,142 L 122,148 M 119,145 L 125,145" stroke-width="0.9"/>
         </g>
-
-        <!-- 左侧节肢腿组 (带收腿动画 class) -->
-        <g class="spider-leg-left" stroke="#231f1c" stroke-width="2.2">
-          <!-- 腿 1 -->
+        <!-- 左侧节肢腿组 -->
+        <g class="sp-legs spider-leg-left" stroke-width="2.2">
           <path d="M 94,98 C 82,75 65,48 58,22 C 55,42 45,65 30,82 C 42,88 56,102 62,118" />
-          <!-- 腿 2 -->
           <path d="M 92,104 C 76,90 52,82 34,92 C 28,108 38,128 22,154" stroke-width="2"/>
-          <!-- 腿 3 -->
           <path d="M 94,110 C 80,118 64,128 54,148 C 50,165 42,178 32,205" stroke-width="2"/>
-          <!-- 腿 4 (后肢延伸) -->
           <path d="M 96,118 C 88,135 82,165 72,192 C 68,206 62,218 52,230" stroke-width="1.8"/>
-          
-          <!-- 尖刺/荆棘倒钩点缀 -->
-          <path d="M 60,32 L 53,35 M 48,60 L 42,66 M 34,112 L 28,116" stroke-width="1.2" stroke="#3d3732"/>
+          <path class="sp-barb" d="M 60,32 L 53,35 M 48,60 L 42,66 M 34,112 L 28,116" stroke-width="1.2"/>
         </g>
-
-        <!-- 右侧节肢腿组 (带收腿动画 class) -->
-        <g class="spider-leg-right" stroke="#231f1c" stroke-width="2.2">
-          <!-- 腿 1 -->
+        <!-- 右侧节肢腿组 -->
+        <g class="sp-legs spider-leg-right" stroke-width="2.2">
           <path d="M 106,98 C 118,75 135,48 142,22 C 145,42 155,65 170,82 C 158,88 144,102 138,118" />
-          <!-- 腿 2 -->
           <path d="M 108,104 C 124,90 148,82 166,92 C 172,108 162,128 178,154" stroke-width="2"/>
-          <!-- 腿 3 -->
           <path d="M 106,110 C 120,118 136,128 146,148 C 150,165 158,178 168,205" stroke-width="2"/>
-          <!-- 腿 4 (后肢延伸) -->
           <path d="M 104,118 C 112,135 118,165 128,192 C 132,206 138,218 148,230" stroke-width="1.8"/>
-          
-          <!-- 尖刺/荆棘倒钩点缀 -->
-          <path d="M 140,32 L 147,35 M 152,60 L 158,66 M 166,112 L 172,116" stroke-width="1.2" stroke="#3d3732"/>
+          <path class="sp-barb" d="M 140,32 L 147,35 M 152,60 L 158,66 M 166,112 L 172,116" stroke-width="1.2"/>
         </g>
-
         <!-- 蜘蛛胸腹主体及刺骨轮廓 -->
-        <g fill="#24201d" stroke="#1d1916" stroke-width="1.6">
-          <!-- 头部与螯牙 -->
+        <g class="sp-body" stroke-width="1.6">
           <ellipse cx="100" cy="94" rx="4.5" ry="5.5" />
           <path d="M 98,99 L 96,104 M 102,99 L 104,104" stroke-width="1.5" />
-          <!-- 胸节 -->
           <ellipse cx="100" cy="107" rx="7.5" ry="8.5" />
-          <!-- 腹部 (带有锐化收尾的水滴椭圆形) -->
           <path d="M 100,115 C 90,120 86,132 91,146 C 94,154 99,165 100,172 C 101,165 106,154 109,146 C 114,132 110,120 100,115 Z" />
         </g>
-
-        <!-- 腹部骨骼/裂甲高光纹理 -->
-        <g stroke="#f7f3e8" stroke-width="0.9" opacity="0.8">
-          <ellipse cx="98.5" cy="105" rx="1.5" ry="3" fill="#f7f3e8" />
+        <!-- 腹部骨骼 / 裂甲高光纹理（蜘蛛红） -->
+        <g class="sp-bone" stroke-width="0.9" opacity="0.9">
+          <ellipse cx="98.5" cy="105" rx="1.5" ry="3" class="sp-bone-fill" />
           <path d="M 96,124 Q 100,127 104,124" />
           <path d="M 95,133 Q 100,137 105,133" />
           <path d="M 97,143 Q 100,147 103,143" />
         </g>
       </svg>
     </div>
+    <div class="splash-wordmark">SPIDER<span class="splash-dot">·</span>VERSE</div>
+    <div class="splash-tagline">WORLD SIMULATOR</div>
   </div>
-
-  <!-- 下方：进度条、载入提示与 @nini 水印 -->
   <div class="splash-bottom-bar">
-    <div class="splash-progress-track">
-      <div class="splash-progress-fill" id="splashProgress"></div>
+    <div class="splash-progress-track"><div class="splash-progress-fill" id="splashProgress"></div></div>
+    <div class="splash-meta">
+      <span class="splash-status-text" id="splashStatus">INITIALIZING...</span>
+      <span class="splash-percent" id="splashPercent">0%</span>
     </div>
-    <div class="splash-status-text" id="splashStatus">LOADING ARCHIVES...</div>
     <div class="splash-watermark-nini">@nini</div>
   </div>
 </div>
@@ -2510,27 +2801,27 @@ body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); 
   <div id="desktop" class="screen active">
     <div class="wallpaper"></div>
     <div class="app-grid">
-      <button class="app-icon" data-app="messages"><span>💬</span><label>信息</label></button>
-      <button class="app-icon" data-app="instagram"><span>📸</span><label>Instagram</label></button>
-     <button class="app-icon" data-app="twitter"><span><svg viewBox="0 0 24 24" width="30" height="30" fill="#ffffff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span><label>推特</label></button>
-      <button class="app-icon" data-app="facetime"><span>🌌</span><label>窗</label></button>
-      <button class="app-icon" data-app="worldline"><span>🌐</span><label>世界线</label></button>
-      <button class="app-icon" data-app="Spider_Terminal"><span>🕷️</span><label>蜘蛛终端</label></button>
-      <button class="app-icon" data-app="Theater"><span>🎭</span><label>小剧场</label></button>
-      <button class="app-icon" data-app="Diary"><span>📓</span><label>双人日记</label></button>
-      <button class="app-icon" data-app="MJNotebook"><span>🕵️</span><label>MJ 笔记本</label></button>
-     <button class="app-icon" data-app="School"><span>🏫</span><label>中城高中</label></button>
-      <button class="app-icon" data-app="worldbook"><span>📖</span><label>世界书</label></button>
-      <button class="app-icon" data-app="Calendar"><span>📅</span><label>日历</label></button>
-      <button class="app-icon" data-app="Dating"><span>🍜</span><label>约饭</label></button>
-      <button class="app-icon" data-app="contacts"><span>👥</span><label>社交圈</label></button>
-     <button class="app-icon" data-app="Memory"><span>🧠</span><label>记忆</label></button>
-      <button class="app-icon" data-app="music"><span>🎵</span><label>音乐</label></button>
-      <button class="app-icon" data-app="Appearance"><span>🎨</span><label>外观</label></button>
-      <button class="app-icon" data-app="settings"><span>⚙️</span><label>设置</label></button>
+            <button class="app-icon" data-app="messages"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 3V6a1 1 0 0 1 1-1Z"/><path d="M8 10h8M8 13h5"/></svg></span><label>信息</label></button>
+      <button class="app-icon" data-app="instagram"><span><svg class="app-glyph" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg></span><label>Instagram</label></button>
+      <button class="app-icon" data-app="twitter"><span><svg class="app-glyph app-glyph-fill" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span><label>推特</label></button>
+      <button class="app-icon" data-app="facetime"><span><svg class="app-glyph" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M12 9v11"/></svg></span><label>窗</label></button>
+      <button class="app-icon" data-app="worldline"><span><svg class="app-glyph" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></span><label>世界线</label></button>
+      <button class="app-icon" data-app="Spider_Terminal"><span><svg class="app-glyph" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></span><label>蜘蛛终端</label></button>
+      <button class="app-icon" data-app="Theater"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4V7Z"/><path d="M12 7v10" stroke-dasharray="2 2"/></svg></span><label>小剧场</label></button>
+      <button class="app-icon" data-app="Diary"><span><svg class="app-glyph" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v18M12 8h4M12 12h4"/></svg></span><label>双人日记</label></button>
+      <button class="app-icon" data-app="MJNotebook"><span><svg class="app-glyph" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L20 20M7 9h6M7 12h4"/></svg></span><label>MJ 笔记本</label></button>
+      <button class="app-icon" data-app="School"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6"/></svg></span><label>中城高中</label></button>
+      <button class="app-icon" data-app="worldbook"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M12 6c-2.5-1.5-5-2-8-2v13c3 0 5.5.5 8 2 2.5-1.5 5-2 8-2V4c-3 0-5.5.5-8 2Z"/><path d="M12 6v13"/></svg></span><label>世界书</label></button>
+      <button class="app-icon" data-app="Calendar"><span><svg class="app-glyph" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><label>日历</label></button>
+      <button class="app-icon" data-app="Dating"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 7c0-1 1-1.5 1-2.5M12 7c0-1 1-1.5 1-2.5M16 7c0-1 1-1.5 1-2.5"/></svg></span><label>约饭</label></button>
+      <button class="app-icon" data-app="contacts"><span><svg class="app-glyph" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16.5 5.5a3 3 0 0 1 0 5.6M17.5 14.8c2.2.6 3.5 2.5 3.5 5.2"/></svg></span><label>社交圈</label></button>
+      <button class="app-icon" data-app="Memory"><span><svg class="app-glyph" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M6.7 7.3l3.3 3M17.3 7.3L14 10.6M6.7 16.7l3.3-3M17.3 16.7L14 13.4"/></svg></span><label>记忆</label></button>
+      <button class="app-icon" data-app="music"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M9 17V5l10-2v12"/><circle cx="6" cy="17" r="3"/><circle cx="16" cy="15" r="3"/></svg></span><label>音乐</label></button>
+      <button class="app-icon" data-app="Appearance"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2s-.7-1.5-.7-2.2c0-.8.6-1.3 1.5-1.3H17a4 4 0 0 0 4-4c0-4.5-4-8.5-9-8.5Z"/><circle cx="7.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="7.5" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="8" r="1" fill="currentColor" stroke="none"/></svg></span><label>外观</label></button>
+      <button class="app-icon" data-app="settings"><span><svg class="app-glyph" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></span><label>设置</label></button>
     </div>
 <div class="desktop-watermark">@nini</div>
-<button id="desktopEditBtn" title="编辑桌面" style="position:absolute;top:50px;right:16px;z-index:5;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:50%;width:34px;height:34px;font-size:15px;cursor:pointer;backdrop-filter:blur(4px);">✏️</button>
+<button id="desktopEditBtn" title="编辑桌面" style="position:absolute;top:52px;right:14px;z-index:5;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:50%;width:30px;height:30px;font-size:13px;cursor:pointer;backdrop-filter:blur(12px);"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
   </div>
   <div id="appView" class="screen">
     <header class="app-header">
@@ -3452,6 +3743,8 @@ function resetPhaseOverrides() {
   localStorage.removeItem(PHASE_OVERRIDES_KEY);
   snapshotDefaultTimeline();
   WORLD.timeline = JSON.parse(JSON.stringify(WORLD_DEFAULT_TIMELINE));
+  // 🕯️ 剧情分支结构变更：清掉旧存档里残留的自动已故标记
+  if (typeof invalidateLifeStateCache === "function") invalidateLifeStateCache();
 }
 
 function getEventAnchors() {
@@ -3649,6 +3942,40 @@ const store = {
 },
   getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3",temperature:"0.8"});},
   setConfig(c){this.set("sv_config",c);},
+// ============================================================
+// 🕯️ 生命事件表：唯一允许持久化的生死「真相来源」
+//   { [name]: { status:"alive"|"deceased", year?, month?,
+//               source:"user"|"story"|"branch"|"canon", reason?, at? } }
+//   注意：联系人的「已故」显示是派生值，禁止缓存；这里只记录
+//   「当前时间线里实际发生的事件」与「玩家显式选择」。
+// ============================================================
+getLifeEvents(){ return this.get("sv_life_events", {}); },
+setLifeEvents(v){ this.set("sv_life_events", v || {}); },
+setContactLifeOverride(name, status, meta){
+  if (!name) return;
+  const st = (status === "deceased") ? "deceased" : "alive";
+  const all = this.get("sv_life_events", {});
+  let sNow = {};
+  try { sNow = this.getState() || {}; } catch (e) {}
+  all[name] = Object.assign({
+    status: st,
+    year: sNow.gameYear || 0,
+    month: sNow.gameMonth || 1,
+    source: "user",
+    at: Date.now()
+  }, meta || {}, { status: st });
+  this.set("sv_life_events", all);
+  // 清掉同一联系人上的旧派生标记，避免两处状态互相打架
+  const list = this.get("sv_contacts", []) || [];
+  const t = list.find(x => x && x.name === name);
+  if (t) { delete t.deceased; delete t.deceasedSource; this.set("sv_contacts", list); }
+},
+clearContactLifeOverride(name){
+  if (!name) return;
+  const all = this.get("sv_life_events", {}) || {};
+  delete all[name];
+  this.set("sv_life_events", all);
+},
 // ===== API 档位（可保存多套 URL / Key / 模型）=====
   getApiSlots() {
     let slots = this.get("sv_api_slots", null);
@@ -4581,9 +4908,9 @@ function showUnlockOverlay() {
   panel.innerHTML = `
     <div style="font-size:48px;margin-bottom:16px;filter:drop-shadow(0 0 20px rgba(230,36,41,.5));">🕸️</div>
     <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:2px;margin-bottom:12px;">${title}</div>
-    <div style="font-size:13px;color:#8a8a99;line-height:1.9;margin-bottom:32px;">${subtitle}</div>
-    <div style="font-size:14px;color:#c9d1e8;line-height:2.1;margin-bottom:24px;">${line1}</div>
-    <div style="font-size:14px;color:#c9d1e8;line-height:2.1;margin-bottom:36px;">${line2}</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.9;margin-bottom:32px;">${subtitle}</div>
+    <div style="font-size:14px;color:var(--dialogue-color);line-height:2.1;margin-bottom:24px;">${line1}</div>
+    <div style="font-size:14px;color:var(--dialogue-color);line-height:2.1;margin-bottom:36px;">${line2}</div>
     <button id="unlockContinueBtn" style="background:linear-gradient(135deg,#e62429,#8a2be2);color:#fff;border:none;padding:14px 36px;border-radius:24px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:2px;box-shadow:0 8px 24px rgba(230,36,41,.35);font-family:inherit;">
       ${isRekindle ? "重新认识他 ›" : "走近一点 ›"}
     </button>
@@ -6042,17 +6369,180 @@ const sharedText = "";  // 永远为空：不喂原文
   return rule;
 }
 // ============================================================
-// 🦸 复联成员：判断在当前游戏时间是否已故
+// 🕯️ 生命状态派生层 · LIFE_STATE_CORE_BEGIN
+// 设计原则：
+//   1) 「已故」是派生值，不是持久化状态 —— 每次调用都从「玩家当前选择 +
+//      当前时间线里实际发生的死亡事件 + 游戏时间」实时重算，禁止缓存。
+//   2) 唯一允许持久化的真相来源是 sv_life_events（显式死亡 / 复活事件）。
+//   3) WORLD.avengersRoster[*].deathYear 只是「遵循原作」时的默认基线；
+//      一旦偏离原作节点、或当前时间线没有对应死亡事件，就不再套用。
+// 本段刻意写成不读全局的纯函数，便于回归测试直接注入 ctx 验证。
 // ============================================================
-function isAvengerDeadNow(name) {
-  const roster = WORLD.avengersRoster[name];
-  if (!roster || !roster.deathYear) return false;
-  const s = store.getState();
-  const y = s.gameYear || 0;
-  const m = s.gameMonth || 1;
-  if (y > roster.deathYear) return true;
-  if (y === roster.deathYear && m >= (roster.deathMonth || 12)) return true;
+const LIFE_DEATH_KEYWORDS = /葬礼|牺牲|去世|逝世|已故|死亡|阵亡|殉职|殉|化灰|离世|遗体|追悼|没能回来|不在了/;
+const LIFE_ALIVE_KEYWORDS = /复活|存活|活了下来|未死|没有死|幸存|救回|死而复生|改写了结局|阻止了.*牺牲|避免了.*死亡/;
+
+function lifeNameTokens(name) {
+  const base = String(name || "").trim();
+  if (!base) return [];
+  const tokens = [base];
+  base.split(/[·・\s]+/).filter(Boolean).forEach(p => { if (p.length >= 2) tokens.push(p); });
+  if (base.length >= 3) tokens.push(base.slice(0, 2));
+  return Array.from(new Set(tokens)).filter(t => t.length >= 2);
+}
+function lifeHasKeyword(name, texts, re) {
+  const tokens = lifeNameTokens(name);
+  if (!tokens.length) return false;
+  return (Array.isArray(texts) ? texts : []).some(line => {
+    const t = String(line == null ? "" : line);
+    return !!t && tokens.some(tok => t.indexOf(tok) !== -1) && re.test(t);
+  });
+}
+function lifeHasDeathEvent(name, texts) { return lifeHasKeyword(name, texts, LIFE_DEATH_KEYWORDS); }
+// 「复活 / 存活」证据必须紧贴角色名：同句里「别人复活」不能误伤本角色。
+// 例：「托尼·斯塔克葬礼已经结束，彼得复活后独自生活。」→ 托尼仍应判定为已故。
+function lifeHasAliveEvent(name, texts) {
+  const tokens = lifeNameTokens(name);
+  if (!tokens.length) return false;
+  return (Array.isArray(texts) ? texts : []).some(line => {
+    const t = String(line == null ? "" : line);
+    if (!t) return false;
+    return tokens.some(tok => {
+      let from = 0, i;
+      while ((i = t.indexOf(tok, from)) !== -1) {
+        const win = t.slice(Math.max(0, i - 6), Math.min(t.length, i + tok.length + 8));
+        if (LIFE_ALIVE_KEYWORDS.test(win)) return true;
+        from = i + tok.length;
+      }
+      return false;
+    });
+  });
+}
+
+// 是否偏离原作节点：自定义开局 / 插入自定义阶段 / 剧情分支标记 / 结局改写
+function isCanonDiverged(ctx) {
+  const sn = ctx.startNode;
+  if (sn && sn.custom === true) return true;
+  if (sn && sn.key && Array.isArray(ctx.startNodeKeys) && ctx.startNodeKeys.length &&
+      ctx.startNodeKeys.indexOf(sn.key) === -1) return true;
+  const ov = ctx.phaseOverrides || {};
+  if (Array.isArray(ov.inserts) && ov.inserts.length) return true;
+  const o = ctx.outcomes || {};
+  if (o.canonDiverged === true || o.branchDiverged === true || o.noDeaths === true) return true;
+  const ev = ctx.lifeEvents || {};
+  if (Object.keys(ev).some(n => ev[n] && (ev[n].source === "branch" || ev[n].source === "story"))) return true;
   return false;
+}
+
+function computeLifeState(name, ctx) {
+  ctx = ctx || {};
+  const c = (ctx.contacts || []).find(x => x && x.name === name) || null;
+  const roster = (ctx.roster || {})[name] || null;
+  const ev = (ctx.lifeEvents || {})[name] || null;
+  const year = Number(ctx.gameYear) || 0;
+  const month = Number(ctx.gameMonth) || 1;
+  const texts = ctx.timelineTexts || [];
+
+  // 1) 玩家显式「复活 / 改为存活」——最高优先级
+  if (ev && ev.status === "alive")
+    return { deceased: false, reason: "explicit_alive", source: ev.source || "user" };
+
+  // 2) 当前时间线里显式登记的死亡事件（必须已经发生）
+  if (ev && ev.status === "deceased") {
+    const ey = Number(ev.year) || 0, em = Number(ev.month) || 1;
+    const happened = ey === 0 || ey < year || (ey === year && em <= month);
+    return { deceased: happened, reason: happened ? "explicit_death" : "death_event_future", source: ev.source || "story" };
+  }
+
+  // 3) 用户手动标记（必须带 deceasedSource=user；旧存档无来源的一律视为陈旧缓存并忽略）
+  if (c && c.deceasedSource === "user" && typeof c.deceased === "boolean")
+    return { deceased: !!c.deceased,
+             reason: c.deceased ? "manual_deceased" : "manual_alive", source: "user" };
+
+  // 4) 剧情文本里明确写了该角色复活 / 存活
+  if (lifeHasAliveEvent(name, texts))
+    return { deceased: false, reason: "survivor_event_in_timeline", source: "timeline" };
+
+  // 5) 偏离原作节点且没有显式死亡事件 → 不套用原作基线，判为存活
+  if (isCanonDiverged(ctx))
+    return { deceased: false, reason: "canon_diverged_no_death_event", source: "derivation" };
+
+  // 6) 当前时间线确有该角色的死亡事件
+  if (lifeHasDeathEvent(name, texts))
+    return { deceased: true, reason: "death_event_in_timeline", source: "timeline" };
+
+  // 7) 遵循原作：仅在游戏时间越过原作死亡点时才成立
+  if (roster && roster.deathYear) {
+    const passed = year > roster.deathYear ||
+      (year === roster.deathYear && month >= (roster.deathMonth || 12));
+    return { deceased: passed, reason: passed ? "canon_baseline" : "canon_not_yet", source: "canon" };
+  }
+
+  // 8) 当前时间线没有任何死亡事件 → 存活
+  return { deceased: false, reason: "no_death_event", source: "derivation" };
+}
+// 🕯️ 生命状态派生层 · LIFE_STATE_CORE_END
+
+// ============================================================
+// 运行时上下文：把全部输入实时读出，绝不缓存
+// ============================================================
+function buildLifeStateContext() {
+  let s = {};
+  try { s = (typeof store !== "undefined" && store.getState) ? store.getState() : {}; } catch (e) {}
+  let contacts = [], lifeEvents = {};
+  try {
+    contacts = (typeof store !== "undefined" && store.get) ? (store.get("sv_contacts", []) || []) : [];
+    lifeEvents = (typeof store !== "undefined" && store.getLifeEvents) ? store.getLifeEvents() : {};
+  } catch (e) {}
+  let startNode = null, phaseOverrides = { renames: {}, inserts: [] };
+  try { startNode = JSON.parse(localStorage.getItem("sv_start_node") || "null"); } catch (e) {}
+  try {
+    const ov = JSON.parse(localStorage.getItem("sv_phase_overrides") || "null");
+    if (ov && typeof ov === "object") phaseOverrides = { renames: ov.renames || {}, inserts: ov.inserts || [] };
+  } catch (e) {}
+  const texts = [];
+  if (Array.isArray(s.pastEvents)) s.pastEvents.forEach(t => { if (t) texts.push(String(t)); });
+  if (typeof s.currentStory === "string" && s.currentStory) texts.push(s.currentStory);
+  if (Array.isArray(s.history)) s.history.forEach(h => {
+    if (!h) return;
+    if (typeof h.story === "string") texts.push(h.story);
+    if (typeof h.choice === "string") texts.push(h.choice);
+  });
+  return {
+    gameYear: s.gameYear || 0,
+    gameMonth: s.gameMonth || 1,
+    contacts: contacts, lifeEvents: lifeEvents, startNode: startNode,
+    phaseOverrides: phaseOverrides,
+    outcomes: s.outcomes || {},
+    timelineTexts: texts,
+    startNodeKeys: ((typeof WORLD !== "undefined" && WORLD.startNodes) || []).map(n => n.key),
+    roster: (typeof WORLD !== "undefined" && WORLD.avengersRoster) || {}
+  };
+}
+function getLifeStateInfo(name, ctxArg) {
+  return computeLifeState(name, ctxArg || buildLifeStateContext());
+}
+// 🦸 兼容旧调用名：现在统一委托给生命状态派生层，不再做静态日历比较
+function isAvengerDeadNow(name) { return getLifeStateInfo(name).deceased; }
+// 🕯️ 唯一的「联系人是否已故」入口 —— 所有 UI / 过滤 / prompt 都必须走这里
+function isContactDeceased(name) { return getLifeStateInfo(name).deceased; }
+// "none" = 不产生任何回复；"ghost" = 用 👻 灰框显示一段超越时间的回望
+function getDeceasedReplyMode(name) {
+  const info = getLifeStateInfo(name);
+  const c = (store.get("sv_contacts", []) || []).find(x => x && x.name === name);
+  if (c && (c.deceasedReplyMode === "ghost" || c.deceasedReplyMode === "none")) return c.deceasedReplyMode;
+  return info.deceased ? "ghost" : "none";
+}
+function buildDeceasedGhostRule(name) {
+  return `
+
+【👻 ${name} · 已故 · 超越时间的回望 · 铁律 · 最高优先级】
+1. 在当前时间线里你已经离世。此刻出现在对话里的，不是「正在正常生活、正在回微信的你」，而是一段超越时间的回望（回忆、梦境、幻觉、或某种说不清的灵魂对话，由玩家自行想象）。
+2. 语气要克制、疏淡、带一点怅惘和温柔，像一个已经走完旅程的人在回看旧日；绝对不要像活人一样热情、撒娇、开玩笑、约见面、聊「今天」「最近」「待会儿」。
+3. 不要绑定到任何具体游戏时间点，不要说「今天几号」「最近怎么样」「我马上到」，不要推进任何现实剧情、不要许诺未来。
+4. 保留你生前的完整记忆与性格，可以谈这一生经历过的事，谈旧日的人和地方。
+5. 不要反复强调「我已经死了」，也不要变成阴森恐怖的鬼；自然一点，像老朋友隔着一个很远的地方说话。
+6. 每条都短一点、轻一点，像随时会散掉的一句话。不要连发一长串、不要话痨。
+`;
 }
 
 // ============================================================
@@ -6064,7 +6554,7 @@ function buildAvengerChatRule(name) {
 
   const s = store.getState();
   const y = s.gameYear || WORLD.startYear;
-  const dead = isAvengerDeadNow(name);
+  const dead = isContactDeceased(name);   // 🕯️ 统一派生状态，复活/偏离原作后不再误入已故独立模式
 
   if (dead) {
     // ★ 已故：转为"独立联系人"，不绑定游戏时间线
@@ -6614,32 +7104,32 @@ let currentApp = null;
 
     const nodes = WORLD.startNodes || [];
     const nodeCards = nodes.map((n, i) => `
-      <div class="start-node-card" data-idx="${i}" style="background:#1a1a24;border:1px solid #2a2a38;border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s;">
+      <div class="start-node-card" data-idx="${i}" style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s;">
         <div style="font-weight:bold;color:#fff;font-size:14px;margin-bottom:4px;">${esc(n.label)}</div>
-        <div style="font-size:12px;color:#a0a0b0;line-height:1.5;">${esc(n.event)}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">${esc(n.event)}</div>
       </div>
     `).join("");
 
     wrap.innerHTML = `
       <div style="max-width:400px;margin:20px auto;">
-        <div style="background:#14141c;border:1px solid #2a2a38;border-radius:16px;padding:20px;">
+        <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;">
           <h2 style="color:#e62429;margin:0 0 8px;font-size:18px;">🕷️ 选择开局时间</h2>
-          <p style="margin:0 0 16px;color:#8a8a99;font-size:12px;">选择你要从哪个大事件节点进入这个蜘蛛侠世界线。</p >
+          <p style="margin:0 0 16px;color:var(--muted);font-size:12px;">选择你要从哪个大事件节点进入这个蜘蛛侠世界线。</p >
 
           <div id="startNodeList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px;">
             ${nodeCards}
           </div>
 
-          <div id="startCustomPanel" style="display:none;background:#1a1a24;border-radius:12px;padding:12px;margin-bottom:12px;">
-            <div style="font-size:12px;color:#8a8a99;margin-bottom:8px;">自定义开局日期（可只填年月，日默认 1 号）</div>
+          <div id="startCustomPanel" style="display:none;background:var(--panel-2);border-radius:12px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">自定义开局日期（可只填年月，日默认 1 号）</div>
             <div style="display:flex;gap:6px;">
-              <input id="sc_year" type="number" placeholder="年" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a38;background:#0f0f15;color:#fff;font-size:13px;">
-              <input id="sc_month" type="number" min="1" max="12" placeholder="月" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a38;background:#0f0f15;color:#fff;font-size:13px;">
-              <input id="sc_day" type="number" min="1" max="31" placeholder="日" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a38;background:#0f0f15;color:#fff;font-size:13px;">
+              <input id="sc_year" type="number" placeholder="年" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:#fff;font-size:13px;">
+              <input id="sc_month" type="number" min="1" max="12" placeholder="月" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:#fff;font-size:13px;">
+              <input id="sc_day" type="number" min="1" max="31" placeholder="日" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:#fff;font-size:13px;">
             </div>
           </div>
 
-          <div id="startCustomToggle" style="background:#222230;border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:13px;color:#5b8dff;margin-bottom:12px;">
+          <div id="startCustomToggle" style="background:var(--panel-2);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--accent-2);margin-bottom:12px;">
             ✏️ 或者：自定义进入时间
           </div>
 
@@ -6675,17 +7165,17 @@ const updateConfirmBtn = () => {
 wrap.querySelectorAll(".start-node-card").forEach(card => {
   card.onclick = () => {
     wrap.querySelectorAll(".start-node-card").forEach(c => {
-      c.style.borderColor = "#2a2a38";
-      c.style.background = "#1a1a24";
+      c.style.borderColor = "var(--line)";
+      c.style.background = "var(--panel-2)";
     });
     card.style.borderColor = "#e62429";
-    card.style.background = "#1f1518";
+    card.style.background = "color-mix(in srgb, var(--accent) 14%, var(--panel-2))";
     const idx = parseInt(card.dataset.idx);
     selectedNode = nodes[idx];
     customDate = null;
     isCustomMode = false;
     customPanel.style.display = "none";
-    wrap.querySelector("#startCustomToggle").style.color = "#5b8dff";
+    wrap.querySelector("#startCustomToggle").style.color = "var(--accent-2)";
     updateConfirmBtn();
   };
 });
@@ -6696,15 +7186,15 @@ wrap.querySelector("#startCustomToggle").onclick = () => {
   if (isCustomMode) {
     customPanel.style.display = "block";
     wrap.querySelectorAll(".start-node-card").forEach(c => {
-      c.style.borderColor = "#2a2a38";
-      c.style.background = "#1a1a24";
+      c.style.borderColor = "var(--line)";
+      c.style.background = "var(--panel-2)";
     });
     selectedNode = null;
     wrap.querySelector("#startCustomToggle").style.color = "#e62429";
   } else {
     customPanel.style.display = "none";
     customDate = null;
-    wrap.querySelector("#startCustomToggle").style.color = "#5b8dff";
+    wrap.querySelector("#startCustomToggle").style.color = "var(--accent-2)";
     updateConfirmBtn();
   }
 };
@@ -6736,6 +7226,7 @@ confirmBtn.onclick = () => {
       month: selectedNode.month,
       day: selectedNode.day,
       label: selectedNode.label,
+      pastEvents: Array.isArray(selectedNode.pastEvents) ? selectedNode.pastEvents : [],
       custom: false
     };
   } else if (customDate) {
@@ -6757,6 +7248,7 @@ confirmBtn.onclick = () => {
       month: m,
       day: customDate.day,
       label: `自定义：${y}年${m}月${customDate.day}日`,
+      pastEvents: [],   // 自定义开局 = 偏离原作，不继承任何原作死亡事件
       custom: true
     };
   } else {
@@ -6765,6 +7257,8 @@ confirmBtn.onclick = () => {
 
   localStorage.setItem("sv_start_node", JSON.stringify(chosen));
   localStorage.setItem("sv_start_node_chosen_v1", "1");
+  // 🕯️ 开局节点 = 剧情分支变更：立刻作废旧存档里残留的自动已故标记
+  if (typeof invalidateLifeStateCache === "function") invalidateLifeStateCache();
 // 🕸️ 从"身份已曝光"的节点开局，自动标记彼得身份对玩家已暴露
 const revealedKeys = [
    "start_phase6_multiverse" // 身份暴露 → 多元宇宙
@@ -7290,7 +7784,7 @@ function renderSideQuestBody(body, q) {
   const isClosed = q.closed;
   body.innerHTML = `<div style="padding:14px">
     <div class="card" style="border-left:3px solid #e62429;padding:12px;margin-bottom:8px;">
-      <div style="font-size:11px;color:#8a8a99;">🎬 支线档案 · ${esc(q.date)} · ${isClosed ? "✅ 已完结" : "▶ 进行中"}</div>
+      <div style="font-size:11px;color:var(--muted);">🎬 支线档案 · ${esc(q.date)} · ${isClosed ? "✅ 已完结" : "▶ 进行中"}</div>
       <div style="font-weight:bold;color: var(--sidebar-title-color);font-size:15px;margin-top:4px;">${esc(q.title)}</div>
     </div>
     <div class="card" style="padding:12px;margin-bottom:12px;">
@@ -8677,7 +9171,7 @@ function showPatrolLogDetail(item) {
   panel.style.cssText = "max-width:460px;width:100%;max-height:82vh;overflow-y:auto;background:var(--panel,#14141c);border:1px solid var(--line,#2a2a38);border-radius:18px;padding:22px 20px;box-shadow:0 20px 60px rgba(0,0,0,.6);color:var(--text,#f2f3f7);";
 
   panel.innerHTML = `
-    <div style="font-size:11px;color:var(--muted,#8a8a99);margin-bottom:10px;">${esc(item.date)} · ${esc(item.loc)}</div>
+    <div style="font-size:11px;color:var(--muted,var(--muted));margin-bottom:10px;">${esc(item.date)} · ${esc(item.loc)}</div>
 
     ${item.story ? `
       <div style="font-size:11px;color:var(--accent-2,#2d6bff);font-weight:600;letter-spacing:1px;margin-bottom:6px;">▍开场</div>
@@ -11353,6 +11847,30 @@ ${this.currentUser === "彼得·帕克" ? `
     </div>
 
     <div class="card" style="margin-top:12px;">
+      <h3>🕯️ 已故状态 / 消息回复</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+        标记为已故后，ta 不会再像正常角色那样回复你。可选择「完全不回复」或「👻 鬼魂灰框」——后者会以灰色虚线框显示一段超越时间的回望。<br>
+        状态按「当前时间线的实际死亡事件 + 你的选择」实时判定：偏离原作节点、或当前时间线没有死亡事件时，角色会自动恢复为存活。此处勾选可强制覆盖，取消勾选即为「改为存活 / 复活」。
+      </p>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <label style="font-size:13px;color:var(--text);">🕯️ 标记为已故</label>
+        <label class="switch"><input type="checkbox" id="c_deceased" ${isContactDeceased(c.name) ? "checked" : ""}><span class="slider"></span></label>
+      </div>
+      <div class="field">
+        <label>已故后消息回复</label>
+        <select id="c_deceasedMode" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:14px;box-sizing:border-box;">
+          <option value="none" ${getDeceasedReplyMode(c.name) === "none" ? "selected" : ""}>不产生对话回复（静默）</option>
+          <option value="ghost" ${getDeceasedReplyMode(c.name) === "ghost" ? "selected" : ""}>👻 以鬼魂灰框样式显示对话</option>
+        </select>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px;">
+        · <b>不回复</b>：你发出的消息会留在对话里，但对方不再有回音，也不会出现「正在输入」。<br>
+        · <b>👻 鬼魂灰框</b>：对方仍会回应，但气泡显示为灰色虚线框并带 👻 标记，语气是回望而非日常。<br>
+        改动即时生效并保存，无需点「保存简介」。
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
       <h3>🚫 聊天干预（防 OOC）</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
         在这里填写你**不希望 AI 在聊天里出现**的内容或行为，或直接下达干预指令。<br>
@@ -11470,6 +11988,28 @@ if (revealToggle) {
     toast(revealToggle.checked ? "彼得现在知道你已经知道了" : "已恢复：彼得仍对你保密");
   };
 }
+
+// 🕯️ 已故状态 / 回复模式：即时生效（不依赖「保存简介」按钮）
+//    写的是「显式生命事件」，而不是把派生结果缓存到联系人上。
+const deceasedToggle = body.querySelector("#c_deceased");
+const deceasedModeSel = body.querySelector("#c_deceasedMode");
+const persistDeceased = () => {
+  const name = self.currentUser;
+  const alive = !(deceasedToggle && deceasedToggle.checked);
+  // ✅ 唯一真相来源：登记「玩家显式选择存活 / 死亡」
+  store.setContactLifeOverride(name, alive ? "alive" : "deceased", { source: "user" });
+  // 回复模式是独立设置，仍保存在联系人上
+  const list = store.getContacts();
+  let t = list.find(x => x.name === name);
+  if (!t) { t = { name: name, desc: "", affinity: 0, heart: "" }; list.push(t); }
+  if (deceasedModeSel) t.deceasedReplyMode = deceasedModeSel.value === "ghost" ? "ghost" : "none";
+  store.setContacts(list);
+  toast(alive
+    ? "🕊️ 已改为存活 · 之后会像正常角色一样回复"
+    : (t.deceasedReplyMode === "ghost" ? "🕯️ 已标记为已故 · 回复将以 👻 鬼魂灰框显示" : "🕯️ 已标记为已故 · 之后不会再有回复"));
+};
+if (deceasedToggle) deceasedToggle.onchange = persistDeceased;
+if (deceasedModeSel) deceasedModeSel.onchange = persistDeceased;
 
     body.querySelector("#save").onclick = () => {
       const list = store.getContacts();
@@ -11932,7 +12472,7 @@ sbG.querySelector("#retryBtn").onclick = (e) => {
 // 未读角标（锁定的彼得不显示）
 const unread = isLockedPeter ? 0 : store.getUnread(c.name);
 const badge = unread > 0
-  ? `<span style="position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#8a8a99;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box;box-shadow:0 1px 3px rgba(0,0,0,.4);">${unread > 99 ? '99+' : unread}</span>`
+  ? `<span style="position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--muted);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box;box-shadow:0 1px 3px rgba(0,0,0,.4);">${unread > 99 ? '99+' : unread}</span>`
   : "";
 const avatarWrap = `<div style="position:relative;width:40px;height:40px;flex-shrink:0;">${avatarHtml}${badge}</div>`;
 
@@ -11940,7 +12480,7 @@ const avatarWrap = `<div style="position:relative;width:40px;height:40px;flex-sh
           ? `<span style="color:var(--muted);font-style:italic;">未知号码</span>`
           : esc(displayName);
 
-const isDeadAvenger = WORLD.avengersRoster[c.name] && isAvengerDeadNow(c.name);
+const isDeadAvenger = isContactDeceased(c.name);   // 🕯️ 手动标记 + 时间线自动判定
 const descHtml = isLockedPeter
   ? `<span style="color:var(--muted);font-style:italic;">你不记得这些对话。但对方……似乎是你曾经最重要的人。</span>`
   : (isDeadAvenger
@@ -12192,6 +12732,8 @@ chatHtml += `<div style="flex-shrink:0;padding:8px 14px;background:var(--panel);
 // --- 消息滚动区 ---
 chatHtml += `<div id="chatThread" style="${cfg.bg?`background-image:url('${esc(cfg.bg)}');`:''}">`;
 
+// 🕯️ 鬼魂灰框是派生表现：联系人恢复为存活后，旧消息不再显示灰框
+const _threadDeceased = isContactDeceased(self.currentUser);
 chatHtml += msgs.map((m, idx) => {
   const quoteHtml = m.quote
     ? `<div style="font-size:11px;color:var(--muted);border-left:2px solid #666;padding-left:6px;margin-bottom:4px;opacity:0.8">引用: ${esc(m.quote)}</div>`
@@ -12326,7 +12868,7 @@ chatHtml += msgs.map((m, idx) => {
     </div>
     <div style="max-width:72%;min-width:0;">
       ${blkTag}
-      <div class="bubble them" data-idx="${idx}" style="cursor:pointer;${blkStyle}">${quoteHtml}${esc(m.content)}${transHtml}</div>
+      <div class="bubble them${(m.ghost && _threadDeceased) ? " ghost-reply" : ""}" data-idx="${idx}" style="cursor:pointer;${blkStyle}">${(m.ghost && _threadDeceased) ? '<span class="ghost-tag">👻 超越时间的回望</span>' : ""}${quoteHtml}${esc(m.content)}${transHtml}</div>
     </div>
   </div>`;
 }
@@ -12959,6 +13501,42 @@ if (c && c.blockState === "byUser") {
   toast(`你已拉黑「${self.currentUser}」，如需正常聊天请到右上角设置解除拉黑`);
   return;
 }
+
+// ============================================================
+// 🕯️ 已故角色 · 消息回复开关
+//    none  → 玩家消息照常保存，但不显示「正在输入」、不调用 AI、不产生任何回复
+//    ghost → 允许生成回复，但走「超越时间回望」prompt，并标记 ghost 供灰框渲染
+// ============================================================
+const _deceasedNow = isContactDeceased(self.currentUser);
+const _deceasedMode = _deceasedNow ? getDeceasedReplyMode(self.currentUser) : "normal";
+const _ghostMode = (_deceasedNow && _deceasedMode === "ghost");
+
+if (_deceasedNow && _deceasedMode === "none") {
+  if (isRetry) { self.render(body); return; }   // 重试也不产生回复
+  const _qn = self.quoteData;
+  self.quoteData = null;
+  const _qp = body.querySelector("#quotePreview");
+  if (_qp) _qp.style.display = "none";
+  self.lastUserText = text;
+  const _cn = store.getChats();
+  const _ar = _cn[self.currentUser] || [];
+  _ar.push({ role: "me", content: text, quote: _qn });
+  _cn[self.currentUser] = _ar;
+  store.setChats(_cn);
+  // 记录互动，避免已故角色被「长时间未回复」逻辑判定为可主动发信
+  (function(){
+    const acts = store.get("sv_contact_last_act", {});
+    acts[self.currentUser] = Date.now();
+    store.set("sv_contact_last_act", acts);
+    const idle = store.get("sv_contact_idle_turns", {});
+    idle[self.currentUser] = 0;
+    store.set("sv_contact_idle_turns", idle);
+  })();
+  self.render(body);
+  toast("🕯️ 消息留在了对话框里，只是不会再有回音");
+  return;
+}
+
   const thread = body.querySelector("#chatThread");
   
   // ===== 校验聊天对象 =====
@@ -13005,7 +13583,7 @@ self.render(body);
     voiceKey = matchVoiceKeyword(text);
   }
 
-  if (voiceKey) {
+  if (voiceKey && !_deceasedNow) {
     self.sendVoiceReply(body, voiceKey, arr, chatsNow);
     return; // 如果是语音回复，就不走后面的常规 AI 文字回复了
   }
@@ -13021,9 +13599,10 @@ self.render(body);
     
     const currentThread = body.querySelector("#chatThread");
     
-    // 1. 增加正在输入标识
+    // 1. 增加正在输入标识（已故鬼魂模式改为「回望浮现」）
+    const _typingLabel = _ghostMode ? "🕯️ 一段回望正在浮现..." : "正在输入...";
     currentThread.innerHTML += `<div class="bubble them typing-indicator" id="loading" style="color:var(--muted);font-style:italic;font-size:12px;display:flex;align-items:center;gap:4px;">
-      <span class="dot"></span><span class="dot"></span><span class="dot"></span> 正在输入...
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span> ${_typingLabel}
     </div>`;
     currentThread.scrollTop = currentThread.scrollHeight;
     
@@ -13429,6 +14008,8 @@ const peterPersonaRule = (self.currentUser === "彼得·帕克") ? buildPeterBra
 const avengerRule = WORLD.avengersRoster[self.currentUser]
   ? buildAvengerChatRule(self.currentUser)
   : "";
+// 👻 已故鬼魂模式：追加「超越时间的回望」铁律
+const ghostChatRule = _ghostMode ? buildDeceasedGhostRule(self.currentUser) : "";
 // 🧠 角色记忆隔离（防止托尼串彼得等角色互串）
 const memoryIsolationRule = buildMemoryIsolationRule(self.currentUser);
 const memoryRule = buildMemoryPromptFor(self.currentUser);   // ★ 新增
@@ -13498,6 +14079,7 @@ ${langRule}
 
 ${(self.currentUser === "彼得·帕克" && contactAff >= 101) ? `【彼得专属 · 好感度 ≥101 时】\n你的心声不能冷漠、不能礼貌、不能像客服。你要：\n- 反复琢磨她的话，想太多\n- 自己吐槽自己"我在想什么啊""完了完了"\n- 冒出"想见她""刚才那句话是不是在撩我"的念头\n- 心里翻江倒海，但嘴上不说\n` : ""}
 ${worldbookPrompt}
+${ghostChatRule}
 `;
 
       // ★★★ 真正调用 AI ★★★
@@ -13698,7 +14280,7 @@ ${isPeterHeart && heartAff >= 151 ? `【彼得深爱时的心声 · 铁律】\n�
       for (let i = 0; i < replyList.length; i++) {
         const msgText = replyList[i].trim();
         if (!msgText) continue;
-        arr.push({ role: "them", content: msgText });
+        arr.push({ role: "them", content: msgText, ghost: _ghostMode || undefined });
         chatsNow[self.currentUser] = arr;
         store.setChats(chatsNow);
         
@@ -13706,18 +14288,20 @@ ${isPeterHeart && heartAff >= 151 ? `【彼得深爱时的心声 · 铁律】\n�
 const rawLiveAv = (curContactLive && curContactLive.avatar) ? curContactLive.avatar : "";
 const liveAv = realAv(rawLiveAv);   // ★ 关键：解析 idb:xxx
 const liveFirst = esc((curContactLive ? curContactLive.name : "?")[0]);
-currentThread.innerHTML +=
+const _ghostCls = _ghostMode ? " ghost-reply" : "";
+        const _ghostTag = _ghostMode ? '<span class="ghost-tag">👻 超越时间的回望</span>' : "";
+        currentThread.innerHTML +=
   '<div class="msg-row them" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">' +
     '<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--text);">' +
       (liveAv ? '<img src="' + liveAv + '" style="width:100%;height:100%;object-fit:cover;">' : liveFirst) +
     '</div>' +
-            '<div class="bubble them" style="max-width:72%;">' + esc(msgText) + '</div>' +
+            '<div class="bubble them' + _ghostCls + '" style="max-width:72%;">' + _ghostTag + esc(msgText) + '</div>' +
           '</div>';
         currentThread.scrollTop = currentThread.scrollHeight;
         if (i < replyList.length - 1) {
           await new Promise(r => setTimeout(r, 800));
           currentThread.innerHTML += '<div class="bubble them typing-indicator" id="typing" style="color:var(--muted);font-style:italic;font-size:12px;display:flex;align-items:center;gap:4px;">' +
-            '<span class="dot"></span><span class="dot"></span><span class="dot"></span> 正在输入...' +
+            '<span class="dot"></span><span class="dot"></span><span class="dot"></span> ' + (_ghostMode ? "🕯️ 回望浮现..." : "正在输入...") +
             '</div>';
           currentThread.scrollTop = currentThread.scrollHeight;
           await new Promise(r => setTimeout(r, 500));
@@ -14179,6 +14763,11 @@ REPLIES: 等等你说真的？ || 我现在就过去 || 别乱跑啊
 },
 
 isAvengerDeceasedInPhase(name) {
+  // 🕯️ 统一生命状态：当前时间线判为存活（偏离原作 / 复活 / 无死亡事件）→ 允许发帖
+  if (WORLD.avengersRoster && WORLD.avengersRoster[name]) {
+    const life = (typeof getLifeStateInfo === "function") ? getLifeStateInfo(name) : null;
+    if (life && !life.deceased) return false;
+  }
   const s = store.getState();
   const phase = WORLD.timeline[s.anchor] || WORLD.timeline[0];
   const key = phase.key;
@@ -14661,7 +15250,7 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
           <div style="font-size:12px;color:#888;margin-bottom:6px;">选择联系人：</div>
           <div style="max-height:240px;overflow-y:auto;">
             ${contacts.map(c => `
-              <div class="rt-contact-item" data-name="${esc(c.name)}" style="padding:10px;border-bottom:1px solid #2a2a38;cursor:pointer;color:#fff;font-size:13px;">
+              <div class="rt-contact-item" data-name="${esc(c.name)}" style="padding:10px;border-bottom:1px solid var(--line);cursor:pointer;color:#fff;font-size:13px;">
                 <div style="font-weight:bold;">${esc(c.name)}</div>
               </div>
             `).join("")}
@@ -14760,7 +15349,7 @@ const displayPosts = posts.filter(p => p.feed === this.currentTab);
         <div style="font-weight:bold;color:#fff;font-size:15px;margin-bottom:12px;">✉️ 私信分享这条推文</div>
         <div style="max-height:300px;overflow-y:auto;">
           ${contacts.map(c => `
-            <div class="dm-contact-item" data-name="${esc(c.name)}" style="padding:10px;border-bottom:1px solid #2a2a38;cursor:pointer;color:#fff;font-size:13px;">
+            <div class="dm-contact-item" data-name="${esc(c.name)}" style="padding:10px;border-bottom:1px solid var(--line);cursor:pointer;color:#fff;font-size:13px;">
               ${esc(c.name)}
             </div>
           `).join("")}
@@ -15419,21 +16008,21 @@ if (s.mainStoryEnded) {
     <div id="endingPage" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:30px 20px 40px;text-align:center;background:radial-gradient(ellipse at 50% 40%, #1a0a0e 0%, #0a0508 50%, #000 100%);opacity:0;transition:opacity 1.8s ease;overflow-y:auto;">
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60%;">
         <div style="font-size:56px;margin-bottom:20px;filter:drop-shadow(0 0 24px rgba(230,36,41,.6));animation:endingPulse 3s ease-in-out infinite;">🕸️</div>
-        <div style="font-size:12px;color:#8a8a99;letter-spacing:6px;margin-bottom:14px;">THE END</div>
+        <div style="font-size:12px;color:var(--muted);letter-spacing:6px;margin-bottom:14px;">THE END</div>
         <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:3px;margin-bottom:16px;font-family:'SimSun','宋体',serif;">到达结局</div>
-        <div style="font-size:14px;color:#c9d1e8;line-height:2;max-width:340px;font-family:'FangSong','仿宋',serif;margin-bottom:28px;">
+        <div style="font-size:14px;color:var(--dialogue-color);line-height:2;max-width:340px;font-family:'FangSong','仿宋',serif;margin-bottom:28px;">
           带着伤疤，<br>
           带着不再抗拒的自己，<br>
           带着重新允许靠近的人。<br><br>
-          <span style="color:#8a8a99;font-size:12px;letter-spacing:4px;">—— 未完待续 ——</span>
+          <span style="color:var(--muted);font-size:12px;letter-spacing:4px;">—— 未完待续 ——</span>
         </div>
       </div>
 
       <!-- ★ 通关后仍保留：存档 / 读档 / 回忆 -->
       <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
         <div style="display:flex;gap:8px;">
-          <button class="ending-btn" id="endingSaveBtn" style="flex:1;background:rgba(45,107,255,.12);border:1px solid rgba(45,107,255,.5);color:#c9d1e8;padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">💾 存档</button>
-          <button class="ending-btn" id="endingLoadBtn" style="flex:1;background:rgba(45,107,255,.12);border:1px solid rgba(45,107,255,.5);color:#c9d1e8;padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">📂 读档</button>
+          <button class="ending-btn" id="endingSaveBtn" style="flex:1;background:rgba(45,107,255,.12);border:1px solid rgba(45,107,255,.5);color:var(--dialogue-color);padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">💾 存档</button>
+          <button class="ending-btn" id="endingLoadBtn" style="flex:1;background:rgba(45,107,255,.12);border:1px solid rgba(45,107,255,.5);color:var(--dialogue-color);padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">📂 读档</button>
         </div>
         <button class="ending-btn" id="endingMemoryBtn" style="width:100%;background:rgba(230,36,41,.1);border:1px solid rgba(230,36,41,.45);color:#e8c9c9;padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'FangSong','仿宋',serif;">📜 回顾全部剧情</button>
       </div>
@@ -16133,7 +16722,7 @@ const liveTimeStr = `${s.gameYear}年${s.gameMonth}月${s.gameDay}日`;
   body.innerHTML = `<div style="padding:14px">
 <div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #2d6bff;display:flex;justify-content:space-between;align-items:center;">
   <div>
-    <div style="font-size:11px;color:#8a8a99;margin-bottom:4px;">📍 当前游戏内日期</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">📍 当前游戏内日期</div>
     <div style="font-weight:bold;color:var(--text);font-size:14px;">${liveTimeStr}</div>
     <div style="font-size:11px;color:var(--muted);margin-top:4px;">${phase.name} · ${phase.summary.slice(0, 40)}...</div>
 ${phase.key === "phase6_5" ? `
@@ -17109,17 +17698,17 @@ facetime: {
     panel.style.cssText = "max-width:420px;width:100%;max-height:80vh;overflow-y:auto;background:var(--panel,#14141c);border:1px solid var(--line,#2a2a38);border-radius:18px;padding:22px 20px;box-shadow:0 20px 60px rgba(0,0,0,.6);font-family:'FangSong','仿宋','STFangsong',serif;";
 
     panel.innerHTML = `
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:11px;color:var(--muted,#8a8a99);letter-spacing:.5px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:11px;color:var(--muted,var(--muted));letter-spacing:.5px;">
         <span style="font-weight:600;color:var(--accent-2,#2d6bff);">${esc(scene.timeLabel || "")}</span>
         <span style="opacity:.4;">·</span>
         <span>${esc(scene.locationEmoji || "🪟")} ${esc(scene.location || "")}</span>
       </div>
       <div style="font-size:15px;line-height:2.1;color:var(--text,#f2f3f7);white-space:pre-wrap;letter-spacing:.5px;margin-bottom:18px;">
-        ${esc(scene.text || "")}
+        ${formatDialogue(scene.text || "")}
       </div>
       <div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px dashed var(--line,#2a2a38);margin-bottom:16px;">
-        <div style="flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--muted,#8a8a99) 0,var(--muted,#8a8a99) 2px,transparent 2px,transparent 6px);opacity:.3;"></div>
-        <div style="font-size:10px;color:var(--muted,#8a8a99);letter-spacing:2px;font-style:italic;">· 你没能走近 ·</div>
+        <div style="flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--muted,var(--muted)) 0,var(--muted,var(--muted)) 2px,transparent 2px,transparent 6px);opacity:.3;"></div>
+        <div style="font-size:10px;color:var(--muted,var(--muted));letter-spacing:2px;font-style:italic;">· 你没能走近 ·</div>
       </div>
       <button id="peekPopupClose" style="width:100%;background:var(--panel-2,#1d1d28);border:1px solid var(--line,#2a2a38);color:var(--text,#f2f3f7);padding:12px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">关闭</button>
     `;
@@ -18813,7 +19402,7 @@ if (closedReviewBtn) {
       ? `<b>第 ${snap.turn} 轮</b><br><span style="color:var(--muted);font-size:11px">${new Date(snap.timestamp).toLocaleString()}</span>`
       : "（空白档）";
     const row = document.createElement("div");
-    row.style.cssText = "background:#14141c;border:1px solid #2a2a38;padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+    row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
     row.innerHTML = `
       <div style="flex:1;color:${filled ? '#fff' : '#666'};font-size:13px;">
         <div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}
@@ -19203,7 +19792,7 @@ const playerDescForSuspects = mjRelationForSuspects.isSameSchool
 content.innerHTML = `
   ${isSpellActiveNow() ? `
 <div class="mjn-suspect-card" style="opacity:.65;border-style:dashed;">
-  <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#3a3a4d,#1d1d28);color:#fff;">?</div>
+  <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#3a3a4d,var(--panel-2));color:#fff;">?</div>
   <div class="mjn-suspect-info">
     <div class="mjn-suspect-name" style="color:var(--muted);font-style:italic;">（想不起来的名字）</div>
     <div class="mjn-suspect-desc">中城高中学生 · ？</div>
@@ -19235,7 +19824,7 @@ content.innerHTML = `
     </div>
 
     <div class="mjn-suspect-card mjn-suspect-self">
-      <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#3a3a4d,#1d1d28);color:#fff;">MJ</div>
+      <div class="mjn-suspect-avatar" style="background:linear-gradient(135deg,#3a3a4d,var(--panel-2));color:#fff;">MJ</div>
       <div class="mjn-suspect-info">
         <div class="mjn-suspect-name">米歇尔·琼斯</div>
         <div class="mjn-suspect-desc">观察者 · 记录人</div>
@@ -19536,7 +20125,7 @@ School: {
       .sch-q-opt.correct{border-color:#4caf50;background:rgba(76,175,80,.15);}
       .sch-q-opt.wrong{border-color:#e62429;background:rgba(230,36,41,.15);}
 
-      .sch-det-scene{background:linear-gradient(160deg,#14141c,#0a0a10);border:1px solid var(--line);border-radius:16px;padding:20px;position:relative;overflow:hidden;}
+      .sch-det-scene{background:linear-gradient(160deg,var(--panel),#0a0a10);border:1px solid var(--line);border-radius:16px;padding:20px;position:relative;overflow:hidden;}
       body.theme-light .sch-det-scene{background:linear-gradient(160deg,#eceef2,#e0e3e8);}
       .sch-det-scene::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#555,#e62429,#555);}
       .sch-det-tag{display:inline-block;font-size:10px;font-weight:700;color:#e62429;background:rgba(230,36,41,.15);padding:3px 10px;border-radius:8px;letter-spacing:1px;margin-bottom:10px;}
@@ -21025,7 +21614,7 @@ async render(body) {
             </div>
             <div class="diary-card-title">${esc(d.title)}</div>
             <div class="diary-card-preview">${esc(preview)}...</div>
-            ${d.response ? `<div class="diary-card-response">💬 ${esc((d.response || "").slice(0, 40))}...</div>` : ""}
+            ${d.response ? `<div class="diary-card-response">💬 ${formatDialogue((d.response || "").slice(0, 40))}...</div>` : ""}
 ${(Array.isArray(d.replies) && d.replies.length) ? `<div style="margin-top:6px;font-size:11px;color:var(--accent-2);font-weight:600;">💬 有 ${d.replies.length} 条留言</div>` : ""}
           </div>`;
       }).join("");
@@ -21427,8 +22016,8 @@ ${content}
               return `
                 <div style="display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};width:100%;">
                   ${!isMe ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;margin-left:4px;">🕷️ 彼得</div>` : `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;margin-right:4px;">我</div>`}
-                  <div style="max-width:85%;${isMe ? 'background:linear-gradient(135deg,#2d6bff,#5b8dff);color:#fff;border-radius:16px 16px 4px 16px;' : 'background:var(--panel-2);border:1px solid var(--line);border-radius:16px 16px 16px 4px;color:var(--text);'}padding:12px 16px;font-size:14px;line-height:1.7;word-break:break-word;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-                    ${esc(r.content).replace(/\n/g, '<br>')}
+                  <div style="max-width:85%;${isMe ? 'background:linear-gradient(135deg,#2d6bff,var(--accent-2));color:#fff;border-radius:16px 16px 4px 16px;' : 'background:var(--panel-2);border:1px solid var(--line);border-radius:16px 16px 16px 4px;color:var(--text);'}padding:12px 16px;font-size:14px;line-height:1.7;word-break:break-word;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+                    ${formatDialogue(r.content).replace(/\n/g, '<br>')}
                   </div>
                 </div>`;
             }).join("")}
@@ -21442,11 +22031,11 @@ ${content}
         <div class="diary-detail ${paper}" style="padding:24px;">
           <div class="diary-detail-meta">${esc(d.date)}${badge} · ${esc(d.stage || "")} · ${isPeter ? "🕷️ 彼得" : "✍️ 我"}</div>
           <div class="diary-detail-title">${esc(d.title)}</div>
-          <div class="diary-detail-content">${esc(d.content)}</div>
+          <div class="diary-detail-content">${formatDialogue(d.content)}</div>
           ${d.response ? `
             <div class="diary-detail-response" style="${paper ? 'background:rgba(255,255,255,.5);border-left:3px solid var(--accent-2);' : ''}">
               <div class="diary-detail-response-label">💬 彼得的回应</div>
-              <div class="diary-detail-response-text">${esc(d.response)}</div>
+              <div class="diary-detail-response-text">${formatDialogue(d.response)}</div>
             </div>
           ` : ""}
           ${repliesHtml}
@@ -22776,6 +23365,11 @@ list.push({
   type: annivType,
   startYear: (startYearVal && startYearVal > 1900 && startYearVal <= 2100) ? startYearVal : null  // ★ 起始年
  });
+  // ✅ 修复：持久化到 localStorage + 关闭弹窗 + 刷新日历
+  setCustomAnniversaries(list);
+  div.remove();
+  toast(`✅ 已保存「${name}」`);
+  self.render(body);
   }
   },
 
@@ -25136,6 +25730,7 @@ window.triggerPostReactionSMS = async function(postText, platform) {
       !/^群聊\s*·/.test(c.name || "") &&
       !isContactBlockedBySpell(c.name) &&
       !store.isBlacklisted(c.name) &&
+      !isContactDeceased(c.name) &&         // 🕯️ 已故角色不主动私信
       getAffinityOf(c.name) >= threshold
     );
     if (!candidates.length) return;
@@ -25195,6 +25790,7 @@ ${buildAffinityBehaviorBlock(name, aff)}
       if (isRetry) return;
       const c = store.getContacts().find(x => x.name === userName);
       if (c && c.isGroup) return;          // 群聊不触发
+      if (isContactDeceased(userName)) return;   // 🕯️ 已故角色不再联动发帖
       const lk = getLinkageCfg();
       if (lk.charPostEnabled && Math.random() * 100 < lk.charPostChance) {
         setTimeout(() => { try { window.triggerCharacterPost(userName); } catch (e) {} }, 1500);
@@ -25762,7 +26358,7 @@ window.showMemory=()=>{
     div.innerHTML=`<h2 style="color:var(--text);padding-bottom:10px;margin-top:0">📜 回忆 · 共 ${history.length} 段</h2>
       ${history.map((h,i)=>`<div style="background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:10px;border-left:3px solid var(--accent-2)">
         <div style="color:var(--muted);font-size:12px;margin-bottom:6px">— 第 ${i+1} 段 —</div>
-        <div style="white-space:pre-wrap;color:var(--text);max-height:200px;overflow-y:auto">${esc(h.story)}</div>
+        <div style="white-space:pre-wrap;color:var(--text);max-height:200px;overflow-y:auto">${formatDialogue(h.story)}</div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);color:var(--accent)">➤ 你的选择：${esc(h.choice)}</div>
       </div>`).join("")}
       <button class="btn" style="margin-top:10px" onclick="this.parentNode.remove()">关闭</button>`;
@@ -25776,7 +26372,7 @@ window.showMemory=()=>{
   // 🔒 遗忘魔咒：过滤掉被屏蔽的联系人（主要是彼得）
   const contacts = allContacts.filter(c =>
   !isContactBlockedBySpell(c.name) &&
-  !(WORLD.avengersRoster[c.name] && isAvengerDeadNow(c.name))  // 已故成员不主动发剧情信
+  !isContactDeceased(c.name)   // 🕯️ 已故角色（手动标记 / 时间线自动）不主动发剧情信
 );
   if (!contacts || contacts.length === 0) return;
 
@@ -25896,7 +26492,7 @@ window.recordHeart = (name, text) => {
 window._heartColorOf = (name) => {
   const palette = [
     "#e62429", "#2d6bff", "#8a2be2", "#e06b9a", "#c8a15a",
-    "#00bcd4", "#4caf50", "#ff7043", "#5b8dff", "#d64a6a",
+    "#00bcd4", "#4caf50", "#ff7043", "var(--accent-2)", "#d64a6a",
     "#3faa6b", "#9a6fb0", "#c89a3a", "#2bb3b3"
   ];
   let h = 0;
@@ -26498,6 +27094,7 @@ window.contactProactiveCheck = async function() {
     if (!cfg || !cfg.enabled) continue;
     if (isContactBlockedBySpell(name)) continue;
     if (store.isBlacklisted(name)) continue;
+    if (isContactDeceased(name)) continue;      // 🕯️ 已故角色不再主动发信
     const c = store.getContacts().find(x => x.name === name);
     if (!c || c.isGroup) continue;
     if (getAffinityOf(name) < 21) continue;
@@ -26587,7 +27184,8 @@ window.festivalCheck = async function() {
     const contacts = store.getContacts().filter(c =>
       !c.isGroup &&
       !/^群聊\s*·/.test(c.name || "") &&
-      !store.isBlacklisted(c.name)
+      !store.isBlacklisted(c.name) &&
+      !isContactDeceased(c.name)              // 🕯️ 已故角色不发节日信
     );
     if (!contacts.length) return;
 
@@ -26852,25 +27450,25 @@ function showFourYearMontageOverlay() {
 
   panel.innerHTML = `
     <div style="font-size:52px;margin-bottom:20px;filter:drop-shadow(0 0 24px rgba(230,36,41,.5));animation:spellPulse 2.5s ease-in-out infinite;">🕸️</div>
-    <div style="font-size:11px;color:#8a8a99;letter-spacing:6px;margin-bottom:14px;">THE SPELL</div>
+    <div style="font-size:11px;color:var(--muted);letter-spacing:6px;margin-bottom:14px;">THE SPELL</div>
     <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:3px;margin-bottom:32px;">遗忘之咒</div>
 
-    <div style="font-size:14px;color:#c9d1e8;line-height:2.2;margin-bottom:18px;">
+    <div style="font-size:14px;color:var(--dialogue-color);line-height:2.2;margin-bottom:18px;">
       金色的符文在空中展开，<br>
       又一圈一圈地碎开。
     </div>
-    <div style="font-size:14px;color:#c9d1e8;line-height:2.2;margin-bottom:18px;">
+    <div style="font-size:14px;color:var(--dialogue-color);line-height:2.2;margin-bottom:18px;">
       奇异博士闭上眼睛，<br>
       最后一个音节落下。
     </div>
-    <div style="font-size:14px;color:#c9d1e8;line-height:2.2;margin-bottom:32px;">
+    <div style="font-size:14px;color:var(--dialogue-color);line-height:2.2;margin-bottom:32px;">
       那个男孩的姓名、面孔、声音，<br>
       从所有人的脑海里被轻轻抽走——<br>
       像潮水退去后留在沙滩上的脚印，<br>
       被下一道浪抹平。
     </div>
 
-    <div style="font-size:13px;color:#8a8a99;line-height:2;margin-bottom:40px;font-style:italic;">
+    <div style="font-size:13px;color:var(--muted);line-height:2;margin-bottom:40px;font-style:italic;">
       从这一刻起，<br>
       世界上再没有「彼得·帕克」这个人。
     </div>
@@ -26927,13 +27525,13 @@ function showMemorySpellPrompt(options) {
       <div style="font-size:18px;font-weight:800;color:var(--text,#f2f3f7);margin-top:6px;letter-spacing:1px;">遗忘咒 · 时间到了</div>
     </div>
 
-    <div style="font-size:13px;color:var(--muted,#8a8a99);line-height:1.9;margin-bottom:18px;font-family:'FangSong','仿宋',serif;">
+    <div style="font-size:13px;color:var(--muted,var(--muted));line-height:1.9;margin-bottom:18px;font-family:'FangSong','仿宋',serif;">
       检测到你的时间线已经到达 2024 年之后，但遗忘咒还没发生。<br><br>
       按照原剧情，奇异博士此时应该施下遗忘咒——全世界都会忘记「彼得·帕克」这个人。<br><br>
       <b style="color:var(--text,#f2f3f7);">是否现在补上这段剧情？</b>
     </div>
 
-    <div style="background:var(--panel-2,#1d1d28);border-radius:12px;padding:12px 14px;margin-bottom:20px;font-size:11.5px;color:var(--muted,#8a8a99);line-height:1.7;">
+    <div style="background:var(--panel-2,#1d1d28);border-radius:12px;padding:12px 14px;margin-bottom:20px;font-size:11.5px;color:var(--muted,var(--muted));line-height:1.7;">
       ⚠️ 触发后会按顺序发生：<br>
       ① 播放一段过场<br>
       ② 彼得演出"那封没送出去的信"<br>
@@ -26944,7 +27542,7 @@ function showMemorySpellPrompt(options) {
     </div>
 
     <div style="display:flex;gap:10px;">
-      <button id="spellSkipBtn" style="flex:1;background:var(--panel-2,#1d1d28);border:1px solid var(--line,#2a2a38);color:var(--muted,#8a8a99);padding:12px;border-radius:12px;font-size:13px;cursor:pointer;">暂不触发</button>
+      <button id="spellSkipBtn" style="flex:1;background:var(--panel-2,#1d1d28);border:1px solid var(--line,#2a2a38);color:var(--muted,var(--muted));padding:12px;border-radius:12px;font-size:13px;cursor:pointer;">暂不触发</button>
       <button id="spellConfirmBtn" style="flex:1.4;background:linear-gradient(135deg,#e62429,#8a2be2);border:none;color:#fff;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;">🕸️ 施下魔咒</button>
     </div>
   `;
@@ -27006,65 +27604,86 @@ function applyMemorySpellForLegacySaveWithForcedScene() {
 
   toast("🕸️ 遗忘魔咒已生效 · 进入世界线继续剧情");
 }
-// 自动识别剧情中的英语或中文对话，并应用仿宋斜体
+// 统一剧情排版：把 *…* / **…** 强调渲染为加粗高亮，
+// 引号对白保留仿宋区分；输出中绝不出现任何星号（含全角＊与孤立星号）。
+// 说明：「信息」应用的聊天气泡走独立的 esc(m.content)，不经过本函数。
 function formatDialogue(text) {
   if (!text) return "";
-  let s = esc(text);
-
-  // ✂️ 第一步：把各种"对话包裹格式"统一识别并包 span
-  // 顺序很重要：先匹配最长的、最具体的，避免被短的正则抢先吃掉
-  const patterns = [
-    // 1) *"..."*  —— 星号 + 半角引号（最标准）
-    /\*"[^"\n]*"\*/g,
-    // 2) *“...”*  —— 星号 + 中文弯引号
-    /\*“[^”\n]*”\*/g,
-    // 3) "..."  —— 纯半角引号（无星号）
-    /"[^"\n]*"/g,
-    // 4) “...”  —— 纯中文弯引号
-    /“[^”\n]*”/g,
-    // 5) *...*  —— 纯星号包裹（无引号），放最后，避免吃掉 markdown 加粗
-    /\*[^*\n]{2,}\*/g,
-  ];
-
-  // 用一个 Set 记录已被包裹的位置，避免重复包裹
-  const spans = [];
-
-  // 收集所有匹配
-  patterns.forEach((re) => {
-    let m;
-    while ((m = re.exec(s)) !== null) {
-      spans.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
-    }
-  });
-
-  // 按起点排序，去重（重叠的保留最长的那段）
-  spans.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
-
-  const merged = [];
-  for (const sp of spans) {
-    const last = merged[merged.length - 1];
-    if (last && sp.start < last.end) {
-      // 有重叠：如果新的更长，替换
-      if (sp.end - sp.start > last.end - last.start) {
-        merged[merged.length - 1] = sp;
-      }
+  const src = String(text).replace(/＊/g, "*");
+  // 一次扫描，按优先级分块，避免二次处理已生成的 HTML
+  const re = /\*\*([^*\n]+?)\*\*|\*"([^"\n]*?)"\*|\*“([^”\n]*?)”\*|\*([^*\n]+?)\*|"[^"\n]+"|“[^”\n]+”/g;
+  let out = "", last = 0, m;
+  while ((m = re.exec(src)) !== null) {
+    out += esc(src.slice(last, m.index));
+    const whole = m[0];
+    if (whole.charAt(0) === "*") {
+      let inner = "";
+      if (m[1] != null) inner = m[1];
+      else if (m[2] != null) inner = '"' + m[2] + '"';
+      else if (m[3] != null) inner = '“' + m[3] + '”';
+      else if (m[4] != null) inner = m[4];
+      out += '<strong class="story-em">' + esc(inner.trim()) + '</strong>';
     } else {
-      merged.push(sp);
+      out += '<span class="dialogue-text">' + esc(whole) + '</span>';
     }
+    last = m.index + whole.length;
   }
-
-  // 从后往前替换，避免索引错位
-  for (let i = merged.length - 1; i >= 0; i--) {
-    const sp = merged[i];
-    const wrapped = `<span class="dialogue-text">${sp.text}</span>`;
-    s = s.slice(0, sp.start) + wrapped + s.slice(sp.end);
-  }
-
-  return s;
+  out += esc(src.slice(last));
+  // 兜底：任何残留星号（未闭合 / 孤立 / markdown 残留）一律不显示
+  out = out.replace(/\*+/g, "");
+  return out;
 }
 // 快照默认时间线 + 应用已保存的阶段覆盖（改名/插入自定义阶段）
 snapshotDefaultTimeline();
 refreshEffectiveTimeline();
+
+// ============================================================
+// 🕯️ 陈旧派生缓存清理 / 对外 API
+//   computeLifeState 本身零缓存（每次实时读 store + localStorage）。
+//   需要清理的是旧版本写进 sv_contacts 的自动 `deceased` 标记 ——
+//   正是它造成「无人死亡但仍保留旧状态」的显示错误。
+// ============================================================
+function invalidateLifeStateCache() {
+  try {
+    const list = store.get("sv_contacts", []) || [];
+    let changed = false;
+    list.forEach(c => {
+      if (!c || c.deceasedSource === "user") return;   // 保留用户显式设置
+      if (Object.prototype.hasOwnProperty.call(c, "deceased")) { delete c.deceased; changed = true; }
+      if (Object.prototype.hasOwnProperty.call(c, "deceasedSource")) { delete c.deceasedSource; changed = true; }
+    });
+    if (changed) store.set("sv_contacts", list);
+  } catch (e) { console.warn("[生命状态] 清理陈旧标记失败", e); }
+}
+function migrateLegacyLifeFlags() {
+  try {
+    if (localStorage.getItem("sv_life_state_v2") === "1") return;
+    invalidateLifeStateCache();
+    localStorage.setItem("sv_life_state_v2", "1");
+  } catch (e) {}
+}
+// 供剧情分支改写 / 回归测试调用的公开 API
+window.getLifeStateInfo = getLifeStateInfo;
+window.computeLifeState = computeLifeState;
+window.buildLifeStateContext = buildLifeStateContext;
+window.setContactLifeOverride = function(name, status, meta) {
+  store.setContactLifeOverride(name, status, meta);
+  return getLifeStateInfo(name);
+};
+window.setNoDeathsInTimeline = function(flag) {
+  const st = store.getState();
+  st.outcomes = st.outcomes || {};
+  if (flag) st.outcomes.noDeaths = true;
+  else delete st.outcomes.noDeaths;
+  store.setState(st);
+  return !!st.outcomes.noDeaths;
+};
+window.clearContactLifeOverride = function(name) {
+  store.clearContactLifeOverride(name);
+  return getLifeStateInfo(name);
+};
+window.invalidateLifeStateCache = invalidateLifeStateCache;
+migrateLegacyLifeFlags();
 // ============================================================
 // 🧠 启动时：检测老存档 + 决定是否弹遗忘魔咒窗
 //   - 只在"老玩家 + 已到 2024 + 没问过"时弹
@@ -27099,56 +27718,68 @@ refreshEffectiveTimeline();
   if(t === "light") document.body.classList.add("theme-light");
 })();
 // ============================================================
-// 🕸️ 驱动开屏加载进度与蛛网退场
+// 🕸️ 开屏预加载 · 平滑进度与优雅退场（与全局视觉规范一致）
 // ============================================================
 (function runSplashScreen() {
   const splash = document.getElementById("splashScreen");
   const fill = document.getElementById("splashProgress");
   const status = document.getElementById("splashStatus");
+  const pct = document.getElementById("splashPercent");
   if (!splash || !fill) return;
 
-  let progress = 0;
-  const statusTexts = [
-    "SPINNING THREADS...",
-    "SYNCING TIMELINE...",
-    "CONNECTING SENSES...",
-    "READY"
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const DUR = reduce ? 700 : 2400;
+  const stages = [
+    [0.00, "INITIALIZING..."],
+    [0.24, "SPINNING THREADS..."],
+    [0.52, "SYNCING TIMELINE..."],
+    [0.80, "CONNECTING SENSES..."],
+    [1.00, "READY"]
   ];
+  let stage = -1;
+  let finished = false;
 
-  const updateProgress = (target, textIndex, callback) => {
-    const timer = setInterval(() => {
-      if (progress >= target) {
-        clearInterval(timer);
-        if (callback) callback();
-      } else {
-        progress += Math.floor(Math.random() * 4) + 1;
-        if (progress > target) progress = target;
-        fill.style.width = progress + "%";
-      }
-    }, 28);
-    if (textIndex !== undefined && status) {
-      status.textContent = statusTexts[textIndex];
+  const setStage = (p) => {
+    let i = 0;
+    for (let k = 0; k < stages.length; k++) if (p >= stages[k][0]) i = k;
+    if (i === stage) return;
+    stage = i;
+    if (status) {
+      status.textContent = stages[i][1];
+      status.classList.remove("tick");
+      void status.offsetWidth;
+      status.classList.add("tick");
     }
   };
+  const render = (value) => {
+    const v = Math.max(0, Math.min(100, Math.round(value)));
+    fill.style.width = v + "%";
+    if (pct) pct.textContent = v + "%";
+    setStage(v / 100);
+  };
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    render(100);
+    setTimeout(() => {
+      splash.classList.add("fade-out");
+      setTimeout(() => splash.remove(), reduce ? 160 : 640);
+    }, reduce ? 60 : 320);
+  };
 
-  // 动画第一幕：下冲回弹期间更新到 40%
-  updateProgress(45, 0, () => {
-    // 动画第二幕：回缩阶段到 85%
-    updateProgress(88, 1, () => {
-      // 动画第三幕：蜘蛛落定并微收腿部时到达 100%
-      setTimeout(() => {
-        updateProgress(100, 3, () => {
-          setTimeout(() => {
-            splash.classList.add("fade-out");
-            setTimeout(() => {
-              splash.remove(); // 优雅移除，释放 DOM
-            }, 800);
-          }, 350);
-        });
-      }, 500); // 留出充足时间让收腿 CSS 动画展现完整
-    });
-  });
+  const start = performance.now();
+  const tick = (now) => {
+    const r = Math.min(1, (now - start) / DUR);
+    const eased = 1 - Math.pow(1 - r, 2.4);
+    render(eased * 100);
+    if (r >= 1) finish();
+    else requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  // 兜底：后台标签页 rAF 被冻结时也能正常退场
+  setTimeout(finish, DUR + 1800);
 })();
+
 </script>
 </body>
 </html>
