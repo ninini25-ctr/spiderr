@@ -24439,6 +24439,14 @@ onBack() {
   selPeople: [],
 
   CITIES: [
+{
+  key: "home", name: "家", emoji: "🏠", color: "#e07a5f",
+  desc: "最私密舒适的居所，门一关就是只属于彼此的时光。",
+  spots: [
+    { name: "我家（用户居处）", emoji: "🛋️" }
+    // “他家”会根据你勾选的联系人动态追加生成
+  ]
+},
   {
     key: "queens", name: "皇后区", emoji: "🏘️", color: "#e05a5a",
     desc: "熟悉的街区，老披萨店和地铁穿行的味道。",
@@ -24931,19 +24939,50 @@ onBack() {
         : "请选择城市、地点和至少一人";
     };
 
-    const renderSpots = () => {
-      spotGrid.innerHTML = this.selCity.spots.map(sp => `
-  <div class="dt-spot ${this.selSpot && this.selSpot.name === sp.name ? 'on' : ''}" data-spot="${esc(sp.name)}" style="--cc:${this.selCity.color};">
-          <span class="dt-spot-emoji">${sp.emoji}</span>
-          <span class="dt-spot-name">${esc(sp.name)}</span>
-        </div>`).join("");
-      spotGrid.querySelectorAll(".dt-spot").forEach(el => {
-        el.onclick = () => {
-          this.selSpot = this.selCity.spots.find(x => x.name === el.dataset.spot);
-          renderSpots(); refreshStart();
-        };
-      });
-    };
+    const getDynamicSpots = () => {
+    if (!this.selCity) return [];
+    let list = [...this.selCity.spots];
+    if (this.selCity.key === "home") {
+      list = [{ name: "我家（用户居处）", emoji: "🛋️" }];
+      if (this.selPeople && this.selPeople.length > 0) {
+        this.selPeople.forEach(name => {
+          const cObj = store.getContacts().find(x => x.name === name);
+          const showName = (cObj && cObj.note) ? cObj.note : name;
+          list.push({
+            name: `${showName}家`,
+            emoji: "🔑",
+            rawName: name
+          });
+        });
+      } else {
+        list.push({ name: "他家（请先勾选联系人）", emoji: "🔑", disabled: true });
+      }
+    }
+    return list;
+  };
+
+  const renderSpots = () => {
+    const currentSpots = getDynamicSpots();
+    // 如果之前选中的地点不在当前生成的有效列表里，重置选中项
+    if (this.selSpot && !currentSpots.some(s => s.name === this.selSpot.name && !s.disabled)) {
+      this.selSpot = null;
+    }
+    spotGrid.innerHTML = currentSpots.map(sp => `
+<div class="dt-spot ${this.selSpot && this.selSpot.name === sp.name ? 'on' : ''} ${sp.disabled ? 'disabled' : ''}" 
+     data-spot="${esc(sp.name)}" 
+     style="--cc:${this.selCity.color};${sp.disabled ? 'opacity:0.45;cursor:not-allowed;' : ''}">
+        <span class="dt-spot-emoji">${sp.emoji}</span>
+        <span class="dt-spot-name">${esc(sp.name)}</span>
+      </div>`).join("");
+    spotGrid.querySelectorAll(".dt-spot").forEach(el => {
+      el.onclick = () => {
+        const target = currentSpots.find(x => x.name === el.dataset.spot);
+        if (!target || target.disabled) return;
+        this.selSpot = target;
+        renderSpots(); refreshStart();
+      };
+    });
+  };
 
     cityRow.innerHTML = this.CITIES.map(c => `
   <div class="dt-city ${this.selCity.key === c.key ? 'on' : ''}" data-city="${c.key}" style="--cc:${c.color};">
@@ -24979,15 +25018,16 @@ onBack() {
           </div>`;
       }).join("");
       peopleEl.querySelectorAll(".dt-person").forEach(el => {
-        el.onclick = () => {
-          const name = el.dataset.name;
-          const idx = this.selPeople.indexOf(name);
-          if (idx === -1) this.selPeople.push(name); else this.selPeople.splice(idx, 1);
-          el.classList.toggle("on");
-          el.querySelector(".dt-check").textContent = this.selPeople.includes(name) ? "✓" : "";
-          refreshStart();
-        };
-      });
+  el.onclick = () => {
+    const name = el.dataset.name;
+    const idx = this.selPeople.indexOf(name);
+    if (idx === -1) this.selPeople.push(name); else this.selPeople.splice(idx, 1);
+    el.classList.toggle("on");
+    el.querySelector(".dt-check").textContent = this.selPeople.includes(name) ? "✓" : "";
+    if (this.selCity && this.selCity.key === "home") renderSpots();
+    refreshStart();
+      };
+    });
     }
 
     refreshStart();
@@ -25351,8 +25391,14 @@ ${buildSpellBanText()}
 
 【当前游戏内日期】${date}
 【地点】${ctx.city.emoji} ${ctx.city.name} · ${ctx.spot.emoji} ${ctx.spot.name}
-【同行的人】${(ctx.people || []).join("、")}
 
+【同行的人】${(ctx.people || []).join("、")}
+${ctx.city.key === "home" ? `
+【家庭私密场景专属规则】
+1. 当前约会地点在私人家中（${ctx.spot.name}），氛围极其私密、放松且生活化。
+2. 可以写：一起做饭煮面、外卖送达、盘腿坐在地毯上看电视、翻看旧照片、递水递毛巾、窗外夜色等居家日常。
+3. 如果好感度进入暧昧（≥101）或恋人（≥151）阶段，室内独处时要有更近的距离感、心跳感与微小的试探。
+` : ""}
 【各人与玩家的关系 · 必须严格据此决定态度/亲密度/语气】
 ${peopleBlocks}
 ${peterPersonaBlock}
