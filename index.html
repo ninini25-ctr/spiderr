@@ -6368,36 +6368,70 @@ const sharedText = "";  // 永远为空：不喂原文
 
   return rule;
 }
-// ============================================================
-// 🕯️ 生命状态派生层 · LIFE_STATE_CORE_BEGIN
-// 设计原则：
-//   1) 「已故」是派生值，不是持久化状态 —— 每次调用都从「玩家当前选择 +
-//      当前时间线里实际发生的死亡事件 + 游戏时间」实时重算，禁止缓存。
-//   2) 唯一允许持久化的真相来源是 sv_life_events（显式死亡 / 复活事件）。
-//   3) WORLD.avengersRoster[*].deathYear 只是「遵循原作」时的默认基线；
-//      一旦偏离原作节点、或当前时间线没有对应死亡事件，就不再套用。
-// 本段刻意写成不读全局的纯函数，便于回归测试直接注入 ctx 验证。
-// ============================================================
-const LIFE_DEATH_KEYWORDS = /葬礼|牺牲|去世|逝世|已故|死亡|阵亡|殉职|殉|化灰|离世|遗体|追悼|没能回来|不在了/;
-const LIFE_ALIVE_KEYWORDS = /复活|存活|活了下来|未死|没有死|幸存|救回|死而复生|改写了结局|阻止了.*牺牲|避免了.*死亡/;
-
+// 🕯️ 生命状态：角色名字 + 别名的 token 列表（用于在文本里精准定位该角色）
 function lifeNameTokens(name) {
-  const base = String(name || "").trim();
-  if (!base) return [];
-  const tokens = [base];
-  base.split(/[·・\s]+/).filter(Boolean).forEach(p => { if (p.length >= 2) tokens.push(p); });
-  if (base.length >= 3) tokens.push(base.slice(0, 2));
-  return Array.from(new Set(tokens)).filter(t => t.length >= 2);
+  if (!name) return [];
+  const aliases = (typeof getCharacterAliases === "function")
+    ? getCharacterAliases(name)
+    : [name];
+  // 去重 + 过滤太短的（避免单字误匹配）
+  const set = new Set();
+  aliases.forEach(a => {
+    const s = String(a || "").trim();
+    if (s && s.length >= 2) set.add(s);
+  });
+  if (!set.size) set.add(name);
+  return [...set];
 }
-function lifeHasKeyword(name, texts, re) {
+
+// 🕯️ 「复活 / 存活」关键词（供 lifeHasAliveEvent 检测）
+const LIFE_ALIVE_KEYWORDS = /(复活|归来|回来了|幸存|活着|醒了|获救|被救回|重新出现|回到人间)/;
+const LIFE_DEATH_STRICT_PATTERNS = [
+  /的(死讯|遗体|牺牲|葬礼|逝世|离世)/,
+  /(牺牲|去世|逝世|身亡|殉职|战死|化为灰烬|化灰|被杀死|停止了呼吸|永远闭上了眼睛)/,
+  /在.*(怀里|眼前|怀中)(咽气|死去|消散|化灰|牺牲)/
+];
+
+// 绝对豁免列表：彼得与内德绝不因日常/同伴剧情被误推为已故
+const IMMUNE_CHARACTERS = ["彼得·帕克", "内德·利兹", "米歇尔·琼斯"];
+
+function lifeHasDeathEvent(name, texts) {
+  if (!name) return false;
+  // 主角三人组在常规时间线有专属保护，除非用户手动标记或有专属命定死亡
+  if (IMMUNE_CHARACTERS.includes(name)) return false;
+
   const tokens = lifeNameTokens(name);
   if (!tokens.length) return false;
-  return (Array.isArray(texts) ? texts : []).some(line => {
+
+  const allLines = Array.isArray(texts) ? texts : [];
+  return allLines.some(line => {
     const t = String(line == null ? "" : line);
-    return !!t && tokens.some(tok => t.indexOf(tok) !== -1) && re.test(t);
+    if (!t) return false;
+
+    // 针对每个名字别称，做精准窗口分析（只检测该名字周围 15 个字内是否有死亡动词属于他自己）
+    return tokens.some(tok => {
+      let from = 0, i;
+      while ((i = t.indexOf(tok, from)) !== -1) {
+        // 取该角色名前后 18 个字符的微型上下文
+        const contextWin = t.slice(Math.max(0, i - 4), Math.min(t.length, i + tok.length + 18));
+        
+        // 关键防御：如果角色只是作为「主语」去「参加/目睹/面对/听到」别人的葬礼或死亡，直接排除！
+        if (/(参加|出席|目睹|面对|听到|得知|经历|看着|为).*(葬礼|牺牲|死亡|去世)/.test(contextWin)) {
+          from = i + tok.length;
+          continue;
+        }
+
+        // 只有确实属于该角色自身的死亡动词才判定
+        for (const pattern of LIFE_DEATH_STRICT_PATTERNS) {
+          if (pattern.test(contextWin)) return true;
+        }
+        from = i + tok.length;
+      }
+      return false;
+    });
   });
 }
-function lifeHasDeathEvent(name, texts) { return lifeHasKeyword(name, texts, LIFE_DEATH_KEYWORDS); }
+
 // 「复活 / 存活」证据必须紧贴角色名：同句里「别人复活」不能误伤本角色。
 // 例：「托尼·斯塔克葬礼已经结束，彼得复活后独自生活。」→ 托尼仍应判定为已故。
 function lifeHasAliveEvent(name, texts) {
@@ -6470,7 +6504,20 @@ function computeLifeState(name, ctx) {
   if (lifeHasDeathEvent(name, texts))
     return { deceased: true, reason: "death_event_in_timeline", source: "timeline" };
 
-  // 7) 遵循原作：仅在游戏时间越过原作死亡点时才成立
+  // 7) 遵循原作判定：主角绝不根据默认年限死亡；已故成员需严格核验
+  if (name === "彼得·帕克" || name === "内德·利兹" || name === "米歇尔·琼斯") {
+    return { deceased: false, reason: "main_character_protected", source: "canon" };
+  }
+
+  // 针对洛基：洛基在 2012 变体时间线或非灭霸线均存活，不可按死人处理
+  if (name === "洛基") {
+    // 只有在明确处于主宇宙灭霸泰坦星/无限战争决战期间，且未走变体线时才按原作基准
+    if (year === 2018 && (month >= 4 && month <= 6)) {
+      return { deceased: true, reason: "loki_infinity_war", source: "canon" };
+    }
+    return { deceased: false, reason: "loki_tva_or_pre_war", source: "canon" };
+  }
+
   if (roster && roster.deathYear) {
     const passed = year > roster.deathYear ||
       (year === roster.deathYear && month >= (roster.deathMonth || 12));
@@ -27684,6 +27731,37 @@ window.clearContactLifeOverride = function(name) {
 };
 window.invalidateLifeStateCache = invalidateLifeStateCache;
 migrateLegacyLifeFlags();
+// ============================================================
+// 🧹 清理因历史匹配 Bug 误判已故的联系人数据（彼得、内德、MJ 等）
+// ============================================================
+(function cleanupWrongfullyDeceased() {
+  try {
+    const protectedNames = ["彼得·帕克", "内德·利兹", "米歇尔·琼斯", "洛基"];
+    let ev = store.getLifeEvents();
+    let evChanged = false;
+
+    protectedNames.forEach(n => {
+      // 如果不是用户亲手去设置里勾选的，一律清除死亡标记
+      if (ev && ev[n] && ev[n].source !== "user") {
+        delete ev[n];
+        evChanged = true;
+      }
+    });
+    if (evChanged) store.setLifeEvents(ev);
+
+    const list = store.getContacts();
+    let listChanged = false;
+    list.forEach(c => {
+      if (c && protectedNames.includes(c.name) && c.deceasedSource !== "user") {
+        if (c.deceased) { delete c.deceased; listChanged = true; }
+        if (c.deceasedSource) { delete c.deceasedSource; listChanged = true; }
+      }
+    });
+    if (listChanged) store.setContacts(list);
+  } catch (err) {
+    console.warn("[生命状态自动校正失败]", err);
+  }
+})();
 // ============================================================
 // 🧠 启动时：检测老存档 + 决定是否弹遗忘魔咒窗
 //   - 只在"老玩家 + 已到 2024 + 没问过"时弹
