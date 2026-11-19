@@ -12524,7 +12524,7 @@ body.querySelector("#addContactBtn").onclick = async () => {
        if(name==="1") name="彼得·帕克"; else if(name==="2") name="内德·利兹"; else if(name==="3") name="米歇尔·琼斯"; else if(name==="4") name="梅婶";
         else if (name==="随机") {
           try { 
-            const res = await callAI([{role:"user",content:"生成一个"}], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)", "massages")); 
+            const res = await callAI([{role:"user",content:"生成一个"}], buildSystem("为蜘蛛侠世界生成一个随机NPC。格式：姓名 ||| 简介(20字内)", "messages")); 
             const [n, d] = res.split('|||').map(x=>x.trim());
             name = n || "神秘人";
             const list=store.getContacts();
@@ -13270,7 +13270,7 @@ const playerPronoun = _giT.pronoun;
   // 联系人的人设
   const contact = store.getContacts().find(c => c.name === contactName);
   const contactDesc = contact ? (contact.desc || "") : "";
-  const affBehavior = buildAffinityBehaviorBlock(self.currentUser, contactAff);
+  const affBehavior = buildAffinityBehaviorBlock(contactName, aff);
 
   // 彼得特殊处理（蜘蛛侠秘密身份 + 话痨风格）
   const isPeter = (contactName === "彼得·帕克");
