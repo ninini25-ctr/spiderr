@@ -2204,9 +2204,306 @@ body.theme-light .wb-hero { background:linear-gradient(135deg,#eceef5,#dde0ec); 
 .wb-scope-opt.global.active { border-color:#8a2be2; background:rgba(138,43,226,.12); }
 .wb-scope-opt-label { font-size:12.5px; font-weight:600; color:var(--text); }
 .wb-scope-opt-desc { font-size:10px; color:var(--muted); line-height:1.3; }
+/* ============================================================
+   🕷️ 开屏预加载动画（米色纸张、复杂手绘线条、蛛丝物理回弹）
+   ============================================================ */
+#splashScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background-color: #f7f3e8; /* 柔和复古米色 */
+  background-image: 
+    radial-gradient(circle at 50% 30%, rgba(120, 100, 80, 0.04) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40px 24px calc(24px + env(safe-area-inset-bottom, 16px));
+  box-sizing: border-box;
+  opacity: 1;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  user-select: none;
+  overflow: hidden;
+}
+
+#splashScreen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 顶部与主体容器 */
+.splash-stage {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* 顶部大水印：SPIDER */
+.splash-watermark-spider {
+  position: absolute;
+  top: 15px;
+  font-family: "Cinzel", "Didot", "Times New Roman", serif;
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: 14px;
+  text-indent: 14px;
+  color: rgba(60, 55, 50, 0.08);
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: splashFadeIn 1.2s ease forwards;
+}
+
+/* 蛛丝悬挂物理下坠与回弹关键帧 */
+.splash-silk-assembly {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  animation: spiderDropSpring 2.2s cubic-bezier(0.28, 1.45, 0.38, 0.98) forwards;
+}
+
+@keyframes spiderDropSpring {
+  0% {
+    transform: translateX(-50%) translateY(-260px) scaleY(0.4);
+    opacity: 0;
+  }
+  35% {
+    transform: translateX(-50%) translateY(32px) scaleY(1.18); /* 下冲拉伸 */
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(-50%) translateY(-18px) scaleY(0.92); /* 向上回弹回缩 */
+  }
+  75% {
+    transform: translateX(-50%) translateY(8px) scaleY(1.05); /* 二次微弹 */
+  }
+  90% {
+    transform: translateX(-50%) translateY(-3px) scaleY(0.98);
+  }
+  100% {
+    transform: translateX(-50%) translateY(0px) scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* 蛛网与悬挂蛛丝线条 */
+.splash-silk-line {
+  width: 1px;
+  height: 90px;
+  background: linear-gradient(to bottom, rgba(70,65,60,0.1), rgba(70,65,60,0.55));
+  position: relative;
+  box-shadow: 0 0 1px rgba(0,0,0,0.1);
+}
+
+/* 悬垂的微型星芒节点 */
+.splash-silk-line::after {
+  content: "✦";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 7px;
+  color: #55504a;
+}
+
+/* 复杂手绘感蜘蛛本体 SVG */
+.splash-spider-svg {
+  width: 150px;
+  height: 210px;
+  margin-top: -4px;
+  overflow: visible;
+}
+
+/* 蛛腿落定后的自然微收动作 */
+.spider-leg-left {
+  transform-origin: 85px 105px;
+  animation: legSettleLeft 1.2s cubic-bezier(0.25, 1, 0.5, 1) 1.8s forwards;
+}
+.spider-leg-right {
+  transform-origin: 115px 105px;
+  animation: legSettleRight 1.2s cubic-bezier(0.25, 1, 0.5, 1) 1.8s forwards;
+}
+
+@keyframes legSettleLeft {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  60% {
+    transform: rotate(3.5deg) scale(0.96, 0.94); /* 腿部向内微合收紧 */
+  }
+  100% {
+    transform: rotate(2.8deg) scale(0.97, 0.96);
+  }
+}
+
+@keyframes legSettleRight {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  60% {
+    transform: rotate(-3.5deg) scale(0.96, 0.94);
+  }
+  100% {
+    transform: rotate(-2.8deg) scale(0.97, 0.96);
+  }
+}
+
+/* 下半部分：进度条与底栏 */
+.splash-bottom-bar {
+  width: 100%;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.splash-progress-track {
+  width: 100%;
+  height: 2px;
+  background: rgba(90, 80, 70, 0.12);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.splash-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #8c8275, #3c3732);
+  border-radius: 2px;
+  transition: width 0.15s ease-out;
+}
+
+.splash-status-text {
+  font-family: "FangSong", "仿宋", "STFangsong", serif;
+  font-size: 11.5px;
+  color: #7d756d;
+  letter-spacing: 2.5px;
+}
+
+/* 底部居中优雅水印：@nini */
+.splash-watermark-nini {
+  font-family: "Cinzel", "Times New Roman", "Baskerville", serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 3.5px;
+  color: rgba(70, 65, 60, 0.42);
+  text-align: center;
+  text-transform: lowercase;
+  margin-top: 6px;
+}
+
+@keyframes splashFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
 </head>
 <body>
+<!-- 开屏预加载动画容器 -->
+<div id="splashScreen">
+  <div class="splash-stage">
+    <!-- 顶部艺术水印 -->
+    <div class="splash-watermark-spider">SPIDER</div>
+
+    <!-- 悬垂组件：包含物理回弹蛛丝与荆棘刺纹蜘蛛 -->
+    <div class="splash-silk-assembly">
+      <div class="splash-silk-line"></div>
+      
+      <!-- 复杂哥特手绘线描蜘蛛 SVG -->
+      <svg class="splash-spider-svg" viewBox="0 0 200 240" fill="none" stroke="#2b2723" stroke-linecap="round" stroke-linejoin="round">
+        
+        <!-- 背景垂落的附带碎网、悬垂晶珠与星芒 -->
+        <g stroke="#6e665d" stroke-width="0.8" opacity="0.6">
+          <path d="M 60,10 Q 75,35 70,70 Q 65,95 80,120" stroke-dasharray="2,3"/>
+          <path d="M 140,15 Q 125,45 132,80 Q 138,105 120,135" stroke-dasharray="2,3"/>
+          <path d="M 75,45 C 90,60 110,60 125,45" />
+          <path d="M 68,75 C 88,95 112,95 132,75" />
+          <!-- 装饰十字星芒 -->
+          <path d="M 60,35 L 60,43 M 56,39 L 64,39" stroke-width="1"/>
+          <path d="M 140,40 L 140,48 M 136,44 L 144,44" stroke-width="1"/>
+          <path d="M 78,130 L 78,136 M 75,133 L 81,133" stroke-width="0.9"/>
+          <path d="M 122,142 L 122,148 M 119,145 L 125,145" stroke-width="0.9"/>
+        </g>
+
+        <!-- 左侧节肢腿组 (带收腿动画 class) -->
+        <g class="spider-leg-left" stroke="#231f1c" stroke-width="2.2">
+          <!-- 腿 1 -->
+          <path d="M 94,98 C 82,75 65,48 58,22 C 55,42 45,65 30,82 C 42,88 56,102 62,118" />
+          <!-- 腿 2 -->
+          <path d="M 92,104 C 76,90 52,82 34,92 C 28,108 38,128 22,154" stroke-width="2"/>
+          <!-- 腿 3 -->
+          <path d="M 94,110 C 80,118 64,128 54,148 C 50,165 42,178 32,205" stroke-width="2"/>
+          <!-- 腿 4 (后肢延伸) -->
+          <path d="M 96,118 C 88,135 82,165 72,192 C 68,206 62,218 52,230" stroke-width="1.8"/>
+          
+          <!-- 尖刺/荆棘倒钩点缀 -->
+          <path d="M 60,32 L 53,35 M 48,60 L 42,66 M 34,112 L 28,116" stroke-width="1.2" stroke="#3d3732"/>
+        </g>
+
+        <!-- 右侧节肢腿组 (带收腿动画 class) -->
+        <g class="spider-leg-right" stroke="#231f1c" stroke-width="2.2">
+          <!-- 腿 1 -->
+          <path d="M 106,98 C 118,75 135,48 142,22 C 145,42 155,65 170,82 C 158,88 144,102 138,118" />
+          <!-- 腿 2 -->
+          <path d="M 108,104 C 124,90 148,82 166,92 C 172,108 162,128 178,154" stroke-width="2"/>
+          <!-- 腿 3 -->
+          <path d="M 106,110 C 120,118 136,128 146,148 C 150,165 158,178 168,205" stroke-width="2"/>
+          <!-- 腿 4 (后肢延伸) -->
+          <path d="M 104,118 C 112,135 118,165 128,192 C 132,206 138,218 148,230" stroke-width="1.8"/>
+          
+          <!-- 尖刺/荆棘倒钩点缀 -->
+          <path d="M 140,32 L 147,35 M 152,60 L 158,66 M 166,112 L 172,116" stroke-width="1.2" stroke="#3d3732"/>
+        </g>
+
+        <!-- 蜘蛛胸腹主体及刺骨轮廓 -->
+        <g fill="#24201d" stroke="#1d1916" stroke-width="1.6">
+          <!-- 头部与螯牙 -->
+          <ellipse cx="100" cy="94" rx="4.5" ry="5.5" />
+          <path d="M 98,99 L 96,104 M 102,99 L 104,104" stroke-width="1.5" />
+          <!-- 胸节 -->
+          <ellipse cx="100" cy="107" rx="7.5" ry="8.5" />
+          <!-- 腹部 (带有锐化收尾的水滴椭圆形) -->
+          <path d="M 100,115 C 90,120 86,132 91,146 C 94,154 99,165 100,172 C 101,165 106,154 109,146 C 114,132 110,120 100,115 Z" />
+        </g>
+
+        <!-- 腹部骨骼/裂甲高光纹理 -->
+        <g stroke="#f7f3e8" stroke-width="0.9" opacity="0.8">
+          <ellipse cx="98.5" cy="105" rx="1.5" ry="3" fill="#f7f3e8" />
+          <path d="M 96,124 Q 100,127 104,124" />
+          <path d="M 95,133 Q 100,137 105,133" />
+          <path d="M 97,143 Q 100,147 103,143" />
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- 下方：进度条、载入提示与 @nini 水印 -->
+  <div class="splash-bottom-bar">
+    <div class="splash-progress-track">
+      <div class="splash-progress-fill" id="splashProgress"></div>
+    </div>
+    <div class="splash-status-text" id="splashStatus">LOADING ARCHIVES...</div>
+    <div class="splash-watermark-nini">@nini</div>
+  </div>
+</div>
 <div class="device">
   <div class="notch"></div>
   <div class="statusbar"><span id="clock">9:41</span><span>100%</span></div>
@@ -26800,6 +27097,57 @@ refreshEffectiveTimeline();
 (function(){
   const t = localStorage.getItem("sv_theme") || "dark";
   if(t === "light") document.body.classList.add("theme-light");
+})();
+// ============================================================
+// 🕸️ 驱动开屏加载进度与蛛网退场
+// ============================================================
+(function runSplashScreen() {
+  const splash = document.getElementById("splashScreen");
+  const fill = document.getElementById("splashProgress");
+  const status = document.getElementById("splashStatus");
+  if (!splash || !fill) return;
+
+  let progress = 0;
+  const statusTexts = [
+    "SPINNING THREADS...",
+    "SYNCING TIMELINE...",
+    "CONNECTING SENSES...",
+    "READY"
+  ];
+
+  const updateProgress = (target, textIndex, callback) => {
+    const timer = setInterval(() => {
+      if (progress >= target) {
+        clearInterval(timer);
+        if (callback) callback();
+      } else {
+        progress += Math.floor(Math.random() * 4) + 1;
+        if (progress > target) progress = target;
+        fill.style.width = progress + "%";
+      }
+    }, 28);
+    if (textIndex !== undefined && status) {
+      status.textContent = statusTexts[textIndex];
+    }
+  };
+
+  // 动画第一幕：下冲回弹期间更新到 40%
+  updateProgress(45, 0, () => {
+    // 动画第二幕：回缩阶段到 85%
+    updateProgress(88, 1, () => {
+      // 动画第三幕：蜘蛛落定并微收腿部时到达 100%
+      setTimeout(() => {
+        updateProgress(100, 3, () => {
+          setTimeout(() => {
+            splash.classList.add("fade-out");
+            setTimeout(() => {
+              splash.remove(); // 优雅移除，释放 DOM
+            }, 800);
+          }, 350);
+        });
+      }, 500); // 留出充足时间让收腿 CSS 动画展现完整
+    });
+  });
 })();
 </script>
 </body>
