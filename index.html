@@ -24899,10 +24899,18 @@ onBack() {
     body.innerHTML = `
       <div class="dt-wrap">
         ${ongoingBanner}
-        <div class="dt-hero">
+                <div class="dt-hero">
           <div class="dt-hero-label">DINNER & DATE</div>
           <div class="dt-hero-title">约饭</div>
           <div class="dt-hero-sub">挑一座城、一个地方，约上想见的人。<br>相处是否愉快，会落在你们之间。</div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:4px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;color:var(--text);font-weight:600;">💬 约饭结束后自动消息</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5;">关闭后，约会结束时同行人不会主动给你发短信</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="dtFollowupToggle"><span class="slider"></span></label>
         </div>
 
         <div class="dt-sec">📍 选择城市</div>
@@ -25039,11 +25047,21 @@ onBack() {
         if (h) self.showHistory(h);
       };
     });
-const resumeBanner = body.querySelector("#dtResumeBanner");
+    const resumeBanner = body.querySelector("#dtResumeBanner");
     if (resumeBanner) {
       resumeBanner.onclick = () => {
         this._view = "date";
         this.render(body);
+      };
+    }
+
+    // 🍜 约饭结束后自动消息开关（默认开启）
+    const followupToggle = body.querySelector("#dtFollowupToggle");
+    if (followupToggle) {
+      followupToggle.checked = localStorage.getItem("sv_date_followup_sms") !== "0";
+      followupToggle.onchange = () => {
+        localStorage.setItem("sv_date_followup_sms", followupToggle.checked ? "1" : "0");
+        toast(followupToggle.checked ? "已开启：约会结束后自动消息" : "已关闭：约会结束后不再自动发消息");
       };
     }
   },
@@ -25584,6 +25602,8 @@ setTimeout(() => {
 // 🍜 约饭 · 约会结束后，同行人自动发来短信
 // ============================================================
 window.sendDateFollowupSMS = async function(session) {
+  // 🍜 约饭结束自动消息开关（默认开启；存 "0" 表示关闭）
+  if (localStorage.getItem("sv_date_followup_sms") === "0") return;
   if (!session || !session.people || !session.people.length) return;
 
   const profile = store.getProfile();
