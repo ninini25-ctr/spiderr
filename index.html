@@ -3260,7 +3260,8 @@ avengersSocialPersona: {
   "奇异博士": "高冷、神秘、用词文绉绉。经常会发一些别人看不懂的魔法术语，或者警告人类不要打破现实。",
   "叶莲娜·贝洛娃": "毒舌、务实、黑色幽默。发帖简短带刺，喜欢吐槽任务、吐槽男人、晒一些奇怪的小东西（比如她那件心爱的背心）。偶尔流露出对姐姐娜塔莎的想念，但立刻用玩笑盖过去。",
   "洛基": "自大、爱炫耀、说话带着居高临下的讽刺感，喜欢用夸张的修辞和 emoji（👑 🐍），管所有人叫 'mortal'（凡人）。偶尔发一些『本神降临』式的段子，或者在推特上阴阳怪气地嘲讽雷神。如果是被关押时期，会发一些冷幽默的自嘲（『牢房伙食不错』）。TVA 变体洛基会发一些关于多元宇宙、时间线的谜语式发言。",
-  "夜魔侠": "律师身份，充满正义感，发帖经常和地狱厨房的治安有关，偶尔吐槽夜巡太累。"
+  "夜魔侠": "律师身份，充满正义感，发帖经常和地狱厨房的治安有关，偶尔吐槽夜巡太累。",
+  "死侍": "满嘴跑火车的话痨，发帖充满无厘头吐槽、黄暴玩笑、墨西哥卷饼安利、对自己颜值的迷之自信。频繁打破第四面墙，直接对着屏幕外的网友/读者说话（比如『是的，说的就是你，手机前的你』），爱 @ 不存在的人、爱用一堆 emoji 和夸张标点。偶尔突然冒出一句意外深刻的话，然后立刻用屎尿屁玩笑盖过去。"
 },
 // ===== 复联成员档案（时间线记忆 + 生卒）=====
 avengersRoster: {
@@ -4212,6 +4213,7 @@ setPosts(p){this.set("sv_posts",p);},
   { name:"米歇尔·琼斯", desc:"彼得的同学（MJ）。外冷内热，观察力极其敏锐，喜欢冷幽默和讽刺。", affinity: 0, heart: "暂无" },
   { name:"梅婶", desc:"彼得的监护人，坚强独立，非常关心彼得。", affinity: 0, heart: "暂无" },
 { name:"哈皮·霍根", desc:"托尼·斯塔克的保镖兼司机，话不多，面冷心热，负责盯着彼得。", affinity: 0, heart: "暂无" },
+{ name:"死侍", desc:"韦德·威尔逊，嘴炮佣兵，不死之身，满嘴黄暴吐槽，爱打破第四面墙直接跟观众/读者说话。神经刀，但偶尔意外靠谱。", affinity: 0, heart: "暂无" },
   ...Object.keys(WORLD.avengersRoster).map(name => ({
     name,
     desc: WORLD.avengersRoster[name].desc,
@@ -4247,6 +4249,12 @@ affCapUnlocked: c.affCapUnlocked === true,
 if (!list.find(c => c && c.name === "哈皮·霍根")) {
   if (!(this.isBlacklisted && this.isBlacklisted("哈皮·霍根"))) {
     list.push({ name:"哈皮·霍根", desc:"托尼·斯塔克的保镖兼司机，话不多，面冷心热，负责盯着彼得。", affinity: 0, heart: "暂无" });
+  }
+}
+// ★ 老数据补全：死侍
+if (!list.find(c => c && c.name === "死侍")) {
+  if (!(this.isBlacklisted && this.isBlacklisted("死侍"))) {
+    list.push({ name:"死侍", desc:"韦德·威尔逊，嘴炮佣兵，不死之身，满嘴黄暴吐槽，爱打破第四面墙直接跟观众/读者说话。神经刀，但偶尔意外靠谱。", affinity: 0, heart: "暂无" });
   }
 }
 // ★ 老数据补全：缺失的复联成员自动加进来
@@ -6279,6 +6287,7 @@ function getCharacterAliases(name) {
     "战争机器": ["战争机器", "罗德", "罗德上校", "War Machine"],
     "奇异博士": ["奇异博士", "斯蒂芬·斯特兰奇", "斯特兰奇", "至尊法师", "Doctor Strange"],
     "夜魔侠": ["夜魔侠", "马特·默多克", "默多克", "Daredevil"],
+    "死侍": ["死侍", "韦德·威尔逊", "韦德", "小贱贱", "Deadpool", "Wade Wilson", "Wade"],
     "叶莲娜·贝洛娃": ["叶莲娜·贝洛娃", "叶莲娜", "贝洛娃", "Yelena"],
     "洛基": ["洛基", "Loki"],
     "Flash Thompson": ["Flash Thompson", "Flash", "弗拉什"],
@@ -13949,8 +13958,18 @@ ${missName}：消息内容`;
 - 不用网络流行语、不用 emoji 乱堆、不话痨。句子短。
 - 和托尼有多年交情，提到托尼时语气熟稔又无奈。
 - 严禁出现彼得式的焦虑碎碎念、自嘲、"天哪""完了完了"。`;
+      } else if (self.currentUser === "死侍") {
+  characterVibe = `【死侍（韦德·威尔逊）的说话风格 · 严格遵守】
+- 极度话痨、贱嘴、神经刀。满嘴吐槽、玩梗、自夸，句子跳脱，想到哪说到哪。
+- **打破第四面墙**：时不时直接对着"屏幕外的人"说话，知道自己在一个模拟器/游戏里。比如："嘿，正在玩这个 app 的家伙，对，说的就是你。" 但别每条都破，偶尔来一下最带感。
+- 玩笑尺度大、黄暴擦边，但用俏皮话包装（不写露骨细节，靠暗示和贱嘴）。
+- 墨西哥卷饼（chimichanga/tacos）是他的真爱，没事就要提一嘴。
+- 对自己的颜值和"不死之身"迷之自信，爱自吹又爱自黑。
+- 偶尔突然冒出一句意外真诚/深刻的话，然后立刻用一个烂玩笑盖过去，绝不让气氛认真超过两秒。
+- 爱用夸张标点、拟声词，但别堆到看不懂。
+- 可以 @ 或提到一些不存在的东西、吐槽剧情设定本身。
+- 严禁写成彼得式的焦虑小高中生，也严禁一本正经。他永远是那个最吵最欠揍但你又拿他没办法的家伙。`;
       }
-
       const peterInitiativeHint = (self.currentUser === "彼得·帕克" && contactAff >= 51)
         ? `\n【彼得主动性 · 铁律】\n1. 好感度 ≥ 51 时，彼得会主动在聊天里表现出亲密和靠近，不只是被动回复。\n2. 他可以用这些方式主动：突然问"你现在在哪？"、主动发"想见你"、用玩笑或吐槽掩盖关心、忽然安静一段时间然后冒出来一句真诚的话。\n3. 彼得的亲密风格多样，不要每回合都"害羞/脸红/心跳"。`
         : "";
@@ -24444,7 +24463,20 @@ onBack() {
   desc: "最私密舒适的居所，门一关就是只属于彼此的时光。",
   spots: [
     { name: "我家（用户居处）", emoji: "🛋️" }
-    // “他家”会根据你勾选的联系人动态追加生成
+    // "他家"会根据你勾选的联系人动态追加生成
+  ]
+},
+{
+  key: "nelson_murdock", name: "内尔森与默多克律所", emoji: "⚖️", color: "#8a1a1a",
+  desc: "地狱厨房的小律所，白天办案、夜里守街。",
+  spots: [
+    { name: "堆满卷宗的办公室", emoji: "📁" },{ name: "律所门口的旧楼梯", emoji: "🪜" },
+    { name: "深夜加班的灯下", emoji: "💡" },{ name: "对面的小酒馆", emoji: "🍺" },
+    { name: "天台看地狱厨房", emoji: "🌃" },{ name: "接待室的旧沙发", emoji: "🛋️" },
+    { name: "打印机旁的走廊", emoji: "📄" },{ name: "楼下的拳馆", emoji: "🥊" },
+    { name: "教堂的长椅", emoji: "⛪" },{ name: "雨夜的巷口", emoji: "🌧️" },
+    { name: "卷宗堆里的咖啡角", emoji: "☕" },{ name: "屋顶的消防梯", emoji: "🪜" },
+    { name: "审判后的空法庭", emoji: "🏛️" }
   ]
 },
   {
@@ -24992,21 +25024,33 @@ onBack() {
     });
   };
 
-    cityRow.innerHTML = this.CITIES.map(c => `
-  <div class="dt-city ${this.selCity.key === c.key ? 'on' : ''}" data-city="${c.key}" style="--cc:${c.color};">
-        <div class="dt-city-emoji">${c.emoji}</div>
-        <div class="dt-city-name">${esc(c.name)}</div>
-        <div class="dt-city-desc">${esc(c.desc)}</div>
-      </div>`).join("");
-    cityRow.querySelectorAll(".dt-city").forEach(el => {
-      el.onclick = () => {
-        this.selCity = this.CITIES.find(x => x.key === el.dataset.city);
-        this.selSpot = null;
-        cityRow.querySelectorAll(".dt-city").forEach(x => x.classList.toggle("on", x.dataset.city === this.selCity.key));
-        renderSpots(); refreshStart();
-      };
-    });
-    renderSpots();
+    const renderCities = () => {
+  // 需要特定人物在场才显示的城市（如夜魔侠律所）
+  const visibleCities = this.CITIES.filter(c =>
+    !c.requirePerson || this.selPeople.includes(c.requirePerson)
+  );
+  // 如果当前选中的城市因取消勾选而被隐藏，回退到第一个
+  if (!visibleCities.some(c => c.key === this.selCity.key)) {
+    this.selCity = visibleCities[0];
+    this.selSpot = null;
+  }
+  cityRow.innerHTML = visibleCities.map(c => `
+<div class="dt-city ${this.selCity.key === c.key ? 'on' : ''}" data-city="${c.key}" style="--cc:${c.color};">
+      <div class="dt-city-emoji">${c.emoji}</div>
+      <div class="dt-city-name">${esc(c.name)}</div>
+      <div class="dt-city-desc">${esc(c.desc)}</div>
+    </div>`).join("");
+  cityRow.querySelectorAll(".dt-city").forEach(el => {
+    el.onclick = () => {
+      this.selCity = this.CITIES.find(x => x.key === el.dataset.city);
+      this.selSpot = null;
+      cityRow.querySelectorAll(".dt-city").forEach(x => x.classList.toggle("on", x.dataset.city === this.selCity.key));
+      renderSpots(); refreshStart();
+    };
+  });
+};
+renderCities();
+renderSpots();
 
     if (!contacts.length) {
       peopleEl.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">还没有可约的联系人</div>`;
@@ -25026,16 +25070,17 @@ onBack() {
           </div>`;
       }).join("");
       peopleEl.querySelectorAll(".dt-person").forEach(el => {
-  el.onclick = () => {
-    const name = el.dataset.name;
-    const idx = this.selPeople.indexOf(name);
-    if (idx === -1) this.selPeople.push(name); else this.selPeople.splice(idx, 1);
-    el.classList.toggle("on");
-    el.querySelector(".dt-check").textContent = this.selPeople.includes(name) ? "✓" : "";
-    if (this.selCity && this.selCity.key === "home") renderSpots();
-    refreshStart();
-      };
-    });
+    el.onclick = () => {
+      const name = el.dataset.name;
+      const idx = this.selPeople.indexOf(name);
+      if (idx === -1) this.selPeople.push(name); else this.selPeople.splice(idx, 1);
+      el.classList.toggle("on");
+      el.querySelector(".dt-check").textContent = this.selPeople.includes(name) ? "✓" : "";
+      renderCities();   // 勾选/取消夜魔侠时，实时显示/隐藏律所
+      if (this.selCity && this.selCity.key === "home") renderSpots();
+      refreshStart();
+       };
+     });
     }
 
     refreshStart();
@@ -25409,6 +25454,13 @@ ${buildSpellBanText()}
 
 【当前游戏内日期】${date}
 【地点】${ctx.city.emoji} ${ctx.city.name} · ${ctx.spot.emoji} ${ctx.spot.name}
+${ctx.city.key === "nelson_murdock" ? `
+【夜魔侠律所专属场景规则】
+1. 当前约会地点在地狱厨房的"内尔森与默多克律所"及周边。马特·默多克（夜魔侠）是这里的主人，场景应体现：堆满卷宗的老律所、法律与夜巡交织的双重生活、地狱厨房雨夜街区的粗粝质感。
+2. 马特是盲人律师，感官极其敏锐（听觉、嗅觉、心跳），可以自然体现这一点——他"看不见"却什么都察觉得到。
+3. 氛围克制、成熟，带点黑色电影感。可以写：加班到深夜、楼下酒馆小酌、天台俯瞰街区、突然响起的警笛让他神情一凛。
+4. 不要当众暴露夜魔侠身份给无关人等，但独处时他可以更坦诚。
+` : ""}
 
 【同行的人】${(ctx.people || []).join("、")}
 ${ctx.city.key === "home" ? `
