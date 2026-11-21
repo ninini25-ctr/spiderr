@@ -5836,7 +5836,9 @@ async function callAI(messages, systemPrompt) {
     hints.push("· 或临时把 Base URL 改成直连（不用 CF 代理）。");
     throw new Error("API 403 报错：" + hints.join("\n") + detail);
   }
-
+  if (res.status === 422) {
+  throw new Error("API 422 报错：请求体被服务端拒绝（常见于中转站对某些参数/消息格式不兼容）。\n排查：1. 到设置把「温度 Temperature」清空再试；2. 换一个模型名；3. 该中转站可能不支持本次请求结构。" + detail);
+}
   if (res.status === 401) {
   throw new Error("API 401 报错：API Key 无效或已过期。请检查 Key 是否正确、是否填了多余的引号或空格。" + detail);
 }
@@ -12317,30 +12319,18 @@ if (self.view === "chat" && self.currentUser) {
 sb.querySelector("#setBtn").onclick = (e) => { e.stopPropagation(); self.renderSettings(body); };
 
 // 🔄 重试按钮：只重发最后一条，不跳设置
-sb.querySelector("#retryBtn").onclick = (e) => {
+   sb.querySelector("#retryBtn").onclick = (e) => {
   e.stopPropagation();   // ★ 阻止冒泡到父按钮
   if (!self.lastUserText) {
     return toast("还没有可以重试的消息");
   }
-  // 只删除最后一条 AI 回复，然后重发
-  const chatsNow = store.getChats();
-// ==========================================
-// 🌟 群聊独立分流
-// ==========================================
-const contact = store.getContacts().find(x => x.name === self.currentUser);
-if (contact && contact.isGroup) {
+  if (self._busy) { return toast("正在生成中，请稍候"); }
+  // ★ 不在这里删消息：由 sendMessage / sendGroupMessage 的 isRetry 分支统一删除末尾整组
+  const contact = store.getContacts().find(x => x.name === self.currentUser);
+  if (contact && contact.isGroup) {
     return self.sendGroupMessage(body, self.lastUserText, true);
   }
-  const arr = chatsNow[self.currentUser] || [];
-  const lastThemIdx = arr.map(m => m.role).lastIndexOf("them");
-  if (lastThemIdx !== -1) {
-    arr.splice(lastThemIdx, 1);
-    chatsNow[self.currentUser] = arr;
-    store.setChats(chatsNow);
-  }
-  self.render(body);
-  // 延迟一点点，让 render 完成后再发
-  setTimeout(() => self.sendMessage(body, self.lastUserText, true), 100);
+  self.sendMessage(body, self.lastUserText, true);
 };
    
 // ==========================================
@@ -12491,16 +12481,8 @@ sbG.querySelector("#setBtn").onclick = (e) => { e.stopPropagation(); self.render
 sbG.querySelector("#retryBtn").onclick = (e) => {
   e.stopPropagation();   // ★ 阻止冒泡
   if (!self.lastUserText) return toast("还没有可以重试的消息");
-  const chatsNow = store.getChats();
-  const arrNow = chatsNow[self.currentUser] || [];
-  const lastThemIdx = arrNow.map(m => m.role).lastIndexOf("them");
-  if (lastThemIdx !== -1) {
-    arrNow.splice(lastThemIdx, 1);
-    chatsNow[self.currentUser] = arrNow;
-    store.setChats(chatsNow);
-  }
-  self.render($("#appBody"));
-  setTimeout(() => self.sendGroupMessage($("#appBody"), self.lastUserText, true), 100);
+  if (self._busy) { return toast("正在生成中，请稍候"); }
+  self.sendGroupMessage($("#appBody"), self.lastUserText, true);
 };
   
   return; // 拦截，不走后面的单人逻辑
@@ -13006,17 +12988,9 @@ sbG.querySelector("#setBtn").onclick = (e) => { e.stopPropagation(); self.render
 sbG.querySelector("#retryBtn").onclick = (e) => {
   e.stopPropagation();   // ★ 阻止冒泡
   if (!self.lastUserText) return toast("还没有可以重试的消息");
-  const chatsNow = store.getChats();
-  const arrNow = chatsNow[self.currentUser] || [];
-  const lastThemIdx = arrNow.map(m => m.role).lastIndexOf("them");
-  if (lastThemIdx !== -1) {
-    arrNow.splice(lastThemIdx, 1);
-    chatsNow[self.currentUser] = arrNow;
-    store.setChats(chatsNow);
-  }
-  self.render($("#appBody"));
-  // ★ 单聊分支：重试应该用 sendMessage，而不是 sendGroupMessage
-  setTimeout(() => self.sendMessage($("#appBody"), self.lastUserText, true), 100);
+  if (self._busy) { return toast("正在生成中，请稍候"); }
+  // ★ 单聊分支：删除末尾整组交给 sendMessage 的 isRetry 分支
+  self.sendMessage($("#appBody"), self.lastUserText, true);
 };
 
     body.querySelector("#backToListBtn").onclick = () => {
@@ -13529,8 +13503,10 @@ showTopicModal(body) {
 
   loadTopics();
 },
-  async sendMessage(body, text, isRetry) {
+    async sendMessage(body, text, isRetry) {
   const self = this;
+  // 🔒 发送锁：防止 422/慢响应时重复触发并发，导致消息错乱
+  if (self._busy) { toast("上一条还在生成中，请稍候"); return; }
 // ============================================================
 // 🔒 遗忘魔咒兜底：彼得未解锁时，禁止发送
 // ============================================================
@@ -13644,9 +13620,10 @@ self.render(body);
     return; // 如果是语音回复，就不走后面的常规 AI 文字回复了
   }
 } else {
-      const lastAiIdx = arr.map(m=>m.role).lastIndexOf("them");
-      if(lastAiIdx !== -1) {
-        arr.splice(lastAiIdx, 1);
+      // ★ 重试：删除末尾连续的所有 them 消息（彼得会连发多条，只删一条会残留叠加）
+      let removed = false;
+      while (arr.length && arr[arr.length - 1].role === "them") { arr.pop(); removed = true; }
+      if (removed) {
         chatsNow[self.currentUser] = arr;
         store.setChats(chatsNow);
         self.render(body);
@@ -13660,8 +13637,9 @@ self.render(body);
     currentThread.innerHTML += `<div class="bubble them typing-indicator" id="loading" style="color:var(--muted);font-style:italic;font-size:12px;display:flex;align-items:center;gap:4px;">
       <span class="dot"></span><span class="dot"></span><span class="dot"></span> ${_typingLabel}
     </div>`;
-    currentThread.scrollTop = currentThread.scrollHeight;
+        currentThread.scrollTop = currentThread.scrollHeight;
     
+    self._busy = true;   // 🔒 进入 AI 调用，上锁
     try {
       const contacts = store.getContacts();
       let contact = contacts.find(x=>x.name === self.currentUser) || { affinity: 0 };
@@ -14400,14 +14378,17 @@ const _ghostCls = _ghostMode ? " ghost-reply" : "";
           }
         }
       } catch(e) { console.warn("[自动总结]", e); }
-    } catch(e) {
+        } catch(e) {
       const load = body.querySelector("#loading"); 
       if(load) load.textContent = "失败: " + e.message; 
+    } finally {
+      self._busy = false;   // 🔓 无论成败都解锁
     }
   },
 
 async sendGroupMessage(body, text, isRetry) {
     const self = this;
+    if (self._busy) { toast("上一条还在生成中，请稍候"); return; }
 // ============================================================
 // 🔒 遗忘魔咒兜底：群聊里如果有彼得且未解锁，禁止发送
 // ============================================================
@@ -14440,9 +14421,10 @@ const realAv = (v) => {
       store.setChats(chatsNow);
       self.render(body);
     } else {
-      const lastAiIdx = arr.map(m => m.role).lastIndexOf("them");
-      if (lastAiIdx !== -1) {
-        arr.splice(lastAiIdx, 1);
+      // ★ 重试：删除末尾连续的所有 them 消息（群聊也会连发多条）
+      let removedG = false;
+      while (arr.length && arr[arr.length - 1].role === "them") { arr.pop(); removedG = true; }
+      if (removedG) {
         chatsNow[self.currentUser] = arr;
         store.setChats(chatsNow);
         self.render(body);
@@ -14453,8 +14435,9 @@ const realAv = (v) => {
     currentThread.innerHTML += `<div class="bubble them typing-indicator" id="loading" style="color:var(--muted);font-style:italic;font-size:12px;display:flex;align-items:center;gap:4px;">
       <span class="dot"></span><span class="dot"></span><span class="dot"></span> 正在输入...
     </div>`;
-    currentThread.scrollTop = currentThread.scrollHeight;
+        currentThread.scrollTop = currentThread.scrollHeight;
 
+    self._busy = true;   // 🔒
     try {
       const liveCfg = JSON.parse(localStorage.getItem("sv_chat_cfg") || '{"lang":"zh"}');
 const isEn = liveCfg.lang === "en";
@@ -14611,9 +14594,11 @@ ${missName}：消息内容`;
         }
         if (i < parsedList.length - 1) await new Promise(r => setTimeout(r, 700));
       }
-    } catch (e) {
+       } catch (e) {
       const load = body.querySelector("#loading");
       if (load) load.textContent = "失败: " + e.message;
+    } finally {
+      self._busy = false;   // 🔓
     }
   },
   // ===== 语音播放 =====
