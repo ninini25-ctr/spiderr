@@ -3943,6 +3943,33 @@ const store = {
 },
   getConfig(){return this.get("sv_config",{enabled:true,provider:"openai",baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o-mini",imgBaseUrl:"https://api.openai.com/v1",imgApiKey:"",imgModel:"dall-e-3",temperature:"0.8"});},
   setConfig(c){this.set("sv_config",c);},
+// 1. 社交软件专用文本 API 配置（默认关闭独立配置，未填时自动回退到主配置）
+getSocialConfig() {
+  return this.get("sv_social_config", {
+    enabled: false, // 是否启用独立社交 API
+    provider: "openai",
+    baseUrl: "https://api.openai.com/v1",
+    apiKey: "",
+    model: "gpt-4o-mini",
+    temperature: "0.8"
+  });
+},
+setSocialConfig(c) {
+  this.set("sv_social_config", c);
+},
+
+// 2. 社交软件 API 档位（10 格）
+getSocialApiSlots() {
+  let slots = this.get("sv_social_api_slots", null);
+  if (!Array.isArray(slots) || slots.length !== 10) {
+    slots = Array(10).fill(null);
+    this.set("sv_social_api_slots", slots);
+  }
+  return slots;
+},
+setSocialApiSlots(slots) {
+  this.set("sv_social_api_slots", slots);
+},
 // ============================================================
 // 🕯️ 生命事件表：唯一允许持久化的生死「真相来源」
 //   { [name]: { status:"alive"|"deceased", year?, month?,
@@ -5773,9 +5800,22 @@ const globalMusic = {
   }
 };
 globalMusic.init();
-async function callAI(messages, systemPrompt) {
+async function callAI(messages, systemPrompt, apiType) {
   messages = (messages || []).filter(m => m && typeof m.content === "string" && m.content.trim() !== "");
-  const cfg = store.getConfig();
+
+  // ★ 判断走「社交软件」还是「长剧情」
+  const socialApps = ["messages", "twitter", "instagram", "contacts"];
+  const isSocial = apiType === "social" || (!apiType && socialApps.includes(currentApp));
+
+  let cfg = store.getConfig();
+  if (isSocial) {
+    const sCfg = store.getSocialConfig();
+    // 只有开启了独立社交 API 且填了 Key，才覆盖；否则自动回退到长剧情主 API
+    if (sCfg.enabled && sCfg.apiKey) {
+      cfg = sCfg;
+    }
+  }
+
   if (!cfg.enabled) throw new Error("AI 未启用");
   if (!cfg.apiKey) throw new Error("请先填入 API Key");
   const url = (cfg.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions";
@@ -9991,52 +10031,17 @@ body.theme-light{--bg:#f4f0fb;--panel:#ffffff;--panel-2:#e9e1f7;--text:#281a3a;-
     💡 带 <span style="color:#e62429;">*</span> 的是必填项。填完后点「保存人设」生效。
   </div>
 </div>
-        <div class="card"><h3>文本 AI 接入</h3>
-          <div class="row" style="justify-content:space-between;margin-bottom:12px"><label>启用</label><label class="switch"><input type="checkbox" id="c_enabled" ${cfg.enabled?'checked':''}><span class="slider"></span></label></div>
-          <div class="field"><label>预设</label><select id="c_provider">
-            <option value="openai" ${cfg.provider==='openai'?'selected':''}>OpenAI</option>
-            <option value="google" ${cfg.provider==='google'?'selected':''}>Google</option>
-            <option value="deepseek" ${cfg.provider==='deepseek'?'selected':''}>DeepSeek</option>
-            <option value="custom" ${cfg.provider==='custom'?'selected':''}>自定义</option>
-          </select></div>
-         <div class="field">
-            <label>API Key</label>
-            <div style="display:flex;gap:6px;">
-              <input id="c_key" type="text" value="${esc(cfg.apiKey)}" style="flex:1;" autocomplete="off" spellcheck="false">
-              <button type="button" id="c_key_toggle" class="btn ghost" style="width:auto;padding:0 12px;font-size:12px;">👁️ 隐藏</button>
-            </div>
+                <div class="card">
+          <h3>文本 AI 接入</h3>
+          <!-- ★ 分栏：长剧情 / 社交软件 -->
+          <div style="display:flex;gap:6px;background:var(--panel-2);padding:4px;border-radius:12px;margin-bottom:14px;">
+            <button type="button" class="api-tab-btn" data-tab="story"
+              style="flex:1;padding:8px;border-radius:9px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:var(--panel);color:var(--text);">📖 长剧情 API</button>
+            <button type="button" class="api-tab-btn" data-tab="social"
+              style="flex:1;padding:8px;border-radius:9px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);">💬 社交软件 API</button>
           </div>
-          <div class="field"><label>Base URL</label><input id="c_url" value="${esc(cfg.baseUrl)}"></div>
-          <div class="field"><label>模型</label>
-          <div class="field">
-  <label>温度 Temperature（留空 = 不发送，解决部分模型 400 报错）</label>
-  <input id="c_temp" type="text" value="${esc(cfg.temperature ?? "")}" placeholder="例如 0.8 / 1 / 留空">
-  <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;">
-    💡 若报 400 且提示 temperature 不支持，请把这里清空后保存。
-  </div>
-</div>
-            <div class="row"><input id="c_model" value="${esc(cfg.model)}" style="flex:1"><button class="btn ghost" id="fetchModel" style="width:auto;padding:0 12px">拉取</button></div>
-          </div>
-         <button class="btn" id="saveC">保存配置</button>
-<button class="btn ghost" id="testApiBtn" style="margin-top:8px;">🔍 测试 API 连通性</button>
-<div id="testApiResult" style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--muted);white-space:pre-wrap;word-break:break-all;"></div>
-</div>
-
-          <!-- ===== API 预设 ===== -->
-          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
-            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">⚡ 快速预设</div>
-            <div id="apiPresetList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
-            <button class="btn ghost" id="apiPresetAddBtn" style="font-size:12px;padding:6px 12px;">＋ 添加自定义预设</button>
-          </div>
-
-          <!-- ===== API 档位 ===== -->
-          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
-            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">💾 API 档位（保留 10 套）</div>
-            <div class="row" style="gap:8px;">
-              <button class="btn ghost" id="apiSlotSaveBtn" style="flex:1;font-size:12px;padding:6px 12px;">💾 存档</button>
-              <button class="btn ghost" id="apiSlotLoadBtn" style="flex:1;font-size:12px;padding:6px 12px;">📂 读档</button>
-            </div>
-           </div>
+          <!-- ★ 动态面板：内容由 renderTextApiPanel 填充 -->
+          <div id="textApiPanel"></div>
         </div>
 <div class="card"><h3>🧠 总结专用 AI（可选）</h3>
   <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.6;">记忆总结单独用一个便宜/快的模型。不填则用上方主 API。</p >
@@ -10206,6 +10211,281 @@ body.theme-light{--bg:#f4f0fb;--panel:#ffffff;--panel-2:#e9e1f7;--text:#281a3a;-
   </div>
 </div>
       </div>`;
+      // ============================================================
+      // 📖💬 文本 AI 双分栏面板（长剧情 / 社交软件）
+      //   - 用旧 id，renderTextApiPanel("story") 先填充 panel，
+      //     后面原有的那些绑定还能找到元素，一行都不用删。
+      // ============================================================
+      function renderTextApiPanel(tab) {
+        const isSocial = tab === "social";
+        const curCfg = isSocial ? store.getSocialConfig() : store.getConfig();
+        const panel = body.querySelector("#textApiPanel");
+        if (!panel) return;
+
+        // 高亮分栏按钮
+        body.querySelectorAll(".api-tab-btn").forEach(b => {
+          const on = b.dataset.tab === tab;
+          b.style.background = on ? "var(--panel)" : "transparent";
+          b.style.color = on ? "var(--text)" : "var(--muted)";
+        });
+
+        const hint = isSocial
+          ? "💬 用于：<b>信息、推特、Instagram、社交圈</b>。关闭或未填 Key 时，自动使用「长剧情 API」。"
+          : "📖 用于：<b>世界线、小剧场、中城高中、约饭、双人日记、蜘蛛终端</b>。";
+
+        panel.innerHTML = `
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;">${hint}</div>
+          <div class="row" style="justify-content:space-between;margin-bottom:12px"><label>${isSocial ? "启用独立社交 API" : "启用"}</label><label class="switch"><input type="checkbox" id="c_enabled" ${curCfg.enabled ? 'checked' : ''}><span class="slider"></span></label></div>
+          <div class="field"><label>预设</label><select id="c_provider">
+            <option value="openai" ${curCfg.provider === 'openai' ? 'selected' : ''}>OpenAI</option>
+            <option value="google" ${curCfg.provider === 'google' ? 'selected' : ''}>Google</option>
+            <option value="deepseek" ${curCfg.provider === 'deepseek' ? 'selected' : ''}>DeepSeek</option>
+            <option value="custom" ${curCfg.provider === 'custom' ? 'selected' : ''}>自定义</option>
+          </select></div>
+          <div class="field">
+            <label>API Key</label>
+            <div style="display:flex;gap:6px;">
+              <input id="c_key" type="text" value="${esc(curCfg.apiKey || '')}" style="flex:1;" autocomplete="off" spellcheck="false">
+              <button type="button" id="c_key_toggle" class="btn ghost" style="width:auto;padding:0 12px;font-size:12px;">👁️ 隐藏</button>
+            </div>
+          </div>
+          <div class="field"><label>Base URL</label><input id="c_url" value="${esc(curCfg.baseUrl || '')}"></div>
+          <div class="field">
+            <label>温度 Temperature（留空 = 不发送）</label>
+            <input id="c_temp" type="text" value="${esc(curCfg.temperature ?? '')}" placeholder="例如 0.8 / 1 / 留空">
+          </div>
+          <div class="field"><label>模型</label>
+            <div class="row"><input id="c_model" value="${esc(curCfg.model || '')}" style="flex:1"><button class="btn ghost" id="fetchModel" style="width:auto;padding:0 12px">拉取</button></div>
+          </div>
+          <button class="btn" id="saveC">保存${isSocial ? '社交软件' : '长剧情'}配置</button>
+          <button class="btn ghost" id="testApiBtn" style="margin-top:8px;">🔍 测试连通性</button>
+          <div id="testApiResult" style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--muted);white-space:pre-wrap;word-break:break-all;"></div>
+
+          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">⚡ 快速预设</div>
+            <div id="apiPresetList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+            <button class="btn ghost" id="apiPresetAddBtn" style="font-size:12px;padding:6px 12px;">＋ 添加自定义预设</button>
+          </div>
+
+          <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">💾 ${isSocial ? '社交软件' : '长剧情'} API 档位（10 套）</div>
+            <div class="row" style="gap:8px;">
+              <button class="btn ghost" id="apiSlotSaveBtn" style="flex:1;font-size:12px;padding:6px 12px;">💾 存档</button>
+              <button class="btn ghost" id="apiSlotLoadBtn" style="flex:1;font-size:12px;padding:6px 12px;">📂 读档</button>
+            </div>
+          </div>
+        `;
+
+        // —— Key 显示/隐藏 ——
+        const keyInput = panel.querySelector("#c_key");
+        const keyToggle = panel.querySelector("#c_key_toggle");
+        keyToggle.onclick = () => {
+          const pwd = keyInput.type === "password";
+          keyInput.type = pwd ? "text" : "password";
+          keyToggle.textContent = pwd ? "👁️ 隐藏" : "👁️ 显示";
+        };
+
+        // —— 服务商预设自动填 URL/模型 ——
+        panel.querySelector("#c_provider").onchange = (e) => {
+          const v = e.target.value;
+          if (v === "openai") { panel.querySelector("#c_url").value = "https://api.openai.com/v1"; panel.querySelector("#c_model").value = "gpt-4o-mini"; }
+          if (v === "google") { panel.querySelector("#c_url").value = "https://generativelanguage.googleapis.com/v1beta/openai"; panel.querySelector("#c_model").value = "gemini-1.5-flash"; }
+          if (v === "deepseek") { panel.querySelector("#c_url").value = "https://api.deepseek.com/v1"; panel.querySelector("#c_model").value = "deepseek-chat"; }
+        };
+
+        // —— 拉取模型 ——
+        panel.querySelector("#fetchModel").onclick = async (e) => {
+          e.target.textContent = "...";
+          try {
+            const m = await fetchModels(panel.querySelector("#c_url").value, panel.querySelector("#c_key").value);
+            if (!m.length) { toast("无模型"); e.target.textContent = "拉取"; return; }
+            const cur = panel.querySelector("#c_model").value;
+            panel.querySelector("#c_model").outerHTML = `<select id="c_model" style="flex:1">${m.map(x => `<option value="${x}" ${x === cur ? "selected" : ""}>${x}</option>`).join('')}</select>`;
+            toast("拉取成功");
+          } catch (err) { toast(err.message); }
+          e.target.textContent = "拉取";
+        };
+
+        // —— 保存（按 isSocial 写回不同 store）——
+        panel.querySelector("#saveC").onclick = () => {
+          const next = {
+            ...curCfg,
+            enabled: panel.querySelector("#c_enabled").checked,
+            provider: panel.querySelector("#c_provider").value,
+            apiKey: panel.querySelector("#c_key").value.trim(),
+            baseUrl: panel.querySelector("#c_url").value.trim(),
+            model: panel.querySelector("#c_model").value.trim(),
+            temperature: panel.querySelector("#c_temp").value.trim()
+          };
+          if (isSocial) store.setSocialConfig(next);
+          else store.setConfig(next);
+          toast("已保存" + (isSocial ? "社交软件" : "长剧情") + "配置");
+        };
+
+        // —— 连通性测试（测当前栏填的 URL/Key/模型）——
+        panel.querySelector("#testApiBtn").onclick = async () => {
+          const resultEl = panel.querySelector("#testApiResult");
+          const url = panel.querySelector("#c_url").value.trim().replace(/\/+$/, "");
+          const key = panel.querySelector("#c_key").value.trim();
+          const model = panel.querySelector("#c_model").value.trim();
+          if (!url) { resultEl.textContent = "❌ Base URL 为空"; return; }
+          if (!key) { resultEl.textContent = "❌ API Key 为空"; return; }
+          const lines = [`📅 ${new Date().toLocaleString()}`, `🌐 ${url}`, `🤖 ${model || "(未填)"}`, ""];
+          resultEl.textContent = lines.join("\n");
+
+          lines.push("【1】GET /models");
+          resultEl.textContent = lines.join("\n");
+          try {
+            const r1 = await fetch(url + "/models", { method: "GET", mode: "cors", credentials: "omit", cache: "no-store", headers: { "Authorization": "Bearer " + key } });
+            lines.push("  → HTTP " + r1.status);
+            if (r1.ok) { const d = await r1.json().catch(() => null); lines.push("  ✅ 模型数：" + (d && d.data ? d.data.length : 0)); }
+            else if (r1.status === 401) lines.push("  ❌ 401 Key 无效");
+            else if (r1.status === 403) lines.push("  ❌ 403 被拦截（CF/WAF/CORS）");
+            else lines.push("  ⚠️ " + r1.status);
+          } catch (e) { lines.push("  ❌ 网络错误：" + e.message); }
+          lines.push("");
+          resultEl.textContent = lines.join("\n");
+
+          lines.push("【2】POST /chat/completions");
+          resultEl.textContent = lines.join("\n");
+          try {
+            const r2 = await fetch(url + "/chat/completions", {
+              method: "POST", mode: "cors", credentials: "omit", cache: "no-store",
+              headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+              body: JSON.stringify({ model: model || "gpt-3.5-turbo", messages: [{ role: "user", content: "hi" }], max_tokens: 5 })
+            });
+            lines.push("  → HTTP " + r2.status);
+            if (r2.ok) {
+              const d = await r2.json().catch(() => null);
+              const c = d && d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message.content : "(无内容)";
+              lines.push("  ✅ 回复：" + String(c).slice(0, 50));
+              lines.push("");
+              lines.push("🎉 该 API 完全可用！");
+            } else if (r2.status === 401) lines.push("  ❌ 401 Key 无效");
+            else if (r2.status === 404) lines.push("  ❌ 404 模型不存在/路径错");
+            else if (r2.status === 429) lines.push("  ❌ 429 频率超限/额度用尽");
+            else { const t = await r2.text().catch(() => ""); lines.push("  ❌ " + r2.status + "：" + t.slice(0, 200)); }
+          } catch (e) { lines.push("  ❌ 网络错误：" + e.message); }
+          resultEl.textContent = lines.join("\n");
+        };
+
+        // —— 快速预设（两栏共用服务商预设库）——
+        const presetListEl = panel.querySelector("#apiPresetList");
+        const renderPresets = () => {
+          const presets = store.getApiPresets();
+          presetListEl.innerHTML = presets.map((p, i) => `<button class="btn ghost tp-preset-chip" data-idx="${i}" style="width:auto;padding:6px 12px;font-size:12px;border-radius:20px;">${esc(p.name)}</button>`).join("");
+          presetListEl.querySelectorAll(".tp-preset-chip").forEach(el => {
+            el.onclick = () => {
+              const p = store.getApiPresets()[parseInt(el.dataset.idx)];
+              if (!p) return;
+              if (p.baseUrl) panel.querySelector("#c_url").value = p.baseUrl;
+              if (p.model) panel.querySelector("#c_model").value = p.model;
+              toast("已填入预设：" + p.name + "（记得点保存）");
+            };
+          });
+        };
+        renderPresets();
+        panel.querySelector("#apiPresetAddBtn").onclick = () => {
+          const name = prompt("预设名称（如：我的中转站）");
+          if (!name || !name.trim()) return;
+          const presets = store.getApiPresets();
+          presets.push({
+            name: name.trim(),
+            baseUrl: panel.querySelector("#c_url").value.trim(),
+            model: panel.querySelector("#c_model").value.trim(),
+            imgBaseUrl: "", imgModel: ""
+          });
+          store.setApiPresets(presets);
+          renderPresets();
+          toast("预设已添加");
+        };
+
+        // —— 档位存读档（按 isSocial 读写不同 slots）——
+        const getSlots = () => isSocial ? store.getSocialApiSlots() : store.getApiSlots();
+        const setSlots = (s) => isSocial ? store.setSocialApiSlots(s) : store.setApiSlots(s);
+
+        panel.querySelector("#apiSlotSaveBtn").onclick = () => {
+          const slots = getSlots();
+          const div = document.createElement("div");
+          div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+          div.innerHTML = `<h2 style="margin-top:0;font-size:17px;">💾 ${isSocial ? '社交软件' : '长剧情'} API 存档（10格）</h2><div id="tpSlotList"></div><button class="btn ghost" style="margin-top:12px" id="tpSlotClose">关闭</button>`;
+          const list = div.querySelector("#tpSlotList");
+          slots.forEach((snap, i) => {
+            const filled = !!snap;
+            const label = filled ? `<b>${esc(snap.name || "未命名")}</b><br><span style="color:var(--muted);font-size:11px;">${esc(snap.model || "")} · ${esc(snap.baseUrl || "")}</span>` : "（空白档）";
+            const row = document.createElement("div");
+            row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+            row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div><button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;">${filled ? "覆盖" : "保存"}</button>`;
+            list.appendChild(row);
+          });
+          list.addEventListener("click", (e) => {
+            const btn = e.target.closest("button[data-idx]");
+            if (!btn) return;
+            const idx = parseInt(btn.dataset.idx);
+            if (slots[idx] && !confirm(`档位 ${idx + 1} 已有内容，覆盖？`)) return;
+            slots[idx] = {
+              name: (panel.querySelector("#c_model").value || "API") + " @ " + (panel.querySelector("#c_url").value || "").replace(/^https?:\/\//, "").slice(0, 20),
+              timestamp: Date.now(),
+              provider: panel.querySelector("#c_provider").value,
+              apiKey: panel.querySelector("#c_key").value.trim(),
+              baseUrl: panel.querySelector("#c_url").value.trim(),
+              model: panel.querySelector("#c_model").value.trim(),
+              temperature: panel.querySelector("#c_temp").value.trim()
+            };
+            setSlots(slots);
+            toast(`已保存到档位 ${idx + 1}`);
+            div.remove();
+          });
+          div.querySelector("#tpSlotClose").onclick = () => div.remove();
+          document.querySelector(".device").appendChild(div);
+        };
+
+        panel.querySelector("#apiSlotLoadBtn").onclick = () => {
+          const slots = getSlots();
+          if (!slots.some(s => s)) return toast("还没有任何存档");
+          const div = document.createElement("div");
+          div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
+          div.innerHTML = `<h2 style="margin-top:0;font-size:17px;">📂 ${isSocial ? '社交软件' : '长剧情'} API 读档（10格）</h2><div id="tpSlotList"></div><button class="btn ghost" style="margin-top:12px" id="tpSlotClose">关闭</button>`;
+          const list = div.querySelector("#tpSlotList");
+          slots.forEach((snap, i) => {
+            const filled = !!snap;
+            const label = filled ? `<b>${esc(snap.name || "未命名")}</b><br><span style="color:var(--muted);font-size:11px;">${esc(snap.model || "")} · ${esc(snap.baseUrl || "")}</span>` : "（空白档）";
+            const row = document.createElement("div");
+            row.style.cssText = "background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;";
+            row.innerHTML = `<div style="flex:1;color:${filled ? 'var(--text)' : 'var(--muted)'};font-size:13px;"><div style="font-size:11px;color:var(--muted);">档位 ${i + 1}</div>${label}</div><button class="btn" data-idx="${i}" style="width:auto;padding:8px 14px;" ${filled ? "" : "disabled"}>读取</button>`;
+            list.appendChild(row);
+          });
+          list.addEventListener("click", (e) => {
+            const btn = e.target.closest("button[data-idx]");
+            if (!btn || btn.disabled) return;
+            const idx = parseInt(btn.dataset.idx);
+            const snap = slots[idx];
+            if (!snap) return;
+            if (!confirm("读档会覆盖当前配置，继续？")) return;
+            const cfg2 = isSocial ? store.getSocialConfig() : store.getConfig();
+            cfg2.provider = snap.provider || cfg2.provider;
+            cfg2.apiKey = snap.apiKey || cfg2.apiKey;
+            cfg2.baseUrl = snap.baseUrl || cfg2.baseUrl;
+            cfg2.model = snap.model || cfg2.model;
+            cfg2.temperature = snap.temperature !== undefined ? snap.temperature : cfg2.temperature;
+            if (isSocial) store.setSocialConfig(cfg2);
+            else store.setConfig(cfg2);
+            toast("已读取档位 " + (idx + 1));
+            div.remove();
+            renderTextApiPanel(tab); // 刷新当前面板
+          });
+          div.querySelector("#tpSlotClose").onclick = () => div.remove();
+          document.querySelector(".device").appendChild(div);
+        };
+      }
+
+      // ★ 先填充「长剧情」面板（保证后面原有的 body.querySelector("#saveC") 等能找到元素，不报错）
+      renderTextApiPanel("story");
+
+      // ★ 分栏按钮点击切换
+      body.querySelectorAll(".api-tab-btn").forEach(btn => {
+        btn.onclick = () => renderTextApiPanel(btn.dataset.tab);
+      });
 const themeSel = body.querySelector("#s_theme");
 // 👁️ API Key 显示/隐藏切换
       const cKeyInput = body.querySelector("#c_key");
@@ -26603,6 +26883,10 @@ window.showMemory=()=>{
     div.innerHTML=`<h2 style="color:var(--text)">📜 回忆</h2><p style="color:var(--muted)">还没有任何历史剧情记录。</p ><button class="btn" style="margin-top:20px" onclick="this.parentNode.remove()">关闭</button>`;
   } else {
     div.innerHTML=`<h2 style="color:var(--text);padding-bottom:10px;margin-top:0">📜 回忆 · 共 ${history.length} 段</h2>
+      <div class="row" style="gap:8px;margin-bottom:14px;">
+        <button class="btn ghost" id="exportMemoryBtn" style="flex:1;">📥 导出回忆为 TXT</button>
+        <button class="btn" style="flex:1;" onclick="this.closest('[style*=z-index]').remove()">关闭</button>
+      </div>
       ${history.map((h,i)=>`<div style="background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:10px;border-left:3px solid var(--accent-2)">
         <div style="color:var(--muted);font-size:12px;margin-bottom:6px">— 第 ${i+1} 段 —</div>
         <div style="white-space:pre-wrap;color:var(--text);max-height:200px;overflow-y:auto">${formatDialogue(h.story)}</div>
@@ -26611,6 +26895,123 @@ window.showMemory=()=>{
       <button class="btn" style="margin-top:10px" onclick="this.parentNode.remove()">关闭</button>`;
   }
   document.querySelector(".device").appendChild(div);
+
+  // ===== 📥 导出回忆为 TXT =====
+  const exportBtn = div.querySelector("#exportMemoryBtn");
+  if (exportBtn) {
+    exportBtn.onclick = () => {
+      // 1. 承诺确认（两次，务必让玩家知情）
+      const vow = confirm(
+        "📥 导出回忆前，请你确认以下承诺：\n\n" +
+        "你导出的全部内容（剧情、阶段、锚点、你的行动选择）\n" +
+        "【仅供个人收藏回顾】。\n\n" +
+        "⚠️ 不得用于创作同人文、小说，\n" +
+        "⚠️ 不得在任何平台公开发布、转载或传播。\n\n" +
+        "点「确定」= 我承诺仅作个人收藏。\n" +
+        "点「取消」= 放弃导出。"
+      );
+      if (!vow) { toast("已取消导出"); return; }
+
+      try {
+        // 2. 组装 TXT 内容
+        const st = store.getState();
+        const profile = store.getProfile();
+        const anchors = getEventAnchors();
+        const now = new Date();
+        const lines = [];
+
+        lines.push("╔══════════════════════════════════════╗");
+        lines.push("   🕷️ 蜘蛛侠世界模拟器 · 世界线回忆存档");
+        lines.push("╚══════════════════════════════════════╝");
+        lines.push("");
+        lines.push("【导出时间】" + now.toLocaleString());
+        lines.push("【玩家】" + (profile.name || "未命名") + "（" +
+          (profile.gender === "male" ? "男" : profile.gender === "nonbinary" ? "其他" : "女") + "）");
+        lines.push("【当前进度】" + st.gameYear + "年" + st.gameMonth + "月" + st.gameDay + "日 · 第 " + st.turn + " 回合 · 彼得好感度 " + st.affinity + "/200");
+        const curPhase = WORLD.timeline[st.anchor] || WORLD.timeline[0];
+        lines.push("【当前阶段】" + (curPhase ? curPhase.name : "未知"));
+        lines.push("");
+
+        // ★ 承诺声明写进文件开头
+        lines.push("────────────────────────────────────────");
+        lines.push("⚠️ 本文件仅供导出者个人收藏回顾。");
+        lines.push("⚠️ 不得用于同人文 / 小说创作，不得公开发布或传播。");
+        lines.push("────────────────────────────────────────");
+        lines.push("");
+
+        // ★ 已完成的阶段锚点一览
+        lines.push("══════════ 📌 已推进的阶段锚点 ══════════");
+        lines.push("");
+        const doneMap = st.doneBeats || {};
+        WORLD.timeline.forEach(phase => {
+          const beats = anchors[phase.key] || [];
+          const doneBeats = beats.filter(b => doneMap[b.id]);
+          if (!doneBeats.length) return;
+          lines.push("【" + phase.name + "】");
+          doneBeats.forEach(b => lines.push("  ✅ " + b.title));
+          lines.push("");
+        });
+
+        // ★ 逐段剧情 + 玩家选择
+        lines.push("══════════ 📖 剧情回忆（共 " + history.length + " 段）══════════");
+        lines.push("");
+        history.forEach((h, i) => {
+          // 该段所属阶段（history 里存了 _anchor）
+          let phaseName = "";
+          if (typeof h._anchor === "number" && WORLD.timeline[h._anchor]) {
+            phaseName = "（" + WORLD.timeline[h._anchor].name + "）";
+          }
+          lines.push("──────── 第 " + (i + 1) + " 段 " + phaseName + " ────────");
+          lines.push("");
+          // 去掉剧情里的标记符号，保留纯文本
+          const cleanStory = String(h.story || "")
+            .replace(/\*\*/g, "")
+            .replace(/＊/g, "")
+            .replace(/\*/g, "")
+            .trim();
+          lines.push(cleanStory);
+          lines.push("");
+          lines.push("➤ 你的选择：" + (h.choice || "（无）"));
+          lines.push("");
+          if (typeof h._affinity === "number") {
+            lines.push("   （当时好感度：" + h._affinity + "）");
+            lines.push("");
+          }
+        });
+
+        // ★ 当前正在进行的那一段（还没选择）
+        if (st.currentStory) {
+          lines.push("──────── 当前段（进行中）────────");
+          lines.push("");
+          const cur = String(st.currentStory)
+            .replace(/\*\*/g, "").replace(/＊/g, "").replace(/\*/g, "").trim();
+          lines.push(cur);
+          lines.push("");
+        }
+
+        lines.push("════════════════════════════════════════");
+        lines.push("—— 回忆到此结束 · 仅供个人收藏 ——");
+
+        const content = lines.join("\n");
+
+        // 3. 下载
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const dateStr = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate();
+        a.href = url;
+        a.download = "蜘蛛侠世界线回忆_" + (profile.name || "存档") + "_" + dateStr + ".txt";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+        toast("✅ 回忆已导出（仅供个人收藏）");
+      } catch (e) {
+        toast("导出失败：" + (e.message || "未知错误"));
+      }
+    };
+  }
 };
 
 // ===== 剧情联动：NPC 主动发短信 =====
