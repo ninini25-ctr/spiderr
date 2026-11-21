@@ -6346,6 +6346,10 @@ const sharedText = "";  // 永远为空：不喂原文
   const OTHER_CHARS = ["彼得·帕克", "内德·利兹", "米歇尔·琼斯", "梅婶", "哈皮·霍根", "托尼·斯塔克"];
   const others = OTHER_CHARS.filter(n => n !== currentUser);
 
+    const _playerProfile = store.getProfile();
+  const _playerNameIso = _playerProfile.name || "玩家";
+  const _playerGenderIso = getGenderInfo(_playerProfile);
+
   let rule = `
 
 【🚫🚫🚫 身份锁定 · 最高铁律 · 优先级高于一切 · 违反即彻底失败 🚫🚫🚫】
@@ -6356,6 +6360,17 @@ const sharedText = "";  // 永远为空：不喂原文
    - 如果「${currentUser}」不是内德，你就不能像内德那样技术宅狂热、满口漫威梗、一惊一乍。
 4. 你只有「${currentUser}」自己的性格和说话方式。回复前先问自己：这句话像不像「${currentUser}」本人说的？不像就重写。
 5. 历史聊天记录里即使出现过别人的话，那也**不是你的说话范例**，不许学、不许串。
+
+【🚫🚫🚫 聊天对象身份 · 最高铁律 · 违反即彻底失败 🚫🚫🚫】
+你正在和「${_playerNameIso}」（${_playerGenderIso.gender}，用「${_playerGenderIso.pronoun}」指代）发短信。
+1. 「${_playerNameIso}」是**玩家本人**，**不是彼得·帕克**，也不是任何其他角色。
+2. **绝对禁止**把「${_playerNameIso}」当成彼得·帕克：
+   - ❌ 禁止对 ta 说彼得才会听到的话（"你昨晚巡逻""你的蛛丝""你的战衣""你和秃鹫打""你在泰坦星"）
+   - ❌ 禁止把彼得做过的事、说过的话、经历过的剧情，说成是「${_playerNameIso}」做的
+   - ❌ 禁止用"你"指代彼得——彼得是第三方，用"他/彼得"
+3. 如果要聊起彼得，必须用**第三人称**："彼得他……""你知道彼得最近……"
+4. 这条规则的优先级**高于一切**，高于好感度、高于记忆、高于世界书。
+   每一条回复发出前，扫一遍：有没有把玩家当成彼得？有就重写。
 
 【🧠 记忆隔离】
 1. 你只拥有「${currentUser}」亲身经历过的记忆。
@@ -13923,10 +13938,25 @@ ${missName}：消息内容`;
       if (theaterTheme) {
         const tq = theaterTheme;
         characterVibe = `【小剧场模式 · ${tq.title}】\n【背景设定】${tq.background}\n【玩家身份】${tq.identity}\n【氛围倾向】${tq.tone}\n【当前剧情进展】${tq.story.slice(0, 800)}\n【要求】严格贴合剧场背景，短信形式简短、口语化。\n【语言要求】${isEn ? "必须全部用英文回复。" : "必须全部用中文回复。"}`;
-      } else if (self.currentUser === "内德·利兹") {
-        characterVibe = `【内德的话痨与技术宅属性】\n- 聊天经常跑题，喜欢突然聊起：最近的漫威电影、新出的电子游戏、他刚写的代码、或者是他在网上看到的外星人阴谋论。\n- 极度崇拜蜘蛛侠，经常想当彼得的“后台技术支持”。\n- 容易激动，经常用感叹号和连发多条消息。`;
-      } else if (self.currentUser === "米歇尔·琼斯") {
+           } else if (self.currentUser === "米歇尔·琼斯") {
         characterVibe = `【MJ 的冷幽默与社会观察】\n- 说话直接、一针见血，经常带点讽刺和冷幽默。\n- 聊天话题非常广泛：最近读的哲学书、独立电影、地下乐队、或者是对某个社会现象的犀利点评。\n- 不喜欢无意义的寒暄，偶尔会调侃彼得。`;
+      } else if (self.currentUser === "内德·利兹") {
+        characterVibe = `【内德·利兹的说话风格 · 严格遵守 · 违反即失败】
+- 技术宅、一惊一乍、容易激动，喜欢漫威梗、乐高、代码、外星人阴谋论。
+- 话多、爱用感叹号，经常一条接一条地连发。
+- 崇拜蜘蛛侠，喜欢帮彼得做技术支持。
+- 会跟玩家八卦彼得的事、吐槽 Flash、分享自己看到的怪事。
+
+【🚫🚫🚫 最高铁律 · 内德对玩家的认知 · 违反即彻底失败 🚫🚫🚫】
+1. 你现在正在跟「${playerName}」聊天。「${playerName}」是**你的朋友/同学**，不是彼得·帕克。
+2. **绝对禁止**把「${playerName}」当成彼得·帕克！
+   - ❌ 禁止对 ta 说"你昨晚巡逻怎么样""你的蛛丝发射器""你的战衣"
+   - ❌ 禁止对 ta 说"哥们你还好吗"然后聊的全是蜘蛛侠的事
+   - ❌ 禁止把彼得做过的事说成是 ta 做的
+   - ❌ 禁止用"你"指代彼得（彼得是"他"，玩家是"你"）
+3. 你可以**跟玩家聊起彼得**（用第三人称"他"）：比如"彼得今天又迟到了""他最近好像有事瞒着我们"。
+4. 你和彼得是好哥们，但你和**玩家**的关系取决于好感度设定，两段关系完全独立。
+5. 如果玩家问你关于彼得的事，你当然可以回答——但你是在**谈论彼得这个第三方**，不是在跟彼得本人说话。`;
       } else if (self.currentUser === "梅婶") {
         characterVibe = `【梅婶的关心与生活气息】\n- 聊天内容多围绕日常生活：今晚吃什么、房租、彼得的学业、或者是她在社区做志愿者的见闻。\n- 说话温暖但带着大人的威严，经常叮嘱彼得注意安全。`;
       } else if (self.currentUser === "哈皮·霍根") {
@@ -20582,10 +20612,14 @@ D. 选项内容`, "School");
 
       store.set("sv_school_class_pending", { course: course.key, courseName: course.name, story, options: optsText });
       self.renderClassEvent(content, { course, story, options: optsText });
-    } catch (e) {
-      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
-    }
-  },
+           } catch (e) {
+      content.innerHTML = `<div class="card" style="text-align:center;padding:20px;">
+        <div style="font-size:14px;color:var(--accent);margin-bottom:12px;">上课失败：${esc(e.message)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">本次上课次数未扣除，可重新选择。</div>
+        <button class="btn ghost" onclick="apps.School.currentTab='course';apps.School.render(document.getElementById('appBody'))">← 返回课堂重选</button>
+      </div>`;
+     }
+    },
 
   renderClassEvent(content, pending) {
     const self = this;
@@ -20719,11 +20753,21 @@ ${buildPeterChatterPersona()}
           <button class="btn" onclick="apps.School.currentTab='course';apps.School.render(document.getElementById('appBody'))">← 返回课堂</button>
         </div>`;
       toast("下课（今日 " + used.count + "/3）");
-    } catch (e) {
-      content.innerHTML = `<div class="card">失败：${esc(e.message)}</div>`;
+          } catch (e) {
+      // ★ 报错回退：重新渲染上课事件页，让玩家可以重选/重试，不丢失本节课
+      const pendingRetry = store.get("sv_school_class_pending", null);
+      if (pendingRetry && content) {
+        const courseRetry = self.COURSES.find(c => c.key === pendingRetry.course) || { name: pendingRetry.courseName || "课堂", color: "#2d6bff", emoji: "📚", teacher: "" };
+        toast("生成失败：" + e.message + "（已回退，可重试）");
+        self.renderClassEvent(content, { course: courseRetry, story: pendingRetry.story, options: pendingRetry.options });
+      } else {
+        content.innerHTML = `<div class="card" style="text-align:center;padding:20px;">
+          <div style="font-size:14px;color:var(--accent);margin-bottom:12px;">失败：${esc(e.message)}</div>
+          <button class="btn ghost" onclick="apps.School.currentTab='course';apps.School.render(document.getElementById('appBody'))">← 返回课堂</button>
+        </div>`;
+      }
     }
   },
-
   // ============================================================
   // 👥 同桌系统
   // ============================================================
@@ -24941,13 +24985,10 @@ onBack() {
 
         <button class="dt-start" id="dtStartBtn" disabled>请选择城市、地点和至少一人</button>
 
-        ${history.length ? `
+                ${history.length ? `
           <div class="dt-sec">📁 过往的约会（${history.length}）</div>
-          <div id="dtHist">${history.slice(0, 15).map((h, i) => `
-            <div class="dt-hist-item" data-idx="${i}">
-              <div class="dt-hist-title">${esc(h.city)} · ${esc(h.spot)}</div>
-              <div class="dt-hist-meta">${esc(h.date)} · 和 ${esc(h.people.join("、"))} · ${esc(h.moodLabel || "")}</div>
-            </div>`).join("")}</div>
+          <div id="dtHistTags" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch;"></div>
+          <div id="dtHist"></div>
         ` : ""}
       </div>`;
 
@@ -25071,12 +25112,67 @@ renderSpots();
     refreshStart();
     startBtn.onclick = () => this.startDate(body);
 
-    body.querySelectorAll(".dt-hist-item").forEach(el => {
-      el.onclick = () => {
-        const h = store.get("sv_date_history", [])[parseInt(el.dataset.idx)];
-        if (h) self.showHistory(h);
+        // ===== 约会历史：标签过滤 + 全量显示 =====
+    if (history.length) {
+      // 提取所有出现过的联系人
+      const histPeopleSet = new Set();
+      history.forEach(h => (h.people || []).forEach(n => histPeopleSet.add(n)));
+      const histPeopleList = [...histPeopleSet];
+
+      // 当前过滤标签（null = 全部）
+      if (!self._histFilter) self._histFilter = null;
+
+      const tagsEl = body.querySelector("#dtHistTags");
+      const histEl = body.querySelector("#dtHist");
+
+      const renderHistList = () => {
+        // 标签栏
+        const isAll = !self._histFilter;
+        let tagsHtml = `<button class="dt-hist-tag" data-tag="" style="flex-shrink:0;padding:7px 14px;border-radius:18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border:1.5px solid ${isAll ? 'var(--accent-2)' : 'var(--line)'};background:${isAll ? 'rgba(45,107,255,.12)' : 'var(--panel)'};color:${isAll ? 'var(--accent-2)' : 'var(--muted)'};">全部 ${history.length}</button>`;
+        histPeopleList.forEach(n => {
+          const cnt = history.filter(h => (h.people || []).includes(n)).length;
+          const on = self._histFilter === n;
+          tagsHtml += `<button class="dt-hist-tag" data-tag="${esc(n)}" style="flex-shrink:0;padding:7px 14px;border-radius:18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border:1.5px solid ${on ? 'var(--accent-2)' : 'var(--line)'};background:${on ? 'rgba(45,107,255,.12)' : 'var(--panel)'};color:${on ? 'var(--accent-2)' : 'var(--muted)'};">${esc(n)} ${cnt}</button>`;
+        });
+        tagsEl.innerHTML = tagsHtml;
+
+        // 过滤后的列表
+        const filtered = self._histFilter
+          ? history.filter(h => (h.people || []).includes(self._histFilter))
+          : history;
+
+        if (!filtered.length) {
+          histEl.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">没有和「${esc(self._histFilter)}」的约会记录</div>`;
+        } else {
+          histEl.innerHTML = filtered.map((h, fi) => {
+            // 找到在原始 history 里的真实索引
+            const realIdx = history.indexOf(h);
+            return `<div class="dt-hist-item" data-idx="${realIdx}">
+              <div class="dt-hist-title">${esc(h.city)} · ${esc(h.spot)}</div>
+              <div class="dt-hist-meta">${esc(h.date)} · 和 ${esc(h.people.join("、"))} · ${esc(h.moodLabel || "")}</div>
+            </div>`;
+          }).join("");
+        }
+
+        // 标签点击
+        tagsEl.querySelectorAll(".dt-hist-tag").forEach(btn => {
+          btn.onclick = () => {
+            self._histFilter = btn.dataset.tag || null;
+            renderHistList();
+          };
+        });
+
+        // 历史条目点击
+        histEl.querySelectorAll(".dt-hist-item").forEach(el => {
+          el.onclick = () => {
+            const h = history[parseInt(el.dataset.idx)];
+            if (h) self.showHistory(h);
+          };
+        });
       };
-    });
+
+      renderHistList();
+    }
     const resumeBanner = body.querySelector("#dtResumeBanner");
     if (resumeBanner) {
       resumeBanner.onclick = () => {
@@ -25248,10 +25344,11 @@ if (resetBtn) resetBtn.onclick = () => {
         <button class="dt-finish-btn" id="dtBack" style="margin-top:8px;">返回列表</button>
       </div>`;
 
-    body.querySelector("#dtAgain").onclick = () => {
+        body.querySelector("#dtAgain").onclick = () => {
       store.set("sv_date_session", null);
       this.selSpot = null;
       this.selPeople = [];
+      this._histFilter = null;
       this._view = "setup";
       this.render(body);
     };
@@ -25259,6 +25356,7 @@ if (resetBtn) resetBtn.onclick = () => {
       store.set("sv_date_session", null);
       this.selSpot = null;
       this.selPeople = [];
+      this._histFilter = null;
       this._view = "setup";
       this.render(body);
     };
@@ -25492,8 +25590,8 @@ ${ctx.choice}
 2. 严格按各人好感度演出反应：玩家的选择让对方舒服→升温；冒犯/冷场/自私→降温。
 3. 结尾用【选项】列出 A. B. C. D.，其中至少一个是"收尾/告别"方向。
 4. 本回合末尾，为每个"情绪有明显变化"的同行人输出一行：
-   【好感度变动: 名字=±X】（X 为 -5~5；没变化的人可不写）
-   依据：玩家的选择是否让 ta 愉快。愉快为正，冒犯/敷衍/闹得不愉快为负。
+   【好感度变动: 名字=±X】（X 范围：最高 +5，最低 -10；没变化的人可不写）
+   依据：玩家的选择是否让 ta 愉快。愉快为正（+1~+5），冒犯/敷衍/闹得不愉快为负（-1~-10，严重冒犯/闹翻可以给到 -10）。
 5. 如果这次约会自然走到尾声（玩家告别/尽兴/闹翻/提议结束），在末尾输出：
    【约会结束】
    并输出整体氛围一行：【约会氛围: 愉快】或【约会氛围: 平淡】或【约会氛围: 不愉快】
@@ -25559,11 +25657,11 @@ window.resolveDateOption = async (choice) => {
     });
     const res = await callAI([{ role: "user", content: "续写约会" }], sys);
 
-    // 解析好感度变动
+        // 解析好感度变动（约饭专属：上限 +5，下限 -10）
     const affM = [...res.matchAll(/【好感度变动[:：]\s*([^=】]+)=\s*([+-]?\d+)】/g)];
     affM.forEach(m => {
       const rawName = m[1].trim();
-      let delta = Math.max(-5, Math.min(5, parseInt(m[2]) || 0));
+      let delta = Math.max(-10, Math.min(5, parseInt(m[2]) || 0));
       if (!delta) return;
       // 匹配到同行人
       const name = session.people.find(p =>
@@ -25617,8 +25715,7 @@ hist.unshift({
   moodLabel: { 愉快: "☺️ 愉快", 平淡: "🙂 平淡", 不愉快: "😔 不愉快" }[mood],
   ts: Date.now()
 });
-      if (hist.length > 50) hist.length = 50;
-      store.set("sv_date_history", hist);
+       store.set("sv_date_history", hist);
 
       store.set("sv_date_session", session);
 apps.Dating.renderResult(body, session);
@@ -27280,13 +27377,19 @@ const arr = rawArr.slice(-6).map(m => ({
 
       const idleReason = byMin ? `${playerName}已经 ${idleMin} 分钟没回你` : `已经 ${idleTurns} 回合没联系`;
 
-      const sys = `你是「${name}」，正在用手机给「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代）发短信。
+            const sys = `你是「${name}」，正在用手机给「${playerName}」（${gi.gender}，用「${gi.pronoun}」指代）发短信。
 ${buildBlacklistBanText([])}
 ${buildMemoryIsolationRule(name)}
 ${buildMemoryPromptFor(name)}
 【当前日期】${date}
 【好感度】${aff}/200
 ${buildAffinityBehaviorBlock(name, aff)}
+
+【🚫 再次强调 · 违反即失败】
+「${playerName}」**不是彼得·帕克**。你在给玩家发消息，不是给彼得发消息。
+- 禁止把彼得的经历说成是 ta 的
+- 提到彼得用第三人称"他/彼得"
+- 如果你是内德：你可以跟 ta 八卦彼得的事，但别把 ta 当成彼得本人
 
 【情境】${idleReason}，你突然想起 ta，主动发消息。
 【规则】你是在**主动**发消息，不是回复。聊天记录里最后几条若是你自己发的，绝不要当成对方说的去回应或反问，要开新话头。手机短信，严禁动作/括号/星号。1~3 条，用 || 分隔。开头别用"嘿""在吗"。不要一上来质问"怎么不回我"，用别的话题切入。${store.getChatConfig().lang==="en"?"全用英文。":"纯中文，可夹少量英文口语。"}
