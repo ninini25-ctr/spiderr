@@ -9908,7 +9908,22 @@ body.theme-light{--bg:#f4f0fb;--panel:#ffffff;--panel-2:#e9e1f7;--text:#281a3a;-
           </div>
           <button class="btn" id="saveTheme">应用外观</button>
         </div>
-
+<div class="card"><h3>📏 世界线剧情字数</h3>
+  <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">控制每回合主线剧情的生成长度。短=节奏快，长=细节多。</p >
+  <div class="row" style="gap:6px;align-items:center;">
+    <input id="s_wordmin" type="number" min="200" max="3000" value="${parseInt(localStorage.getItem('sv_worldline_wordmin')||'600')}" style="flex:1;text-align:center;">
+    <span style="color:var(--muted);">—</span>
+    <input id="s_wordmax" type="number" min="200" max="3000" value="${parseInt(localStorage.getItem('sv_worldline_wordmax')||'800')}" style="flex:1;text-align:center;">
+    <span style="color:var(--muted);font-size:12px;">字</span>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:8px;">
+    <button type="button" class="btn ghost wl-word-preset" data-min="300" data-max="500" style="flex:1;font-size:11px;padding:6px;">短 300-500</button>
+    <button type="button" class="btn ghost wl-word-preset" data-min="600" data-max="800" style="flex:1;font-size:11px;padding:6px;">标准 600-800</button>
+    <button type="button" class="btn ghost wl-word-preset" data-min="1000" data-max="1500" style="flex:1;font-size:11px;padding:6px;">长 1000-1500</button>
+    <button type="button" class="btn ghost wl-word-preset" data-min="1800" data-max="2500" style="flex:1;font-size:11px;padding:6px;">更长 1800-2500</button>
+  </div>
+  <button class="btn" id="saveWord" style="margin-top:10px;">保存字数设置</button>
+</div>
         <div class="card"><h3>👁️ 世界线叙事人称</h3>
           <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">控制主线剧情如何指代你。切换后从下一回合剧情开始生效。</p >
           <div class="field">
@@ -10552,6 +10567,23 @@ if (feedBtn) {
         store.setState(st);
         toast("已保存人称设置：" + { first: "第一人称", second: "第二人称", third: "第三人称" }[st.pov]);
       };
+// 📏 世界线字数区间
+body.querySelectorAll(".wl-word-preset").forEach(btn => {
+  btn.onclick = () => {
+    body.querySelector("#s_wordmin").value = btn.dataset.min;
+    body.querySelector("#s_wordmax").value = btn.dataset.max;
+  };
+});
+body.querySelector("#saveWord").onclick = () => {
+  let min = parseInt(body.querySelector("#s_wordmin").value) || 600;
+  let max = parseInt(body.querySelector("#s_wordmax").value) || 800;
+  min = Math.max(200, Math.min(3000, min));
+  max = Math.max(200, Math.min(3000, max));
+  if (max < min) { const t = min; min = max; max = t; }
+  localStorage.setItem("sv_worldline_wordmin", String(min));
+  localStorage.setItem("sv_worldline_wordmax", String(max));
+  toast(`已保存：每回合 ${min}-${max} 字`);
+};
 // 💌 彼得主动发信设置
 const proacCfg = store.getProactiveCfg();
 const proacEnabled = body.querySelector("#proac_enabled");
@@ -10578,9 +10610,34 @@ if (proacEnabled && proacSaveBtn) {
         if(sel.value==="deepseek"){body.querySelector("#c_url").value="https://api.deepseek.com/v1";body.querySelector("#c_model").value="deepseek-chat";}
       };
 body.querySelector("#resetStartNodeBtn").onclick = () => {
-  if (!confirm("⚠️ 重新选择开局会清空当前所有剧情进度（好感度、回合、聊天记录、推特、日记、小剧场等），但会保留你的人设存档、API 配置、外观设置、世界书。确认继续？")) return;
+  if (!confirm("⚠️ 重新选择开局会清空当前所有剧情进度（回合、聊天记录、推特、日记、小剧场等），但会保留你的人设存档、API 配置、外观设置、世界书。确认继续？")) return;
 
-  // ★ 只清剧情相关数据，不动人设/外观/API/存档/世界书
+  // ★ 新增：询问是否保留上周目联系人好感度
+  const keepAff = confirm(
+    "💞 要保留上周目的联系人好感度吗？\n\n" +
+    "点「确定」= 保留所有联系人（含彼得）的当前好感度和备注，开新周目不用重新养\n" +
+    "点「取消」= 全部清零，从零开始"
+  );
+
+  // 先备份好感度 / 备注 / 心声 / 上限解锁
+  let affBackup = null;
+  if (keepAff) {
+    try {
+      affBackup = (store.getContacts() || []).map(c => ({
+        name: c.name,
+        affinity: typeof c.affinity === "number" ? c.affinity : 0,
+        heart: c.heart || "暂无",
+        note: c.note || "",
+        affCapUnlocked: c.affCapUnlocked === true,
+        intervention: c.intervention || "",
+        avatar: c.avatar || "",
+        refImage: c.refImage || "",
+        bubbleColor: c.bubbleColor || ""
+      }));
+    } catch (e) { console.warn("[好感备份]", e); }
+  }
+
+  // ★ 只清剧情相关数据
   const keysToRemove = [
     "sv_start_node", "sv_start_node_chosen_v1", "sv_state",
     "sv_posts", "sv_chats", "sv_contacts",
@@ -10590,8 +10647,7 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
     "sv_memory_state", "sv_blank4y_turns",
     "sv_peter_identity_revealed", "sv_peter_last_user_act",
     "sv_peter_idle_turns", "sv_peter_last_proactive",
-    "sv_event_anchors",  // ★ 阶段锚点进度清空（但自定义阶段模板不受影响，见第3部分）
-    "sv_phase_overrides",
+    "sv_event_anchors", "sv_phase_overrides",
     "sv_daily_news",
     "sv_school_scores", "sv_school_team", "sv_school_class_used",
     "sv_school_class_pending", "sv_school_dance",
@@ -10599,9 +10655,18 @@ body.querySelector("#resetStartNodeBtn").onclick = () => {
   ];
   keysToRemove.forEach(k => localStorage.removeItem(k));
 
-  toast("已重置剧情，人设/API/外观/世界书已保留，即将刷新");
+  // ★ 恢复好感度：等页面刷新后 store.getContacts() 会重建默认联系人，
+  //    再把备份合并进去（名字相同的覆盖好感度/备注）
+  if (keepAff && affBackup) {
+    try {
+      localStorage.setItem("sv_aff_carryover", JSON.stringify(affBackup));
+    } catch (e) {}
+  }
+
+  toast(keepAff ? "已重置剧情 · 好感度已保留，即将刷新" : "已重置剧情 · 即将刷新");
   setTimeout(() => location.reload(), 600);
-};      body.querySelector("#fetchModel").onclick = async (e) => {
+};    
+       body.querySelector("#fetchModel").onclick = async (e) => {
         e.target.textContent="...";
         try {
           const m = await fetchModels(body.querySelector("#c_url").value, body.querySelector("#c_key").value);
@@ -16759,7 +16824,7 @@ ${(phase.mutableOutcomes||[]).map(o=>"   - "+o).join("\n")}
    - **严禁**用：纯引号"Hey"、纯星号*Hey*、全角星号＊、markdown 加粗**Hey**
 4. 场景描写要贴近纽约皇后区的真实生活——地铁、老旧公寓、便利店、学校走廊。
 5. 剧情必须严格承接上一轮的结尾与玩家的选择。
-6. 生成 600-800 字的高质量剧情。
+6. 生成 ${(parseInt(localStorage.getItem("sv_worldline_wordmin")||"600"))}-${(parseInt(localStorage.getItem("sv_worldline_wordmax")||"800"))} 字的高质量剧情。
 7. 在剧情末尾，用【选项】列出 A. B. C. D. 四个不同方向选项。
 8. 在剧情末尾标注【好感度变动: +X】或【好感度变动: -X】，X 绝对值 ≤5。
 9. **如果本回合玩家选项导致某个可变结局发生变化，还必须在末尾追加一行**：
