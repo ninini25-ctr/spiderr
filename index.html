@@ -7087,6 +7087,7 @@ ${worldbookPrompt}
 ${extra}`;
 }
 
+let targetUser = "";
 const $ = s => document.querySelector(s);
 const esc = str => String(str||"").replace(/[&<>"']/g, c=>({'&':"&amp;",'<':"&lt;",'>':"&gt;",'"':"&quot;","'":'&#39;'}[c]));
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.classList.add("show"),10);setTimeout(()=>{t.classList.remove("show");setTimeout(()=>t.remove(),300);},2000);}
