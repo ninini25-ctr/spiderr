@@ -17176,9 +17176,9 @@ ${phase.key === "phase6_5" ? `
       <div style="font-size:11px;color:var(--muted);">📌 事件锚点进度 ${_phaseBeats.length ? `（${_doneCount}/${_phaseBeats.length}）` : ""}</div>
       <button id="twAnchorBtn2" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;">管理</button>
     </div>
-    ${_lastDone ? `<div style="font-size:12px;color:#4caf50;margin-bottom:4px;">✅ 上回合完成：${esc(_lastDone.join("、"))}</div>` : ""}
+    ${_lastDone ? `<div class="beat-title-ellipsis" onclick="window.showBeatDetailModal('上回合完成锚点', '${esc(_lastDone.join('、')).replace(/'/g, "\\'")}')" style="font-size:12px;color:#4caf50;margin-bottom:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="点击查看全文">✅ 上回合完成：${esc(_lastDone.join("、"))}</div>` : ""}
     ${_curBeat
-      ? `<div style="font-size:13px;color:var(--text);font-weight:600;">▶ 当前推进：${esc(_curBeat.title)}</div>
+      ? `<div class="beat-title-ellipsis" onclick="window.showBeatDetailModal('当前推进锚点', '${esc(_curBeat.title).replace(/'/g, "\\'")}')" style="font-size:13px;color:var(--text);font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="点击查看全文">▶ 当前推进：${esc(_curBeat.title)}</div>
          ${_lastDone ? `<div style="font-size:11px;color:var(--accent-2);margin-top:4px;">👉 下一回合将开始新锚点</div>` : ""}`
       : (_phaseBeats.length
           ? `<div style="font-size:13px;color:#4caf50;font-weight:600;">🎉 本阶段锚点已全部完成</div>
@@ -26629,6 +26629,52 @@ function moveBeat(phaseKey, beatId, dir) {
   a[phaseKey] = arr;
   setEventAnchors(a);
 }
+// ============================================================
+// 🔍 锚点内容全文大窗弹窗
+// ============================================================
+window.showBeatDetailModal = function(title, fullText, options) {
+  options = options || {};
+  document.querySelectorAll(".__beat_detail_modal").forEach(el => el.remove());
+
+  const overlay = document.createElement("div");
+  overlay.className = "__beat_detail_modal";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;";
+
+  const panel = document.createElement("div");
+  panel.style.cssText = "background:var(--panel);border:1px solid var(--line);border-radius:18px;max-width:440px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.6);overflow:hidden;";
+
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel-2);">
+      <div style="font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;">
+        <span>📌</span>
+        <span>${esc(title || "锚点详情")}</span>
+      </div>
+      <button id="bdmClose" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>
+    </div>
+    <div style="padding:18px;overflow-y:auto;flex:1;font-size:14px;line-height:1.85;color:var(--text);word-break:break-word;white-space:pre-wrap;">${esc(fullText || "")}</div>
+    <div style="display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--panel-2);">
+      ${options.canEdit ? `<button id="bdmEdit" class="btn ghost" style="flex:1;font-size:13px;padding:9px;">✏️ 编辑修改</button>` : ""}
+      <button id="bdmConfirm" class="btn" style="flex:1;font-size:13px;padding:9px;">关闭</button>
+    </div>
+  `;
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+  panel.querySelector("#bdmClose").onclick = close;
+  panel.querySelector("#bdmConfirm").onclick = close;
+
+  const editBtn = panel.querySelector("#bdmEdit");
+  if (editBtn && typeof options.onEdit === "function") {
+    editBtn.onclick = () => {
+      close();
+      options.onEdit();
+    };
+  }
+};
+
 window.showEventAnchorPanel = function() {
   document.querySelectorAll(".__anchor_panel").forEach(el => el.remove());
   const s = store.getState();
@@ -26636,185 +26682,259 @@ window.showEventAnchorPanel = function() {
   const done = s.doneBeats || {};
   const anchors = getEventAnchors();
 
+  // 默认仅当前进行中的阶段展开，其它阶段自动收入折叠
+  const expandedPhases = new Set([curKey]);
+
   const div = document.createElement("div");
   div.className = "__anchor_panel";
   div.style.cssText = "position:absolute;inset:0;background:var(--bg);z-index:700;padding:20px;overflow-y:auto;color:var(--text);";
 
   const render = () => {
-  const anchorsNow = getEventAnchors();
-  const doneNow = store.getState().doneBeats || {};
-  let html = `<div style="max-width:560px;margin:0 auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <h2 style="margin:0;font-size:17px;">📌 事件锚点 · 阶段管理</h2>
-      <button id="anchorClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
-    </div>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
-      ✅已发生 ▶当前阶段 ⬜待发生。点锚点标题可改名，✕删除，＋加锚点。阶段标题旁可改名/在此阶段后插入新阶段。
-    </p >
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button id="anchorNewPhaseStart" class="btn ghost" style="flex:1;font-size:12px;color:var(--accent-2);border-color:var(--accent-2);">🧩 插在最前面</button>
-      <button id="phaseResetAll" class="btn ghost" style="flex:1;font-size:12px;color:#e62429;border-color:#e62429;">🔄 恢复默认阶段划分</button>
+    const anchorsNow = getEventAnchors();
+    const doneNow = store.getState().doneBeats || {};
+    let html = `<div style="max-width:560px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h2 style="margin:0;font-size:17px;">📌 事件锚点 · 阶段管理</h2>
+        <button id="anchorClose" class="btn ghost" style="width:auto;padding:4px 14px;font-size:12px;">关闭</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.6;">
+        点击阶段标题可<b>展开/折叠</b>锚点；超出一行锚点自动截断，点击可<b>大窗查看全文</b>。
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button id="anchorExpandAll" class="btn ghost" style="flex:1;font-size:11px;padding:6px;">📂 展开全部</button>
+        <button id="anchorCollapseAll" class="btn ghost" style="flex:1;font-size:11px;padding:6px;">📁 折叠全部</button>
+        <button id="anchorNewPhaseStart" class="btn ghost" style="flex:1;font-size:11px;padding:6px;color:var(--accent-2);border-color:var(--accent-2);">🧩 插在最前</button>
+      </div>`;
+
+    WORLD.timeline.forEach((phase) => {
+      const beats = anchorsNow[phase.key] || [];
+      const isCur = phase.key === curKey;
+      const isExpanded = expandedPhases.has(phase.key);
+      const doneCount = beats.filter(b => doneNow[b.id]).length;
+
+      html += `<div style="background:var(--panel);border:1px solid ${isCur?'var(--accent-2)':'var(--line)'};border-radius:12px;margin-bottom:10px;overflow:hidden;">
+        <!-- 阶段头部：点击折叠/展开 -->
+        <div class="phase-header-toggle" data-pk="${phase.key}" style="display:flex;justify-content:space-between;align-items:center;padding:12px;cursor:pointer;background:${isCur?'rgba(45,107,255,0.06)':'transparent'};border-bottom:${isExpanded ? '1px solid var(--line)' : 'none'};gap:6px;user-select:none;">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+            <span style="font-size:11px;color:var(--muted);transition:transform .2s;display:inline-block;transform:rotate(${isExpanded ? '90deg' : '0deg'});">▶</span>
+            <div style="font-size:13px;font-weight:700;color:${isCur?'var(--accent-2)':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${isCur?'▶ ':''}${esc(phase.name)}
+              ${phase.isCustom ? ' <span style="font-size:10px;color:var(--muted);font-weight:normal;">(自定义)</span>' : ''}
+            </div>
+            <span style="font-size:10.5px;color:var(--muted);flex-shrink:0;">(${doneCount}/${beats.length})</span>
+          </div>
+          <!-- 操作按钮区 -->
+          <div style="display:flex;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
+            <button class="phase-rename-btn" data-pk="${phase.key}" title="重命名阶段" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:2px 6px;font-size:11px;cursor:pointer;">✏️</button>
+            <button class="anchor-add" data-pk="${phase.key}" title="添加锚点" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:6px;padding:2px 7px;font-size:11px;cursor:pointer;">＋锚点</button>
+            <button class="phase-insert-after" data-pk="${phase.key}" title="在此之后插入新阶段" style="background:var(--panel-2);border:1px solid var(--line);color:#8a2be2;border-radius:6px;padding:2px 6px;font-size:11px;cursor:pointer;">🧩此后插</button>
+            ${phase.isCustom ? `<button class="phase-del-custom" data-pk="${phase.key}" title="删除自定义阶段" style="background:var(--panel-2);border:1px solid var(--line);color:#e62429;border-radius:6px;padding:2px 6px;font-size:11px;cursor:pointer;">删</button>` : ""}
+          </div>
+        </div>
+
+        <!-- 阶段内折叠的锚点列表容器 -->
+        <div class="phase-beats-container" style="display:${isExpanded ? 'block' : 'none'};padding:0 12px 6px;">`;
+
+      beats.forEach((b, i) => {
+        const isDone = !!doneNow[b.id];
+        const isFirst = (i === 0);
+        const isLast = (i === beats.length - 1);
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);">
+          <input type="checkbox" class="anchor-chk" data-id="${b.id}" ${isDone?'checked':''} style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent-2);cursor:pointer;">
+          
+          <!-- 锚点内容超出一行单行截断省略，点击查看大窗全文 -->
+          <div class="anchor-title-box" data-pk="${phase.key}" data-id="${b.id}" data-full="${esc(b.title)}" title="点击查看全文或修改" style="flex:1;min-width:0;display:flex;align-items:center;cursor:pointer;">
+            <span class="anchor-title" style="flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;${isDone?'color:var(--muted);text-decoration:line-through;':'color:var(--text);'}">${esc(b.title)}</span>
+          </div>
+
+          <button class="anchor-up" data-pk="${phase.key}" data-id="${b.id}" ${isFirst?'disabled':''} style="background:none;border:none;color:${isFirst?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isFirst?'default':'pointer'};flex-shrink:0;padding:0 2px;">↑</button>
+          <button class="anchor-down" data-pk="${phase.key}" data-id="${b.id}" ${isLast?'disabled':''} style="background:none;border:none;color:${isLast?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isLast?'default':'pointer'};flex-shrink:0;padding:0 2px;">↓</button>
+          <button class="anchor-del" data-pk="${phase.key}" data-id="${b.id}" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
+        </div>`;
+      });
+
+      if (!beats.length) html += `<div style="font-size:11px;color:var(--muted);padding:8px 0;">（暂无锚点，点击上方“＋锚点”添加）</div>`;
+      html += `</div></div>`;
+    });
+
+    html += `
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="phaseResetAll" class="btn ghost" style="flex:1;color:#e62429;border-color:#e62429;font-size:12px;">🔄 恢复默认阶段划分</button>
+        <button id="anchorReset" class="btn ghost" style="flex:1;color:var(--muted);font-size:12px;">🔄 重置内置锚点</button>
+      </div>
     </div>`;
 
-  WORLD.timeline.forEach((phase, pIdx) => {
-    const beats = anchorsNow[phase.key] || [];
-    const isCur = phase.key === curKey;
-    html += `<div style="background:var(--panel);border:1px solid ${isCur?'var(--accent-2)':'var(--line)'};border-radius:12px;padding:12px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:6px;">
-        <div class="phase-name" data-pk="${phase.key}" style="font-size:13px;font-weight:700;color:${isCur?'var(--accent-2)':'var(--text)'};cursor:pointer;flex:1;min-width:0;">${isCur?'▶ ':''}${esc(phase.name)}${phase.isCustom ? ' <span style="font-size:10px;color:var(--muted);">(自定义)</span>' : ''}</div>
-        <button class="anchor-add" data-pk="${phase.key}" style="background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">＋锚点</button>
-        <button class="phase-insert-after" data-pk="${phase.key}" style="background:var(--panel-2);border:1px solid var(--line);color:#8a2be2;border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">🧩此后插</button>
-        ${phase.isCustom ? `<button class="phase-del-custom" data-pk="${phase.key}" style="background:var(--panel-2);border:1px solid var(--line);color:#e62429;border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">删阶段</button>` : ""}
-      </div>`;
-    beats.forEach((b, i) => {
-      const isDone = !!doneNow[b.id];
-      const isFirst = (i === 0);
-      const isLast = (i === beats.length - 1);
-      html += `<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px dashed var(--line);">
-        <input type="checkbox" class="anchor-chk" data-id="${b.id}" ${isDone?'checked':''} style="width:16px;height:16px;flex-shrink:0;accent-color:var(--accent-2);">
-        <span class="anchor-title" data-pk="${phase.key}" data-id="${b.id}" style="flex:1;font-size:12.5px;cursor:pointer;${isDone?'color:var(--muted);text-decoration:line-through;':'color:var(--text);'}">${esc(b.title)}</span>
-        <button class="anchor-up" data-pk="${phase.key}" data-id="${b.id}" ${isFirst?'disabled':''} style="background:none;border:none;color:${isFirst?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isFirst?'default':'pointer'};flex-shrink:0;padding:0 3px;">↑</button>
-        <button class="anchor-down" data-pk="${phase.key}" data-id="${b.id}" ${isLast?'disabled':''} style="background:none;border:none;color:${isLast?'var(--line)':'var(--muted)'};font-size:14px;cursor:${isLast?'default':'pointer'};flex-shrink:0;padding:0 3px;">↓</button>
-        <button class="anchor-del" data-pk="${phase.key}" data-id="${b.id}" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;flex-shrink:0;padding:0 3px;">✕</button>
-      </div>`;
-    });
-    if (!beats.length) html += `<div style="font-size:11px;color:var(--muted);padding:4px 0;">（空，点＋锚点添加）</div>`;
-    html += `</div>`;
-  });
-
-  html += `<button id="anchorReset" class="btn ghost" style="width:100%;margin-top:4px;color:#e62429;border-color:#e62429;font-size:12px;">🔄 仅恢复默认锚点列表（不影响阶段结构）</button></div>`;
-  div.innerHTML = html;
-  bind();
-};
-
-  const bind = () => {
-  div.querySelector("#anchorClose").onclick = () => div.remove();
-
-  div.querySelectorAll(".anchor-chk").forEach(el => {
-    el.onchange = () => {
-      const st = store.getState();
-      st.doneBeats = st.doneBeats || {};
-      if (el.checked) st.doneBeats[el.dataset.id] = true;
-      else delete st.doneBeats[el.dataset.id];
-      store.setState(st);
-      render();
-    };
-  });
-
-  div.querySelectorAll(".anchor-title").forEach(el => {
-    el.onclick = () => {
-      const nv = prompt("修改锚点名称：", el.textContent);
-      if (!nv || !nv.trim()) return;
-      const a = getEventAnchors();
-      const arr = a[el.dataset.pk] || [];
-      const t = arr.find(x => x.id === el.dataset.id);
-      if (t) { t.title = nv.trim(); setEventAnchors(a); render(); }
-    };
-  });
-
-  div.querySelectorAll(".anchor-del").forEach(el => {
-    el.onclick = () => {
-      if (!confirm("删除这个锚点？")) return;
-      const a = getEventAnchors();
-      a[el.dataset.pk] = (a[el.dataset.pk] || []).filter(x => x.id !== el.dataset.id);
-      setEventAnchors(a);
-      render();
-    };
-  });
-
-  div.querySelectorAll(".anchor-add").forEach(el => {
-    el.onclick = () => {
-      const nv = prompt("新锚点名称：");
-      if (!nv || !nv.trim()) return;
-      const a = getEventAnchors();
-      a[el.dataset.pk] = a[el.dataset.pk] || [];
-      a[el.dataset.pk].push({ id: el.dataset.pk + "_c" + Date.now(), title: nv.trim() });
-      setEventAnchors(a);
-      render();
-    };
-  });
-
-  div.querySelectorAll(".anchor-up").forEach(el => {
-    el.onclick = () => { if (el.disabled) return; moveBeat(el.dataset.pk, el.dataset.id, -1); render(); };
-  });
-  div.querySelectorAll(".anchor-down").forEach(el => {
-    el.onclick = () => { if (el.disabled) return; moveBeat(el.dataset.pk, el.dataset.id, +1); render(); };
-  });
-
-  div.querySelector("#anchorReset").onclick = () => {
-    if (!confirm("恢复默认锚点列表？你自定义增删的锚点会丢失，但完成勾选状态保留。（不影响阶段结构）")) return;
-    // 只重置内置阶段的锚点，不动自定义阶段的锚点
-    const defaultAnchors = getDefaultEventAnchors();
-    const curAnchors = getEventAnchors();
-    Object.keys(defaultAnchors).forEach(k => { curAnchors[k] = defaultAnchors[k]; });
-    setEventAnchors(curAnchors);
-    render();
-    toast("已恢复默认锚点");
+    div.innerHTML = html;
+    bind();
   };
 
-  // ★ 阶段改名
-  div.querySelectorAll(".phase-name").forEach(el => {
-    el.onclick = () => {
-      const pk = el.dataset.pk;
-      const curPhase = WORLD.timeline.find(p => p.key === pk);
-      if (!curPhase) return;
-      const nv = prompt("修改阶段名称：", curPhase.name);
-      if (!nv || !nv.trim() || nv.trim() === curPhase.name) return;
+  const bind = () => {
+    div.querySelector("#anchorClose").onclick = () => div.remove();
 
-      if (curPhase.isCustom) {
-        // 自定义阶段：直接改 inserts 里存的 phase.name
+    // 全部展开 / 折叠
+    const expAll = div.querySelector("#anchorExpandAll");
+    if (expAll) expAll.onclick = () => {
+      WORLD.timeline.forEach(p => expandedPhases.add(p.key));
+      render();
+    };
+    const colAll = div.querySelector("#anchorCollapseAll");
+    if (colAll) colAll.onclick = () => {
+      expandedPhases.clear();
+      render();
+    };
+
+    // 阶段点击折叠 / 展开
+    div.querySelectorAll(".phase-header-toggle").forEach(el => {
+      el.onclick = () => {
+        const pk = el.dataset.pk;
+        if (expandedPhases.has(pk)) expandedPhases.delete(pk);
+        else expandedPhases.add(pk);
+        render();
+      };
+    });
+
+    // 阶段重命名
+    div.querySelectorAll(".phase-rename-btn").forEach(el => {
+      el.onclick = () => {
+        const pk = el.dataset.pk;
+        const curPhase = WORLD.timeline.find(p => p.key === pk);
+        if (!curPhase) return;
+        const nv = prompt("修改阶段名称：", curPhase.name);
+        if (!nv || !nv.trim() || nv.trim() === curPhase.name) return;
+
+        if (curPhase.isCustom) {
+          const ov = getPhaseOverrides();
+          ov.inserts.forEach(ins => { if (ins.phase.key === pk) ins.phase.name = nv.trim(); });
+          setPhaseOverrides(ov);
+        } else {
+          const ov = getPhaseOverrides();
+          ov.renames[pk] = nv.trim();
+          setPhaseOverrides(ov);
+        }
+        refreshEffectiveTimeline();
+        render();
+        toast("阶段名称已修改");
+      };
+    });
+
+    // 点击锚点大窗查看全文，并在大窗中提供编辑修改
+    div.querySelectorAll(".anchor-title-box").forEach(el => {
+      el.onclick = () => {
+        const pk = el.dataset.pk;
+        const id = el.dataset.id;
+        const full = el.dataset.full;
+
+        window.showBeatDetailModal("事件锚点全文", full, {
+          canEdit: true,
+          onEdit: () => {
+            const nv = prompt("修改锚点名称：", full);
+            if (!nv || !nv.trim() || nv.trim() === full) return;
+            const a = getEventAnchors();
+            const arr = a[pk] || [];
+            const t = arr.find(x => x.id === id);
+            if (t) {
+              t.title = nv.trim();
+              setEventAnchors(a);
+              render();
+              toast("锚点已修改");
+            }
+          }
+        });
+      };
+    });
+
+    // 勾选完成状态
+    div.querySelectorAll(".anchor-chk").forEach(el => {
+      el.onchange = () => {
+        const st = store.getState();
+        st.doneBeats = st.doneBeats || {};
+        if (el.checked) st.doneBeats[el.dataset.id] = true;
+        else delete st.doneBeats[el.dataset.id];
+        store.setState(st);
+        render();
+      };
+    });
+
+    // 删除锚点
+    div.querySelectorAll(".anchor-del").forEach(el => {
+      el.onclick = () => {
+        if (!confirm("删除这个锚点？")) return;
+        const a = getEventAnchors();
+        a[el.dataset.pk] = (a[el.dataset.pk] || []).filter(x => x.id !== el.dataset.id);
+        setEventAnchors(a);
+        render();
+      };
+    });
+
+    // 添加锚点
+    div.querySelectorAll(".anchor-add").forEach(el => {
+      el.onclick = () => {
+        const nv = prompt("新锚点名称：");
+        if (!nv || !nv.trim()) return;
+        const a = getEventAnchors();
+        a[el.dataset.pk] = a[el.dataset.pk] || [];
+        a[el.dataset.pk].push({ id: el.dataset.pk + "_c" + Date.now(), title: nv.trim() });
+        setEventAnchors(a);
+        expandedPhases.add(el.dataset.pk);
+        render();
+      };
+    });
+
+    // 移动顺序
+    div.querySelectorAll(".anchor-up").forEach(el => {
+      el.onclick = () => { if (el.disabled) return; moveBeat(el.dataset.pk, el.dataset.id, -1); render(); };
+    });
+    div.querySelectorAll(".anchor-down").forEach(el => {
+      el.onclick = () => { if (el.disabled) return; moveBeat(el.dataset.pk, el.dataset.id, +1); render(); };
+    });
+
+    // 重置内置锚点
+    div.querySelector("#anchorReset").onclick = () => {
+      if (!confirm("恢复默认锚点列表？你自定义增删的锚点会丢失，但完成勾选状态保留。（不影响阶段结构）")) return;
+      const defaultAnchors = getDefaultEventAnchors();
+      const curAnchors = getEventAnchors();
+      Object.keys(defaultAnchors).forEach(k => { curAnchors[k] = defaultAnchors[k]; });
+      setEventAnchors(curAnchors);
+      render();
+      toast("已恢复默认锚点");
+    };
+
+    // 阶段插入
+    div.querySelectorAll(".phase-insert-after").forEach(el => {
+      el.onclick = () => showPhaseInsertEditor(el.dataset.pk, render);
+    });
+
+    const startBtn = div.querySelector("#anchorNewPhaseStart");
+    if (startBtn) startBtn.onclick = () => showPhaseInsertEditor(null, render);
+
+    // 删除自定义阶段
+    div.querySelectorAll(".phase-del-custom").forEach(el => {
+      el.onclick = () => {
+        if (!confirm("删除这个自定义阶段？它的锚点也会被删除。")) return;
+        const pk = el.dataset.pk;
         const ov = getPhaseOverrides();
-        ov.inserts.forEach(ins => { if (ins.phase.key === pk) ins.phase.name = nv.trim(); });
+        ov.inserts = ov.inserts.filter(ins => ins.phase.key !== pk);
         setPhaseOverrides(ov);
-      } else {
-        // 默认阶段：记录改名映射
-        const ov = getPhaseOverrides();
-        ov.renames[pk] = nv.trim();
-        setPhaseOverrides(ov);
-      }
-      refreshEffectiveTimeline();
-      render();
-      toast("阶段名称已修改");
-    };
-  });
+        const a = getEventAnchors();
+        delete a[pk];
+        setEventAnchors(a);
+        refreshEffectiveTimeline();
+        render();
+        toast("已删除自定义阶段");
+      };
+    });
 
-  // ★ 在此阶段后插入新阶段
-  div.querySelectorAll(".phase-insert-after").forEach(el => {
-    el.onclick = () => showPhaseInsertEditor(el.dataset.pk, render);
-  });
-
-  // ★ 最前面插入
-  const startBtn = div.querySelector("#anchorNewPhaseStart");
-  if (startBtn) startBtn.onclick = () => showPhaseInsertEditor(null, render);
-
-  // ★ 删除自定义阶段
-  div.querySelectorAll(".phase-del-custom").forEach(el => {
-    el.onclick = () => {
-      if (!confirm("删除这个自定义阶段？它的锚点也会被删除。")) return;
-      const pk = el.dataset.pk;
-      const ov = getPhaseOverrides();
-      ov.inserts = ov.inserts.filter(ins => ins.phase.key !== pk);
-      setPhaseOverrides(ov);
-      const a = getEventAnchors();
-      delete a[pk];
-      setEventAnchors(a);
-      refreshEffectiveTimeline();
-      render();
-      toast("已删除自定义阶段");
-    };
-  });
-
-  // ★ 恢复默认阶段划分（清所有覆盖）
-  const resetAllBtn = div.querySelector("#phaseResetAll");
-  if (resetAllBtn) {
-    resetAllBtn.onclick = () => {
-      if (!confirm("确定恢复为默认的阶段划分吗？所有改名和插入的自定义阶段都会被移除（但不影响已勾选的锚点完成状态和当前游戏进度）。")) return;
-      resetPhaseOverrides();
-      render();
-      toast("已恢复默认阶段划分");
-    };
-  }
-};
+    // 恢复默认阶段划分
+    const resetAllBtn = div.querySelector("#phaseResetAll");
+    if (resetAllBtn) {
+      resetAllBtn.onclick = () => {
+        if (!confirm("确定恢复为默认的阶段划分吗？所有改名和插入的自定义阶段都会被移除。")) return;
+        resetPhaseOverrides();
+        render();
+        toast("已恢复默认阶段划分");
+      };
+    }
+  };
 
 // ============================================================
 // 🧩 阶段插入编辑弹窗（afterKey = null 表示插最前面，否则插在该 key 阶段之后）
